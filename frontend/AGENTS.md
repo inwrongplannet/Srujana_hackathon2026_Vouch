@@ -21,4 +21,8 @@ Applies to any agent working in `frontend/` on top of the root `AGENTS.md`. Near
 - **ZK stub labelling**: any UI text that references identity anchoring must say "simulated identity anchor", never "zero-knowledge proof".
 
 ## Stack notes (filled by the scaffold-zone skill)
-TODO(scaffold): framework and version, run one test, run lint, folder layout, how types are imported.
+- Vite 8, React 19, TypeScript 6, Tailwind 4, React Router 8, Motion 14. Layout in `frontend/README.md` (Structure).
+- One test: `npx vitest run src/mocks/engine/graph.test.ts`. Lint: `npm run lint` (tsc + ESLint; `src/components/bits/` is vendored and skipped).
+- Types: import from `@/api/types` until `make types` produces `src/types/api.d.ts`. Data only through `@/api/client`.
+- Maths lives in `src/mocks/engine/` (backend stand-in). Components format, never compute; `geom()` converts to numbers for drawing only.
+- Screenshots: `?jump=<step>` replays the story (`request`, `vouch`, `apply`, `approve`, `advance`, `outcome`, `settled`, `defaulted`).

@@ -11,7 +11,15 @@ TODO: setup commands (verified against the Makefile).
 <!-- END:quickstart -->
 
 <!-- BEGIN:features -->
-_No features yet. Add one in `docs/features/`, then run `make readme`._
+| Feature | Status | Assignee | What it does |
+|---|---|---|---|
+| Borrower dashboard | in-progress | Reehan | See a two-axis score, ask for a vouch and borrow |
+| Default cascade | in-progress | Reehan | Watch a default slash sponsors and stop at two hops |
+| Demo director | in-progress | Reehan | Drive the demo story from one presenter bar |
+| Identity onboarding | in-progress | Reehan | Sign in with a demo Aadhaar and get a simulated identity anchor |
+| Landing page | in-progress | Reehan | Understand the idea in one screen, then enter the demo |
+| Lender console | in-progress | Reehan | Rank applicants on both axes and read the trust graph |
+| Vouching | in-progress | Reehan | See what a vouch costs you, then hold to vouch |
 <!-- END:features -->
 
 <!-- BEGIN:architecture -->

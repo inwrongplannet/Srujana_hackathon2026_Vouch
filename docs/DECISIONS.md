@@ -4,4 +4,34 @@
 
 **Why this file exists:** a running log of what we chose and why (especially new dependencies). Stops repeat debates and doubles as pitch material.
 
+## Log
+
 <!-- ENTRIES -->
+
+### 2026-10-24: Demo parameters the skills leave open
+- **Decision:** base unit 10,000 INR per point of Score_final, limits rounded down to 500 INR; delta0 = principal / 5,000 INR; settlement mints 0.5 x delta0 to the borrower and 0.1 x delta0 to each direct sponsor; cash-flow normalisation DSCR 0.5 to 2.5, income CV 0 to 0.6, volatility 0 to 1; five expected data fields; pricing 24% a.p.r., 6 monthly instalments, 30-day term. A DEFAULTED identity gets a 0 limit whatever its graph trust.
+- **Why:** the formulas need concrete values to run; these give the story a 6,000 INR first limit from one vouch and visible band shrinkage.
+- **Alternatives considered:** the PDF's 12.5% hop-2 penalty, rejected for the slashing-cascade skill's 0.25 x delta0.
+- **Consequences:** all live in `frontend/src/mocks/engine/params.ts`; the backend must copy them or log a change here.
+- **By:** Reehan
+
+### 2026-10-24: Frontend runs on a mock server until the backend exists
+- **Decision:** `frontend/src/mocks/` holds an in-memory server with all protocol maths (from the graph-trust-engine, dual-axis-scoring and slashing-cascade skills), reached only through `src/api/client.ts`.
+- **Why:** the demo path needs no network and the UI could be built in parallel with the backend.
+- **Alternatives considered:** MSW (another dependency for no gain offline); computing in components (breaks the "maths lives in the backend" rule).
+- **Consequences:** swapping to the real API touches `client.ts` only; shapes in `src/api/types.ts` must move into `docs/API_CONTRACT.md` (needs Abhishek's OK).
+- **By:** Reehan
+
+### 2026-10-24: Frontend stack and libraries
+- **Decision:** Vite 8, React 19, TypeScript 6, Tailwind CSS 4, React Router 8, Motion 14 (all MIT); `@dagrejs/dagre` 3.1 (MIT) for layered graph layout; `decimal.js` 10.6 (MIT) for money; `qrcode` 1.5 (MIT); Fontsource Anek Latin, Anek Devanagari, IBM Plex Sans and Mono (OFL); React Bits components vendored into `src/components/bits/` (MIT + Commons Clause). None needs a key or network at demo time.
+- **Why:** fast single-page build; dagre gives a direction-aware layout we can draw and animate ourselves; fonts are self-hosted so the demo works offline.
+- **Alternatives considered:** Next.js (no server rendering needed); Cytoscape.js (harder to style to the theme and to animate the cascade).
+- **Consequences:** `npm ci` in `frontend/`; CI needs a Node setup step before `make check` runs frontend tests.
+- **By:** Reehan
+
+### 2026-10-24: Visual direction "ink on ledger paper"
+- **Decision:** khadi paper neutrals, one indigo ink (`#24368F`), node-state colours for meaning only, Anek for display and IBM Plex for UI, hatching for uncertainty, motion only when protocol state changes.
+- **Why:** trust and community over generic fintech gradients; the kirana udhaar book is the product's origin story.
+- **Alternatives considered:** dark Linear-style console (washes out on projectors).
+- **Consequences:** tokens live in `frontend/src/styles/index.css`; icons are a custom SVG set.
+- **By:** Reehan
