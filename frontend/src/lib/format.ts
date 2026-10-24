@@ -49,6 +49,11 @@ export function pct(value: string, dp = 0): string {
   return `${new Decimal(value).mul(100).toFixed(dp, Decimal.ROUND_HALF_EVEN)}%`;
 }
 
+/** Assessment confidence shown beside sigma2: 1 - sigma2 as a percentage. */
+export function confidencePct(sigma2: string): string {
+  return `${new Decimal(1).minus(sigma2).mul(100).toFixed(0, Decimal.ROUND_HALF_EVEN)}%`;
+}
+
 /**
  * Converts a decimal string to a JS number for drawing only (pixel positions, bar widths).
  * Never use the result for money or scoring.

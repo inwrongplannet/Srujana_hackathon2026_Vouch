@@ -3,7 +3,9 @@
  * the mock server for `fetch(VITE_API_BASE_URL + path)` later touches this file alone.
  */
 import { MockServer } from '@/mocks/server';
+import { BORROWER_SEED, VOUCH_NOTE } from '@/mocks/seed';
 import type {
+  StoryStep,
   DemoIdentity,
   RegisterResponse,
   SimulateRequest,
@@ -80,5 +82,26 @@ export const api = {
   async reset(): Promise<void> {
     await latency(80);
     server.reset();
+  },
+
+  /**
+   * Presenter fallback: replays the story up to `step` (e.g. `?jump=approve` in the URL), so any
+   * scene can be shown without clicking through the ones before it.
+   */
+  async jumpTo(step: StoryStep): Promise<void> {
+    const order: StoryStep[] = ['register', 'request', 'vouch', 'apply', 'approve', 'advance', 'outcome', 'settled', 'defaulted'];
+    const target = order.indexOf(step);
+    if (target < 0) return;
+    server.reset();
+    const s = () => server.getSnapshot();
+    if (target >= order.indexOf('request')) await server.register(BORROWER_SEED.rawId!);
+    if (target >= order.indexOf('vouch')) server.requestVouch(s().borrowerId, s().voucherId, VOUCH_NOTE);
+    if (target >= order.indexOf('apply')) server.respondVouch(s().requests[0]!.id, true);
+    if (target >= order.indexOf('approve')) server.applyLoan(s().borrowerId, '5000', 'Industrial sewing-machine motor');
+    const loan = () => s().loans.find((l) => l.borrower === s().borrowerId)!;
+    if (target >= order.indexOf('advance')) server.decideLoan(loan().id, true);
+    if (target >= order.indexOf('outcome')) server.advance(30);
+    if (step === 'settled') server.settle(loan().id);
+    if (step === 'defaulted') server.defaultLoan(loan().id);
   },
 };

@@ -136,3 +136,43 @@
     transition-duration: 0.001ms !important;
   }
 }
+
+/* Range input: ink track, neel fill, a node for a thumb. */
+.vt-range {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 18px;
+  background: transparent;
+  cursor: pointer;
+}
+.vt-range::-webkit-slider-runnable-track {
+  height: 4px;
+  border-radius: 999px;
+  background: linear-gradient(to right, var(--color-neel-700) var(--fill, 50%), var(--color-paper-3) var(--fill, 50%));
+}
+.vt-range::-moz-range-track {
+  height: 4px;
+  border-radius: 999px;
+  background: linear-gradient(to right, var(--color-neel-700) var(--fill, 50%), var(--color-paper-3) var(--fill, 50%));
+}
+.vt-range::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 16px;
+  height: 16px;
+  margin-top: -6px;
+  border-radius: 50%;
+  background: var(--color-surface);
+  border: 2px solid var(--color-neel-700);
+  box-shadow: 0 1px 3px rgb(19 28 70 / 0.25);
+  transition: transform 120ms var(--ease-ink);
+}
+.vt-range::-moz-range-thumb {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--color-surface);
+  border: 2px solid var(--color-neel-700);
+}
+.vt-range:active::-webkit-slider-thumb {
+  transform: scale(1.15);
+}

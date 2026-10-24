@@ -442,7 +442,8 @@ export class MockServer {
       principal: req.principal ? D(req.principal) : undefined,
     });
     const dscrHealthy = assessment.cashflow ? D(assessment.cashflow.dscr).gte('1.25') : false;
-    return { assessment, dscrHealthy };
+    const emiValue = req.principal ? inr(demoEmi(D(req.principal))) : null;
+    return { assessment, dscrHealthy, emi: emiValue };
   }
 
   reset(): void {

@@ -203,6 +203,8 @@ export interface SimulateResponse {
   assessment: ApiAssessment;
   /** DSCR at or above the 1.25 micro-lending threshold. */
   dscrHealthy: boolean;
+  /** Monthly instalment on the simulated principal, if one was given. */
+  emi: Money | null;
 }
 
 export interface DemoIdentity {
