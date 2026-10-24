@@ -1,0 +1,6 @@
+# Data-build only: veritrust.anchor (download, Berka calibration, anchored build).
+# Not needed by the CLI, the tests or the simulated generator (veritrust.synth is stdlib only).
+# Pending Abhishek's approval as new dependencies; see docs/DECISIONS.md.
+pandas>=3.0
+pyarrow>=25.0
+pymysql>=2.2

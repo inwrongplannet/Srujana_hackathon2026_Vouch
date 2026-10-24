@@ -11,7 +11,9 @@ TODO: setup commands (verified against the Makefile).
 <!-- END:quickstart -->
 
 <!-- BEGIN:features -->
-_No features yet. Add one in `docs/features/`, then run `make readme`._
+| Feature | Status | Assignee | What it does |
+|---|---|---|---|
+| Credit Dataset | in-progress | Reehan | Train and test the assessment on real applicants plus a simulated world with known truth |
 <!-- END:features -->
 
 <!-- BEGIN:architecture -->

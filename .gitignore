@@ -16,3 +16,8 @@ build/
 .opencode/package-lock.json
 .idea/
 .vscode/
+# Why: public source data and generated datasets are large and fetched by scripts; never commit rows.
+data/external/
+data/synth/
+data/anchored/
+data/*_try/
