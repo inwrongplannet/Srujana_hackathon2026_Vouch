@@ -146,6 +146,9 @@ class StateStore:
                 )
                 lending.transactions.append(tx)
 
+            # Synchronize internal counters so new IDs never collide with loaded IDs
+            lending.sync_counters()
+
             # If ledger exists and is empty, bootstrap genesis events for audit continuity
             if getattr(engine, "ledger", None) is not None and engine.ledger.count() == 0:
                 from veritrust.models import Evidence

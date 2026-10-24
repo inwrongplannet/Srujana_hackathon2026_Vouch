@@ -252,10 +252,21 @@ def cmd_repay(args: argparse.Namespace) -> None:
     amount = Decimal(str(args.amount))
 
     try:
+        loan_before = lending.get_loan(loan_id)
+        if not loan_before:
+            print(f"Error: Loan '{loan_id}' does not exist.")
+            sys.exit(1)
+        prev_balance = loan_before.outstanding_balance
+
         loan = lending.repay(loan_id, amount)
+        actual_payment = prev_balance - loan.outstanding_balance
+        refund = max(Decimal("0.00"), amount - actual_payment)
         store.save(engine, lending)
+
         print(f"Repayment Processed for Loan '{loan_id}'!")
-        print(f"  + Payment Applied:     INR {amount:,.2f}")
+        print(f"  + Payment Applied:     INR {actual_payment:,.2f}")
+        if refund > Decimal("0.00"):
+            print(f"  + Excess Refunded:     INR {refund:,.2f} (Payment exceeded total debt balance)")
         print(f"  + Outstanding Balance: INR {loan.outstanding_balance:,.2f}")
         print(f"  + Contract Status:     {loan.status}")
         if loan.status == "REPAID":

@@ -66,12 +66,18 @@ class ExplanationEngine:
         if orig.is_feasible:
             cap_status = "APPROVED_WITHIN_BUDGET"
             cap_headline = "Requested loan instalment is fully affordable within disposable cash flow."
-        else:
+        elif orig.monthly_emi > affordability.max_affordable_emi:
             cap_status = "EXCEEDS_REPAYMENT_BUDGET"
             diff = orig.monthly_emi - affordability.max_affordable_emi
             cap_headline = (
                 f"Requested loan exceeds repayment budget by INR {diff:,.2f} per month "
                 f"(EMI INR {orig.monthly_emi:,.2f} vs. budget INR {affordability.max_affordable_emi:,.2f})."
+            )
+        else:
+            cap_status = "WITHIN_INSTALMENT_BUDGET"
+            cap_headline = (
+                f"Monthly instalment of INR {orig.monthly_emi:,.2f} fits within disposable budget "
+                f"of INR {affordability.max_affordable_emi:,.2f}, but loan violates credit ceiling or policy bounds."
             )
 
         cap_findings = [
@@ -191,20 +197,75 @@ class ExplanationEngine:
             )
         elif best is not None:
             verdict = "RESTRUCTURED_ALTERNATIVE"
-            diff = orig.monthly_emi - affordability.max_affordable_emi
-            narrative = (
-                f"The requested loan exceeds the repayment budget by INR {diff:,.2f} per month. "
-                f"Extending the tenure from {orig.tenure_months} to {best.tenure_months} months reduces the monthly instalment "
-                f"to INR {best.monthly_emi:,.2f}, satisfying all configured affordability rules while increasing total interest "
-                f"from INR {orig.total_interest:,.2f} to INR {best.total_interest:,.2f}."
-            )
-            restructuring_notes.append(
-                f"Option 1 (Recommended): Extend tenure to {best.tenure_months} months -> Monthly instalment drops to INR {best.monthly_emi:,.2f}."
-            )
+            narrative_parts: list[str] = []
+
+            # 1. State the constraint violations of the original request
+            if orig.monthly_emi > affordability.max_affordable_emi:
+                diff = orig.monthly_emi - affordability.max_affordable_emi
+                narrative_parts.append(
+                    f"The requested loan exceeds the repayment budget by INR {diff:,.2f} per month."
+                )
+            if orig.principal > best.principal:
+                narrative_parts.append(
+                    f"The requested principal of INR {orig.principal:,.2f} exceeds the approved borrowing limit of INR {best.principal:,.2f}."
+                )
+
+            # 2. Explain how the restructured plan resolves the violations
+            if best.tenure_months > orig.tenure_months:
+                if best.monthly_emi < orig.monthly_emi:
+                    emi_impact = f"reduces the monthly instalment to INR {best.monthly_emi:,.2f}"
+                else:
+                    emi_impact = f"sets the monthly instalment to INR {best.monthly_emi:,.2f}"
+
+                if best.total_interest > orig.total_interest:
+                    interest_impact = f"increasing total interest from INR {orig.total_interest:,.2f} to INR {best.total_interest:,.2f}"
+                elif best.total_interest < orig.total_interest:
+                    interest_impact = f"reducing total interest from INR {orig.total_interest:,.2f} to INR {best.total_interest:,.2f}"
+                else:
+                    interest_impact = f"with total interest of INR {best.total_interest:,.2f}"
+
+                narrative_parts.append(
+                    f"Extending the tenure from {orig.tenure_months} to {best.tenure_months} months {emi_impact}, "
+                    f"satisfying all configured affordability rules while {interest_impact}."
+                )
+            elif best.tenure_months < orig.tenure_months:
+                if best.total_interest < orig.total_interest:
+                    interest_impact = f"reducing total interest from INR {orig.total_interest:,.2f} to INR {best.total_interest:,.2f}"
+                else:
+                    interest_impact = f"with total interest of INR {best.total_interest:,.2f}"
+
+                narrative_parts.append(
+                    f"Restructuring to a {best.tenure_months}-month term at principal INR {best.principal:,.2f} satisfies all rules "
+                    f"with monthly instalment INR {best.monthly_emi:,.2f}, {interest_impact}."
+                )
+            else:
+                narrative_parts.append(
+                    f"A smaller principal of INR {best.principal:,.2f} over {best.tenure_months} months satisfies the configured "
+                    f"affordability constraints (monthly instalment: INR {best.monthly_emi:,.2f}, total interest: INR {best.total_interest:,.2f})."
+                )
+
+            narrative = " ".join(narrative_parts)
+
+            # Restructuring guidance recommendations
             if best.principal < orig.principal:
                 restructuring_notes.append(
-                    f"Option 2: Reduce principal from INR {orig.principal:,.2f} to INR {best.principal:,.2f} to maintain the original {orig.tenure_months}-month horizon."
+                    f"Option 1 (Recommended): Reduce principal to approved ceiling INR {best.principal:,.2f} "
+                    f"over {best.tenure_months} months (Monthly instalment: INR {best.monthly_emi:,.2f}, Total Interest: INR {best.total_interest:,.2f})."
                 )
+            elif best.tenure_months > orig.tenure_months:
+                restructuring_notes.append(
+                    f"Option 1 (Recommended): Extend tenure to {best.tenure_months} months -> Monthly instalment drops to INR {best.monthly_emi:,.2f}."
+                )
+            else:
+                restructuring_notes.append(
+                    f"Option 1 (Recommended): Restructure plan to INR {best.principal:,.2f} over {best.tenure_months} months (EMI: INR {best.monthly_emi:,.2f})."
+                )
+
+            for opt in optimization.feasible_options:
+                if opt.principal != best.principal or opt.tenure_months != best.tenure_months:
+                    restructuring_notes.append(
+                        f"{opt.label}: Principal INR {opt.principal:,.2f} | {opt.tenure_months}m @ EMI INR {opt.monthly_emi:,.2f} (Total Interest: INR {opt.total_interest:,.2f})"
+                    )
         else:
             verdict = "REJECTED_UNAFFORDABLE"
             narrative = (

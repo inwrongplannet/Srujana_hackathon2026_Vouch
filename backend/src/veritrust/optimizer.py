@@ -66,6 +66,9 @@ class LoanOptimizer:
 
         if tenure_candidates is None:
             tenure_candidates = [3, 6, 9, 12, 18, 24, 36, 48]
+            if requested_tenure_months not in tenure_candidates and 1 <= requested_tenure_months <= 120:
+                tenure_candidates.append(requested_tenure_months)
+                tenure_candidates.sort()
 
         # Credit ceiling is min of max_approved_credit_limit (if present) and disposable income projection
         limit_ceiling = (
