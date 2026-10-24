@@ -58,3 +58,22 @@ def test_vouch_guards():
     with pytest.raises(ValueError, match="already exists"):
         engine.vouch("U1", "U2")
 
+def test_bulk_dataset_ingestion():
+    """Verify bulk dataset loading (Stage 2)."""
+    engine = TrustEngine()
+    users_data = [
+        {"user_id": "BANK", "name": "Anchor Bank", "reputation": "50.0", "is_anchor": True},
+        {"user_id": "ALICE", "name": "Alice", "reputation": "20.0"},
+        {"user_id": "BOB", "name": "Bob", "reputation": "0.0"},
+    ]
+    vouches_data = [
+        {"source": "BANK", "target": "ALICE"},
+        {"source": "ALICE", "target": "BOB"},
+    ]
+    engine.load_dataset(users_data, vouches_data)
+
+    assert len(engine.list_users()) == 3
+    assert engine.graph.has_edge("BANK", "ALICE")
+    assert engine.graph.has_edge("ALICE", "BOB")
+    assert engine.graph["BANK"]["ALICE"]["weight"] == Decimal("50.0")
+    assert engine.graph["ALICE"]["BOB"]["weight"] == Decimal("20.0")

@@ -98,6 +98,25 @@ class TrustEngine:
             name=user.name,
         )
 
+    def add_user_to_graph(self, user: User) -> None:
+        """Stage 2 specification: add a user node to the NetworkX graph."""
+        self._sync_node_to_graph(user)
+
+    def load_dataset(self, users: list[dict], vouches: list[dict]) -> None:
+        """Stage 2 specification: bulk load nodes and edges from dataset records."""
+        for u in users:
+            ff = None
+            if u.get("financial_features"):
+                ff = FinancialFeatures(**u["financial_features"])
+            self.create_user(
+                user_id=u["user_id"],
+                name=u.get("name", u["user_id"]),
+                initial_reputation=Decimal(str(u.get("reputation", "0.0"))),
+                is_anchor=u.get("is_anchor", False),
+                financial_features=ff,
+            )
+        for v in vouches:
+            self.vouch(source_id=v["source"], target_id=v["target"])
     def recompute_weights(self, source_id: str) -> None:
         """Atomically recompute all outgoing edge weights from source_id.
 
