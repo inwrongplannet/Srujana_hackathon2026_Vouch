@@ -579,6 +579,154 @@ def cmd_reset(args: argparse.Namespace) -> None:
     print("Reset complete! Initialized fresh demo graph, ledger events, and cleared sessions.")
 
 
+def cmd_optimize(args: argparse.Namespace) -> None:
+    """Evaluate loan plan using rule-based affordability, OR-Tools optimizer, Monte Carlo stress testing, and explanation engine."""
+    from veritrust.affordability import AffordabilityEngine, AffordabilityInput
+    from veritrust.explainer import ExplanationEngine
+    from veritrust.optimizer import LoanOptimizer
+    from veritrust.stress_tester import MonteCarloStressTester
+
+    engine, scorer, lending, store, current_user = _init_context()
+    borrower_id = args.borrower or current_user
+    if not borrower_id:
+        print("Error: Specify a user ID with --borrower <id> or log in with 'login <id>'.")
+        sys.exit(1)
+
+    user = engine.get_user(borrower_id)
+    if not user:
+        print(f"Error: User '{borrower_id}' does not exist.")
+        sys.exit(1)
+
+    requested_p = Decimal(str(args.amount))
+    requested_t = int(args.tenure or 6)
+    objective = getattr(args, "objective", "MIN_COST")
+
+    ff = user.financial_features
+    income = (
+        Decimal(str(args.income))
+        if getattr(args, "income", None)
+        else (ff.monthly_income if ff and ff.monthly_income > 0 else Decimal("35000.00"))
+    )
+    debt = (
+        Decimal(str(args.debt))
+        if getattr(args, "debt", None)
+        else (ff.monthly_debt if ff else Decimal("0.00"))
+    )
+    expenses = (
+        Decimal(str(args.expenses))
+        if getattr(args, "expenses", None)
+        else ((ff.monthly_income - ff.net_operating_income) if ff and ff.net_operating_income > 0 else Decimal("18000.00"))
+    )
+    completeness = ff.completeness if ff else Decimal("0.85")
+    is_verified = getattr(args, "verified", False) or user.is_anchor or (ff is not None and completeness >= Decimal("0.90"))
+
+    afford_input = AffordabilityInput(
+        monthly_income=income,
+        essential_expenses=expenses,
+        existing_debt_service=debt,
+        data_completeness=completeness,
+        is_verified=is_verified,
+    )
+
+    try:
+        assessment = scorer.assess_credit(borrower_id)
+        limit = assessment.max_loan_limit
+    except Exception:
+        assessment = None
+        limit = Decimal("50000.00")
+
+    afford_engine = AffordabilityEngine()
+    afford_res = afford_engine.evaluate(afford_input)
+
+    optimizer = LoanOptimizer(afford_engine)
+    opt_res = optimizer.optimize(
+        affordability_input=afford_input,
+        requested_principal=requested_p,
+        requested_tenure_months=requested_t,
+        annual_rate=Decimal("0.10"),
+        max_approved_credit_limit=limit,
+        objective=objective,
+    )
+
+    plan_to_test = opt_res.best_feasible_alternative or opt_res.original_request
+    stress_tester = MonteCarloStressTester()
+    stress_res = stress_tester.stress_test(
+        monthly_income=income,
+        essential_expenses=expenses + debt,
+        monthly_emi=plan_to_test.monthly_emi,
+        tenure_months=plan_to_test.tenure_months,
+        initial_cash_buffer=afford_res.effective_buffer,
+    )
+
+    explainer = ExplanationEngine()
+    explanation = explainer.explain(
+        affordability=afford_res,
+        optimization=opt_res,
+        stress_test=stress_res,
+        credit_assessment=assessment,
+    )
+
+    print("=======================================================================")
+    print(" VeriTrust Loan Affordability, Optimization & Stress Test Report")
+    print(f" Borrower: {borrower_id} ({user.name}) | Status: [{explanation.verdict}]")
+    print("=======================================================================")
+    print("\n[EXECUTIVE SUMMARY]")
+    print(f"  {explanation.narrative_summary}")
+
+    print("\n[1. FINANCIAL CAPACITY DIMENSION]")
+    print(f"  + Gross Monthly Income:       INR {afford_res.monthly_income:,.2f}")
+    print(f"  + Non-Discretionary Outflows: INR {afford_res.total_non_discretionary:,.2f} (Expenses: {afford_res.essential_expenses:,.2f}, Debt: {afford_res.existing_debt_service:,.2f})")
+    print(f"  + Protected Cash Buffer (B):  INR {afford_res.effective_buffer:,.2f} (Safety reserve)")
+    print(f"  + Disposable Income (D):      INR {afford_res.disposable_income:,.2f}")
+    print(f"  + Maximum Affordable EMI:     INR {afford_res.max_affordable_emi:,.2f} / month")
+    print(f"  + Binding Policy Rule:        {afford_res.binding_policy_rule}")
+
+    print("\n[2. OR-TOOLS PLAN OPTIMIZATION]")
+    orig = opt_res.original_request
+    status_tag = "[FEASIBLE]" if orig.is_feasible else "[VIOLATES CONSTRAINTS]"
+    print(f"  * Requested Plan {status_tag}:")
+    print(f"      Principal: INR {orig.principal:,.2f} | Tenure: {orig.tenure_months}m | EMI: INR {orig.monthly_emi:,.2f} | Total Interest: INR {orig.total_interest:,.2f}")
+    if orig.infeasibility_reasons:
+        for r in orig.infeasibility_reasons:
+            print(f"      ! Infeasibility: {r}")
+
+    if opt_res.best_feasible_alternative:
+        best = opt_res.best_feasible_alternative
+        print(f"  * Best Feasible Plan ({best.label}):")
+        print(f"      Principal: INR {best.principal:,.2f} | Tenure: {best.tenure_months}m | EMI: INR {best.monthly_emi:,.2f} | Total Interest: INR {best.total_interest:,.2f}")
+
+    if opt_res.binding_constraints:
+        print("  * Constraints Restricting Other Plans:")
+        for bc in opt_res.binding_constraints:
+            print(f"      - {bc}")
+
+    if opt_res.feasible_options:
+        print("  * Alternative Qualifying Restructuring Options:")
+        for opt in opt_res.feasible_options:
+            print(f"      - {opt.label:<30}: Principal INR {opt.principal:,.2f} | {opt.tenure_months}m @ EMI INR {opt.monthly_emi:,.2f} (Total Int: INR {opt.total_interest:,.2f})")
+
+    print("\n[3. MONTE CARLO STRESS TEST RESILIENCE (5,000 Scenarios)]")
+    print(f"  + Stress Resilience Rating:   [{stress_res.stress_rating}]")
+    print(f"  + Default / Shortfall Risk:   {stress_res.shortfall_frequency_pct}% across simulated tenure")
+    print(f"  + Adverse 5th-Percentile Cash: INR {stress_res.residual_cash_p05:,.2f} (Severe economic shock cushion)")
+    print(f"  + Income Shock Tolerance:     Can absorb a {stress_res.shock_tolerance_pct}% income drop before deficit")
+    print(f"  + Affordability Breaking Point: Deficit occurs if income falls below INR {stress_res.affordability_break_income:,.2f}/month")
+
+    print("\n[4. EVIDENCE RELIABILITY & GRAPH REPUTATION DIMENSIONS]")
+    print(f"  + Reliability Status:         {explanation.dimension_evidence_reliability.status}")
+    print(f"  + Documentation Confidence:   {explanation.dimension_evidence_reliability.headline}")
+    print(f"  + Web-of-Trust Standing:      {explanation.dimension_graph_reputation.headline}")
+    if assessment and assessment.contributing_paths:
+        for p in assessment.contributing_paths[:2]:
+            print(f"      Trust Path: {' -> '.join(p.path)} (Weight: {p.path_trust})")
+
+    if explanation.restructuring_guidance:
+        print("\n[RECOMMENDED ACTION PLAN]")
+        for note in explanation.restructuring_guidance:
+            print(f"  => {note}")
+    print("=======================================================================")
+
+
 # -----------------------------------------------------------------------------
 # Interactive REPL Shell
 # -----------------------------------------------------------------------------
@@ -743,6 +891,18 @@ def build_parser() -> argparse.ArgumentParser:
     p_replay = subparsers.add_parser("replay", help="Reconstruct protocol state from raw immutable events")
     p_replay.add_argument("--restore", "-r", action="store_true", help="Synchronize store.json with reconstructed state")
     p_replay.set_defaults(func=cmd_replay)
+
+    # optimize (affordability + OR-Tools + stress test + explanation)
+    p_opt = subparsers.add_parser("optimize", help="Optimize loan plan under affordability, OR-Tools, and stress testing")
+    p_opt.add_argument("amount", type=str, help="Requested loan principal in INR")
+    p_opt.add_argument("--tenure", "-t", type=int, default=6, help="Requested tenure in months (default: 6)")
+    p_opt.add_argument("--borrower", "-b", help="Borrower user ID (defaults to active user)")
+    p_opt.add_argument("--income", type=str, help="Override monthly gross income in INR")
+    p_opt.add_argument("--expenses", type=str, help="Override monthly essential expenses in INR")
+    p_opt.add_argument("--debt", type=str, help="Override existing monthly debt service in INR")
+    p_opt.add_argument("--objective", choices=["MIN_COST", "MAX_PRINCIPAL"], default="MIN_COST", help="Optimization objective (default: MIN_COST)")
+    p_opt.add_argument("--verified", action="store_true", help="Flag documentation as verified by bank/DigiLocker statement")
+    p_opt.set_defaults(func=cmd_optimize)
 
     # reset
     p_reset = subparsers.add_parser("reset", help="Reset state to initial seed demo data")
