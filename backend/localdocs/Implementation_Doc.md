@@ -179,7 +179,7 @@ Straightforward, deterministic propagation:
 
 ## 3. Planned Code Organization in `backend/`
 
-```
+```text
 backend/
 ├── localdocs/
 │   ├── Init_Arch.md                      # Original briefing

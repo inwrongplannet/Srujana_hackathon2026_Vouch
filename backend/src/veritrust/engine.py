@@ -117,7 +117,6 @@ class TrustEngine:
             )
         for v in vouches:
             self.vouch(source_id=v["source"], target_id=v["target"])
-
     def recompute_weights(self, source_id: str) -> None:
         """Atomically recompute all outgoing edge weights from source_id.
 
