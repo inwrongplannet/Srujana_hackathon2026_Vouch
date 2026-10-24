@@ -1,0 +1,188 @@
+"""Domain models for the VeriTrust engine.
+
+All financial amounts and reputation scores use Decimal end-to-end to prevent
+floating-point drift from corrupting graph trust calculations.
+"""
+
+from datetime import datetime, timezone
+from decimal import Decimal
+from typing import Literal, Optional
+from pydantic import BaseModel, Field, field_validator
+
+
+class FinancialFeatures(BaseModel):
+    """Borrower financial signals for cash-flow underwriting."""
+
+    monthly_income: Decimal = Field(default=Decimal("0.0"), description="Gross monthly income in INR")
+    monthly_debt: Decimal = Field(default=Decimal("0.0"), description="Existing recurring debt payments in INR")
+    net_operating_income: Decimal = Field(
+        default=Decimal("0.0"), description="Net operating income after operating expenses"
+    )
+    debt_service: Decimal = Field(default=Decimal("0.0"), description="Total monthly debt service obligations")
+    income_volatility: Decimal = Field(
+        default=Decimal("0.15"), description="Coefficient of variation of income (stddev / mean)"
+    )
+    cashflow_volatility: Decimal = Field(
+        default=Decimal("0.15"), description="Volatility of net operating cash flows"
+    )
+    completeness: Decimal = Field(
+        default=Decimal("1.0"),
+        description="Data completeness fraction in [0.0, 1.0]. Lower values increase epistemic uncertainty.",
+    )
+
+    @field_validator(
+        "monthly_income",
+        "monthly_debt",
+        "net_operating_income",
+        "debt_service",
+        "income_volatility",
+        "cashflow_volatility",
+        "completeness",
+        mode="before",
+    )
+    @classmethod
+    def parse_to_decimal(cls, value: object) -> Decimal:
+        """Coerce raw numeric inputs to Decimal."""
+        if isinstance(value, Decimal):
+            return value
+        return Decimal(str(value))
+
+
+class User(BaseModel):
+    """Participant node in the VeriTrust web-of-trust graph."""
+
+    user_id: str = Field(description="Unique protocol identifier for the node (e.g. 'U001')")
+    name: str = Field(description="Display name or organizational label")
+    reputation: Decimal = Field(default=Decimal("0.0"), description="Intrinsic credibility score R")
+    capacity: Decimal = Field(
+        default=Decimal("0.0"), description="Allocatable vouch capacity C_u = max(0, R_u)"
+    )
+    status: Literal["ACTIVE", "RESTRICTED", "DEFAULTED"] = Field(
+        default="ACTIVE", description="Node protocol state"
+    )
+    is_anchor: bool = Field(
+        default=False, description="True if this node is an institutional / seed trust root"
+    )
+    financial_features: Optional[FinancialFeatures] = Field(
+        default=None, description="Optional financial health features"
+    )
+    n_settled_loans: int = Field(default=0, description="Count of successfully repaid loan contracts")
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+    @field_validator("reputation", "capacity", mode="before")
+    @classmethod
+    def parse_reputation_decimal(cls, value: object) -> Decimal:
+        """Coerce reputation/capacity inputs to Decimal."""
+        if isinstance(value, Decimal):
+            return value
+        return Decimal(str(value))
+
+    def update_capacity(self) -> None:
+        """Synchronize allocatable capacity with current reputation score.
+
+        C_u = max(0, R_u) if ACTIVE, else 0.
+        """
+        if self.status != "ACTIVE":
+            self.capacity = Decimal("0.0")
+        else:
+            self.capacity = max(Decimal("0.0"), self.reputation)
+
+
+class Transaction(BaseModel):
+    """Monetary transaction record."""
+
+    tx_id: str = Field(description="Unique transaction ID")
+    user_id: str = Field(description="Target user ID")
+    amount: Decimal = Field(description="Transaction amount (paise / Decimal)")
+    currency: str = Field(default="INR", description="ISO 4217 currency code")
+    tx_type: Literal["INCOME", "DEBT_SERVICE", "DISBURSEMENT", "REPAYMENT"] = Field(
+        description="Type of financial transaction"
+    )
+    timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+    @field_validator("amount", mode="before")
+    @classmethod
+    def parse_amount(cls, value: object) -> Decimal:
+        """Ensure amount is strictly Decimal."""
+        if isinstance(value, Decimal):
+            return value
+        return Decimal(str(value))
+
+
+class Vouch(BaseModel):
+    """Directed trust endorsement between two nodes."""
+
+    vouch_id: str = Field(description="Unique vouch ID (e.g. 'V_U001_U002')")
+    source: str = Field(description="Source endorser user ID (u)")
+    target: str = Field(description="Endorsed borrower user ID (v)")
+    weight: Decimal = Field(
+        default=Decimal("0.0"), description="Allocated vouch weight W_uv satisfying out-degree conservation"
+    )
+    active: bool = Field(default=True, description="Whether this endorsement is currently active")
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+    @field_validator("weight", mode="before")
+    @classmethod
+    def parse_weight(cls, value: object) -> Decimal:
+        """Ensure weight is strictly Decimal."""
+        if isinstance(value, Decimal):
+            return value
+        return Decimal(str(value))
+
+
+class Loan(BaseModel):
+    """Borrowing contract record."""
+
+    loan_id: str = Field(description="Unique loan ID")
+    borrower_id: str = Field(description="Borrower user ID")
+    principal: Decimal = Field(description="Principal loan amount in INR")
+    outstanding_balance: Decimal = Field(description="Remaining balance to be settled in INR")
+    interest_rate: Decimal = Field(
+        default=Decimal("0.10"), description="Annual interest rate as a decimal fraction (e.g. 0.10 = 10%)"
+    )
+    tenure_months: int = Field(default=6, description="Tenure in months")
+    status: Literal["PENDING", "ACTIVE", "REPAID", "DEFAULTED"] = Field(
+        default="ACTIVE", description="Current contract status"
+    )
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+    @field_validator("principal", "outstanding_balance", "interest_rate", mode="before")
+    @classmethod
+    def parse_loan_decimals(cls, value: object) -> Decimal:
+        """Ensure loan numeric fields are Decimal."""
+        if isinstance(value, Decimal):
+            return value
+        return Decimal(str(value))
+
+
+class ContributingPath(BaseModel):
+    """Explainability record of a trust path from an anchor to a target node."""
+
+    path: list[str] = Field(description="Sequence of node IDs [anchor, ..., target]")
+    hop_weights: list[Decimal] = Field(description="Edge weights along each hop")
+    path_trust: Decimal = Field(description="Total attenuated trust contribution of this path")
+
+
+class CreditAssessment(BaseModel):
+    """Dual-axis credit evaluation report."""
+
+    user_id: str = Field(description="Evaluated borrower user ID")
+    r_graph: Decimal = Field(description="Graph trust score propagated from institutional anchors")
+    s_cashflow: Decimal = Field(description="Repayment capacity score derived from cash-flow signals")
+    mu_composite: Decimal = Field(description="Expected repayment capacity (weighted blend)")
+    sigma2_epistemic: Decimal = Field(
+        description="Epistemic uncertainty [0.0, 1.0]. High uncertainty indicates thin file, not bad credit."
+    )
+    score_final: Decimal = Field(
+        description="Lower Confidence Bound (LCB) decision score: mu - kappa * sqrt(sigma2)"
+    )
+    max_loan_limit: Decimal = Field(description="Maximum eligible borrowing limit in INR")
+    currency: str = Field(default="INR", description="ISO 4217 currency code")
+    contributing_paths: list[ContributingPath] = Field(
+        default_factory=list, description="Audit list of paths backing this borrower"
+    )
+    timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    disclaimer: str = Field(
+        default="Illustrative data — prototype recommendation, not validated financial advice."
+    )
+
