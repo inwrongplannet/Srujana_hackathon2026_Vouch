@@ -6,7 +6,12 @@ Web-of-trust credit engine, dual-axis underwriting, and lending simulations.
 - **Propagation & Underwriting Complete:** Anchor path traversal, geometric hop attenuation ($\lambda = 0.5$), per-path cycle absorption, cash-flow scoring, and Lower Confidence Bound (LCB) loan limit derivation.
 - **Lending & Slashing Complete:** In-memory lending service, repayment boosts, and atomic 4-level slashing cascade on default.
 - **Trust Lifecycle & Reputation Ledger Complete:** Immutable append-only event store (ACID SQLite + POSIX JSONL mirror), SHA-256 cryptographic hash chaining, strict idempotency enforcement, and disaster recovery via deterministic state replay.
-- **Test Suite Complete:** 43 comprehensive unit tests covering models, vouch conservation, propagation, slashing, and cryptographic ledger integrity.
+- **Credit Decisioning & Optimization Suite Complete:**
+  - **Rule-based affordability engine:** Computes disposable income $D = I - E - B$, protected minimum cash buffer $B$, and maximum affordable monthly instalments under explicit policy caps (ITI/FOIR $\le 40\%$, DTI $\le 50\%$). Treats missing or unverified information separately from low affordability.
+  - **Loan optimizer using Google OR-Tools:** Solves discrete search grid with CP-SAT constraint programming, optimizing for either lowest total borrowing cost (`MIN_COST`) or largest sustainable principal (`MAX_PRINCIPAL`). Outputs original request, best feasible alternative, EMI, total interest, and binding constraints.
+  - **Monte Carlo stress tester:** Simulates thousands of stochastic financial scenarios (income volatility, payment delays, emergency expense shocks) using reproducible seeded pseudo-random sampling (no ML). Measures shortfall frequency, 5th-percentile adverse residual cash, and the exact income shock tolerance boundary.
+  - **Explanation and evidence engine:** Generates traceable, auditable natural language explanations from the exact rules that fired, evaluating Financial Capacity, Evidence Reliability, Graph Reputation, and Stress-Test Resilience as four separate dimensions.
+- **Test Suite Complete:** 60 comprehensive unit tests covering models, vouch conservation, propagation, slashing, cryptographic ledger integrity, affordability rules, OR-Tools optimization, Monte Carlo stress testing, and explanation synthesis.
 
 ## Run
 Create and activate a virtual environment, install dependencies, and run the engine:
@@ -182,6 +187,12 @@ python main.py --demo                         # Run automated walkthrough simula
 | `history [user_id]` | View chronological reputation mutations, delta, and evidence |
 | `audit` | Verify SHA-256 hash chain from Genesis to Head for tamper detection |
 | `replay [--restore]` | Deterministically reconstruct protocol state from raw events |
+| `optimize <amt> [-t tenure] [-b borrower] [--objective MIN_COST/MAX_PRINCIPAL]` | Run rule-based affordability, OR-Tools optimization, Monte Carlo stress testing & explanation |
+| `counterfactual <amt> [-t tenure] [-b borrower]` | Deterministic what-if simulator computing exact Delta I, Delta E, Delta T, Delta P remedies |
+| `stress-compare -pa <amt> -ta <t> -pb <amt> -tb <t>` | Compare two loan plans side-by-side under identical seeded Monte Carlo futures |
+| `simulate-attack [--attack sybil/collusion/dilution/burst/all]` | Adversarial attack simulator testing graph invariants & defensive safeguards |
+| `audit-decision <amt> [-t tenure] [-b borrower]` | Forensic decision explorer: explicit rule traces, primary evidence, paths, and sensitivity |
+| `recourse file/resolve/audit` | Borrower dispute workflow, evidence quality classification & score recalculation audit |
 | `graph` | Visualize the Web-of-Trust network |
 | `denounce <id> [--reason]` | Denounce bad actor and trigger 4-level slashing cascade |
 | `reset` | Reset state to clean demo seed data |
@@ -195,15 +206,30 @@ python main.py --demo                         # Run automated walkthrough simula
   - `config.py`: Dynamic configuration loaded from environment or `.env` (`K`, `ALPHA`, `BETA`, `HOP_DECAY`, `GAMMA`, etc.).
   - `scoring.py`: Credibility path enumeration, hop decay, cycle absorption, and dual-axis underwriting.
   - `lending.py`: In-memory loan lifecycle, repayments, 4-level slashing cascade, and settlement yields.
+  - `affordability.py`: Rule-based affordability engine ($D = I - E - B$, protected cash buffer $B$, ITI/FOIR $\le 40\%$, DTI $\le 50\%$).
+  - `optimizer.py`: Google OR-Tools CP-SAT optimizer for loan plan restructuring (`MIN_COST` vs `MAX_PRINCIPAL`).
+  - `stress_tester.py`: Seeded pseudo-random Monte Carlo stress tester (5,000 simulations, comparative dashboards).
+  - `explainer.py`: Multi-dimensional explanation and evidence engine across Financial Capacity, Evidence Reliability, Graph Reputation, and Stress Resilience.
+  - `counterfactual.py`: Deterministic counterfactual loan simulator computing sensitivity margins and remedies.
+  - `attack_simulator.py`: Web-of-Trust attack simulator (Sybil cliques, collusion rings, sponsor dilution, burst anomalies).
+  - `audit_explorer.py`: Forensic decision explorer detailing numerical rule traces, evidence links, and sensitivity deltas.
+  - `recourse.py`: Borrower recourse protocol, evidence-quality tracking (`MISSING`, `STALE`, `DUPLICATED`, `DISPUTED`), and recalculation audit.
 - `tests/`: Pytest unit tests for all mathematical invariants, state transitions, and ledger integrity.
 - `main.py`: End-to-end interactive CLI demonstration.
-- `requirements.txt`: Python package requirements (`pydantic`, `networkx`, `pytest`).
+- `requirements.txt`: Python package requirements (`pydantic`, `networkx`, `ortools`, `pytest`).
 
 ## Interfaces
 - **`TrustEngine`**: Core graph state manager exposing `create_user()`, `vouch()`, `unvouch()`.
 - **`CreditScorer`**: Underwriting interface exposing `assess_credit(user_id) -> CreditAssessment`.
 - **`LendingService`**: Lending lifecycle interface exposing `borrow()`, `repay()`, `default_loan()`.
 - **`ReputationLedger`**: Immutable event store exposing `append_event()`, `get_history()`, `verify_integrity()`, `reconstruct_state()`.
+- **`AffordabilityEngine`**: Evaluates disposable income, minimum cash buffer, and maximum affordable EMI.
+- **`LoanOptimizer`**: Google OR-Tools CP-SAT solver generating optimal feasible plans and restructuring alternatives.
+- **`MonteCarloStressTester`**: Evaluates shortfall risk, adverse 5th-percentile cash, and side-by-side plan comparisons.
+- **`CounterfactualSimulator`**: Evaluates parameter sweeps and derives exact required adjustments ($\Delta I, \Delta E, \Delta T, \Delta P$).
+- **`TrustGraphAttackSimulator`**: Evaluates Sybil cliques, collusion rings, sponsor dilution, and temporal burst anomalies.
+- **`DecisionAuditExplorer`**: Forensic inspection of rule thresholds, graph paths, evidence, and input sensitivity.
+- **`BorrowerRecourseWorkflow`**: Dispute filing, evidence corrections, recalculation tracking, and quality auditing.
 - **CLI**: Executed via `python main.py`.
 
 ## Config
@@ -229,12 +255,16 @@ Run the complete test suite:
 pytest -v
 
 # Run individual test files
-pytest tests/test_trust.py       # Out-degree conservation, hop decay, multi-anchor sum
-pytest tests/test_cycles.py      # Per-path cycle absorption, Sybil ring absorption
-pytest tests/test_credit.py      # Dual-axis scoring, thin vs rich file, LCB derivation
-pytest tests/test_reputation.py  # Repayment yields, atomic 4-level slashing cascade
-pytest tests/test_ledger.py      # Cryptographic hash chain, tamper detection, replay
-pytest tests/test_models.py      # Pydantic schemas, Decimal validation
+pytest tests/test_trust.py          # Out-degree conservation, hop decay, multi-anchor sum
+pytest tests/test_cycles.py         # Per-path cycle absorption, Sybil ring absorption
+pytest tests/test_credit.py         # Dual-axis scoring, thin vs rich file, LCB derivation
+pytest tests/test_reputation.py     # Repayment yields, atomic 4-level slashing cascade
+pytest tests/test_ledger.py         # Cryptographic hash chain, tamper detection, replay
+pytest tests/test_models.py         # Pydantic schemas, Decimal validation
+pytest tests/test_affordability.py  # D = I - E - B, buffer floors, FOIR/DTI caps
+pytest tests/test_optimizer.py      # Google OR-Tools CP-SAT solver, MIN_COST & MAX_PRINCIPAL
+pytest tests/test_stress_tester.py  # Seeded Monte Carlo simulations, break income, shock tolerance
+pytest tests/test_explainer.py      # 4-dimension explanation engine, traceable rules
 ```
 
 ## Notes

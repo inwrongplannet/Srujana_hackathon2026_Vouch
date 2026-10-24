@@ -51,13 +51,42 @@ class LendingService:
         self._tx_counter: int = 0
         self._loan_counter: int = 0
 
+    def sync_counters(self) -> None:
+        """Synchronize internal counters with loaded loans and transactions to avoid collisions."""
+        for lid in self.loans:
+            if lid.startswith("LN_"):
+                try:
+                    num = int(lid[3:])
+                    if num > self._loan_counter:
+                        self._loan_counter = num
+                except ValueError:
+                    pass
+        for tx in self.transactions:
+            if tx.tx_id.startswith("TX_"):
+                try:
+                    num = int(tx.tx_id[3:])
+                    if num > self._tx_counter:
+                        self._tx_counter = num
+                except ValueError:
+                    pass
+
     def _next_tx_id(self) -> str:
+        self.sync_counters()
         self._tx_counter += 1
-        return f"TX_{self._tx_counter:05d}"
+        new_id = f"TX_{self._tx_counter:05d}"
+        while any(tx.tx_id == new_id for tx in self.transactions):
+            self._tx_counter += 1
+            new_id = f"TX_{self._tx_counter:05d}"
+        return new_id
 
     def _next_loan_id(self) -> str:
+        self.sync_counters()
         self._loan_counter += 1
-        return f"LN_{self._loan_counter:05d}"
+        new_id = f"LN_{self._loan_counter:05d}"
+        while new_id in self.loans:
+            self._loan_counter += 1
+            new_id = f"LN_{self._loan_counter:05d}"
+        return new_id
 
     def borrow(
         self,
@@ -88,15 +117,26 @@ class LendingService:
         if not borrower:
             raise ValueError(f"Borrower '{borrower_id}' does not exist.")
 
+        if amount <= Decimal("0.0"):
+            raise ValueError(f"Loan amount must be positive, got INR {amount:,.2f}.")
+
+        if tenure_months <= 0:
+            raise ValueError(f"Loan tenure must be positive, got {tenure_months} months.")
+
         if borrower.status != "ACTIVE":
             raise ValueError(f"Borrower '{borrower_id}' is '{borrower.status}' and cannot take loans.")
 
-        # Evaluate current credit capacity
+        # Evaluate current credit capacity and existing active exposure
         assessment = self.scorer.assess_credit(borrower_id)
-        if amount > assessment.max_loan_limit:
+        current_active_debt = sum(
+            l.outstanding_balance for l in self.loans.values()
+            if l.borrower_id == borrower_id and l.status == "ACTIVE"
+        )
+        if current_active_debt + amount > assessment.max_loan_limit:
+            remaining = max(Decimal("0.00"), assessment.max_loan_limit - current_active_debt)
             raise ValueError(
                 f"Requested loan amount INR {amount:,.2f} exceeds approved credit limit "
-                f"INR {assessment.max_loan_limit:,.2f} (Score: {assessment.score_final})."
+                f"(Remaining limit: INR {remaining:,.2f}, Active loans: INR {current_active_debt:,.2f}, Max limit: INR {assessment.max_loan_limit:,.2f})."
             )
 
         loan_id = self._next_loan_id()
@@ -185,6 +225,9 @@ class LendingService:
         loan = self.loans.get(loan_id)
         if not loan:
             raise ValueError(f"Loan '{loan_id}' does not exist.")
+
+        if amount <= Decimal("0.0"):
+            raise ValueError(f"Repayment amount must be positive, got INR {amount:,.2f}.")
 
         if loan.status != "ACTIVE":
             raise ValueError(f"Cannot repay loan '{loan_id}' with status '{loan.status}'.")

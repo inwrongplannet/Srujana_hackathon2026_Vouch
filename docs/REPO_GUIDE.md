@@ -53,6 +53,7 @@ A zone is a top-level folder with its own `AGENTS.md` (`backend/`, `frontend/`, 
 | `docs/API_CONTRACT.md` | Lets frontend and backend be built in parallel | At kickoff, then ongoing |
 | `docs/TASKS.md` | Task board; how work is assigned | Via `/task` |
 | `docs/DECISIONS.md` | Log of choices and dependencies; pitch material | Via `/decide` |
+| `docs/OR_TOOLS_AND_MONTE_CARLO.md` | Technical rationale for OR-Tools optimization and Monte Carlo stress testing | Ongoing |
 | `docs/DEMO.md` | Demo script and fallback plan | Mid-event, finalized in last 20% |
 | `docs/features/` | One manifest per feature; feeds README table and `/status` | As features start |
 | `docs/templates/` | Fixed formats for tasks, spike write-ups, feature manifests | Before event |
