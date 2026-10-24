@@ -8,17 +8,18 @@ from decimal import Decimal
 from typing import Optional
 import networkx as nx
 
-from veritrust.models import FinancialFeatures, User, Vouch
+from veritrust.models import Evidence, FinancialFeatures, User, Vouch
 
 
 class TrustEngine:
     """Core Web-of-Trust graph engine maintaining participants and endorsements."""
 
-    def __init__(self) -> None:
-        """Initialize empty graph and registries."""
+    def __init__(self, ledger: Optional[object] = None) -> None:
+        """Initialize empty graph, registries, and optional reputation ledger."""
         self.graph: nx.DiGraph = nx.DiGraph()
         self.users: dict[str, User] = {}
         self.vouches: dict[str, Vouch] = {}  # key: f"{source}_{target}"
+        self.ledger = ledger
 
     def create_user(
         self,
@@ -27,6 +28,8 @@ class TrustEngine:
         initial_reputation: Decimal = Decimal("0.0"),
         is_anchor: bool = False,
         financial_features: Optional[FinancialFeatures] = None,
+        evidence: Optional[Evidence] = None,
+        event_id: Optional[str] = None,
     ) -> User:
         """Create and register a new user node in the system.
 
@@ -36,6 +39,8 @@ class TrustEngine:
             initial_reputation: Starting reputation score (anchors start > 0).
             is_anchor: True if this is an institutional seed anchor.
             financial_features: Optional cash-flow metrics.
+            evidence: Optional verifiable evidence backing node creation.
+            event_id: Optional unique event ID for idempotency control.
 
         Returns:
             The created User instance.
@@ -47,6 +52,20 @@ class TrustEngine:
             raise ValueError(f"User with ID '{user_id}' already exists.")
 
         rep = Decimal(str(initial_reputation))
+        ff_payload = financial_features.model_dump(mode="json") if financial_features else None
+
+        # Record immutable event in ledger first (Source of Truth)
+        if self.ledger is not None:
+            self.ledger.append_event(
+                event_type="USER_REGISTERED",
+                actor_id=user_id if not is_anchor else "SYSTEM_ANCHOR",
+                subject_id=user_id,
+                delta_reputation=rep,
+                payload={"name": name, "is_anchor": is_anchor, "financial_features": ff_payload},
+                evidence=evidence,
+                event_id=event_id,
+            )
+
         user = User(
             user_id=user_id,
             name=name,
@@ -114,12 +133,20 @@ class TrustEngine:
             if key in self.vouches:
                 self.vouches[key].weight = weight
 
-    def vouch(self, source_id: str, target_id: str) -> Vouch:
+    def vouch(
+        self,
+        source_id: str,
+        target_id: str,
+        evidence: Optional[Evidence] = None,
+        event_id: Optional[str] = None,
+    ) -> Vouch:
         """Establish a directed trust endorsement from source to target.
 
         Args:
             source_id: User ID of the endorser.
             target_id: User ID of the endorsed borrower.
+            evidence: Optional verifiable evidence backing the endorsement.
+            event_id: Optional unique event ID for idempotency control.
 
         Returns:
             The created Vouch record with conserved weight.
@@ -150,7 +177,22 @@ class TrustEngine:
         if self.graph.has_edge(source_id, target_id):
             raise ValueError(f"Active vouch from '{source_id}' to '{target_id}' already exists.")
 
-        # Insert edge into graph
+        # Compute conserved weight that will be assigned
+        n_out = len(list(self.graph.out_edges(source_id))) + 1
+        expected_weight = source.capacity / Decimal(n_out)
+
+        # Record immutable event in ledger first (Source of Truth)
+        if self.ledger is not None:
+            self.ledger.append_event(
+                event_type="VOUCH_CREATED",
+                actor_id=source_id,
+                subject_id=target_id,
+                payload={"assigned_weight": str(expected_weight)},
+                evidence=evidence,
+                event_id=event_id,
+            )
+
+        # Insert edge into graph and register vouch
         self.graph.add_edge(source_id, target_id, weight=Decimal("0.0"))
 
         vouch_record = Vouch(
@@ -169,12 +211,20 @@ class TrustEngine:
         vouch_record.weight = self.graph[source_id][target_id]["weight"]
         return vouch_record
 
-    def unvouch(self, source_id: str, target_id: str) -> None:
+    def unvouch(
+        self,
+        source_id: str,
+        target_id: str,
+        evidence: Optional[Evidence] = None,
+        event_id: Optional[str] = None,
+    ) -> None:
         """Remove an existing endorsement and reallocate capacity among remaining siblings.
 
         Args:
             source_id: User ID of endorser.
             target_id: User ID of endorsed borrower.
+            evidence: Optional verifiable evidence explaining revocation.
+            event_id: Optional unique event ID for idempotency control.
 
         Raises:
             ValueError: If no active vouch exists.
@@ -182,11 +232,23 @@ class TrustEngine:
         if not self.graph.has_edge(source_id, target_id):
             raise ValueError(f"No active vouch found from '{source_id}' to '{target_id}'.")
 
+        key = f"{source_id}_{target_id}"
+
+        # Record immutable event in ledger first (Source of Truth)
+        if self.ledger is not None:
+            self.ledger.append_event(
+                event_type="VOUCH_REVOKED",
+                actor_id=source_id,
+                subject_id=target_id,
+                payload={"revoked_vouch": key},
+                evidence=evidence,
+                event_id=event_id,
+            )
+
         # Remove edge from graph
         self.graph.remove_edge(source_id, target_id)
 
         # Update vouch record
-        key = f"{source_id}_{target_id}"
         if key in self.vouches:
             self.vouches[key].active = False
             self.vouches[key].weight = Decimal("0.0")

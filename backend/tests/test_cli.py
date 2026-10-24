@@ -98,3 +98,21 @@ def test_peer_to_peer_lending():
     assert loan.principal == Decimal("10000.00")
     assert loan.status == "ACTIVE"
 
+
+def test_cli_subparser_registration():
+    """Verify that ledger subcommands are properly registered in the parser."""
+    from veritrust.cli import build_parser
+
+    parser = build_parser()
+    args_hist = parser.parse_args(["history", "BOB"])
+    assert args_hist.subcommand == "history"
+    assert args_hist.user_id == "BOB"
+
+    args_audit = parser.parse_args(["audit"])
+    assert args_audit.subcommand == "audit"
+
+    args_replay = parser.parse_args(["replay", "--restore"])
+    assert args_replay.subcommand == "replay"
+    assert args_replay.restore is True
+
+

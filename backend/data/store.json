@@ -1,6 +1,6 @@
 {
   "version": "1.0",
-  "updated_at": "2026-10-24T17:07:59.341980+00:00",
+  "updated_at": "2026-10-24T18:04:50.858693+00:00",
   "users": [
     {
       "user_id": "ANCHOR_BANK",
@@ -11,18 +11,18 @@
       "is_anchor": true,
       "financial_features": null,
       "n_settled_loans": 0,
-      "created_at": "2026-10-24T17:07:59.339468Z"
+      "created_at": "2026-10-24T18:04:50.803496Z"
     },
     {
       "user_id": "ALICE",
       "name": "Alice (Community Leader)",
-      "reputation": "11.0",
-      "capacity": "11.0",
+      "reputation": "10.0",
+      "capacity": "10.0",
       "status": "ACTIVE",
       "is_anchor": false,
       "financial_features": null,
       "n_settled_loans": 0,
-      "created_at": "2026-10-24T17:07:59.339487Z"
+      "created_at": "2026-10-24T18:04:50.814322Z"
     },
     {
       "user_id": "BOB",
@@ -41,7 +41,7 @@
         "completeness": "0.90"
       },
       "n_settled_loans": 0,
-      "created_at": "2026-10-24T17:07:59.339504Z"
+      "created_at": "2026-10-24T18:04:50.824839Z"
     },
     {
       "user_id": "CHARLIE",
@@ -52,29 +52,7 @@
       "is_anchor": false,
       "financial_features": null,
       "n_settled_loans": 0,
-      "created_at": "2026-10-24T17:07:59.339510Z"
-    },
-    {
-      "user_id": "DAVID",
-      "name": "David Miller",
-      "reputation": "2.0",
-      "capacity": "2.0",
-      "status": "ACTIVE",
-      "is_anchor": false,
-      "financial_features": null,
-      "n_settled_loans": 1,
-      "created_at": "2026-10-24T17:07:59.339514Z"
-    },
-    {
-      "user_id": "Noodles",
-      "name": "IAteNoodles",
-      "reputation": "0.0",
-      "capacity": "0.0",
-      "status": "ACTIVE",
-      "is_anchor": false,
-      "financial_features": null,
-      "n_settled_loans": 0,
-      "created_at": "2026-10-24T17:07:59.339518Z"
+      "created_at": "2026-10-24T18:04:50.836188Z"
     }
   ],
   "vouches": [
@@ -84,62 +62,17 @@
       "target": "ALICE",
       "weight": "20.0",
       "active": true,
-      "created_at": "2026-10-24T17:07:59.341520Z"
+      "created_at": "2026-10-24T18:04:50.847648Z"
     },
     {
       "vouch_id": "V_ALICE_BOB",
       "source": "ALICE",
       "target": "BOB",
-      "weight": "3.666666666666666666666666667",
+      "weight": "10.0",
       "active": true,
-      "created_at": "2026-10-24T17:07:59.341532Z"
-    },
-    {
-      "vouch_id": "V_ALICE_CHARLIE",
-      "source": "ALICE",
-      "target": "CHARLIE",
-      "weight": "3.666666666666666666666666667",
-      "active": true,
-      "created_at": "2026-10-24T17:07:59.341538Z"
-    },
-    {
-      "vouch_id": "V_ALICE_DAVID",
-      "source": "ALICE",
-      "target": "DAVID",
-      "weight": "3.666666666666666666666666667",
-      "active": true,
-      "created_at": "2026-10-24T17:07:59.341542Z"
+      "created_at": "2026-10-24T18:04:50.858558Z"
     }
   ],
-  "loans": [
-    {
-      "loan_id": "LN_00001",
-      "borrower_id": "DAVID",
-      "lender_id": null,
-      "principal": "25000",
-      "outstanding_balance": "0",
-      "interest_rate": "0.10",
-      "tenure_months": 6,
-      "status": "REPAID",
-      "created_at": "2026-10-24T17:07:59.341642Z"
-    }
-  ],
-  "transactions": [
-    {
-      "tx_id": "TX_00001",
-      "user_id": "DAVID",
-      "amount": "25000",
-      "currency": "INR",
-      "tx_type": "DISBURSEMENT",
-      "timestamp": "2026-10-24T17:07:59.341649Z"
-    },
-    {
-      "tx_id": "TX_00001",
-      "user_id": "DAVID",
-      "amount": "25000",
-      "currency": "INR",
-      "tx_type": "REPAYMENT",
-      "timestamp": "2026-10-24T17:07:59.341842Z"
-    }
-  ]
+  "loans": [],
+  "transactions": []
 }
