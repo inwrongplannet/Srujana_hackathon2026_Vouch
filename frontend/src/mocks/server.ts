@@ -19,7 +19,7 @@ import type {
   DemoIdentity,
 } from '@/api/types';
 import { D, Decimal, PARAMS } from './engine/params';
-import { capacity, edgeWeights, edgeKey, rGraph, type GraphEdge, type GraphNode } from './engine/graph';
+import { capacity, edgeWeights, edgeKey, rGraph, type GraphNode } from './engine/graph';
 import { score, type CashflowProfile, type DataSources } from './engine/scoring';
 import { demoEmi, delta0For } from './engine/loan';
 import { breakerTrips, cascade } from './engine/slashing';
