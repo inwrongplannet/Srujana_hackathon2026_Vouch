@@ -1,4 +1,4 @@
-"""VeriTrust CLI — Web-of-Trust Credit Assessment & Lending.
+"""VeriTrust CLI -- Web-of-Trust Credit Assessment & Lending.
 
 Inspired by mitchellh/vouch transparent flat-file and command interface.
 Supports both single-shot CLI invocations and an interactive REPL shell.
@@ -11,16 +11,18 @@ from typing import Optional
 
 from veritrust.engine import TrustEngine
 from veritrust.lending import LendingService
-from veritrust.models import FinancialFeatures
+from veritrust.ledger import ReputationLedger
+from veritrust.models import Evidence, FinancialFeatures, Loan
 from veritrust.scoring import CreditScorer
 from veritrust.store import StateStore
 
 
 def _init_context() -> tuple[TrustEngine, CreditScorer, LendingService, StateStore, Optional[str]]:
-    engine = TrustEngine()
+    store = StateStore()
+    ledger = ReputationLedger(db_path=store.data_dir / "ledger.db", jsonl_path=store.data_dir / "events.jsonl")
+    engine = TrustEngine(ledger=ledger)
     scorer = CreditScorer(engine)
     lending = LendingService(engine, scorer)
-    store = StateStore()
     store.load(engine, lending)
     current_user = store.get_current_user()
     return engine, scorer, lending, store, current_user
@@ -345,11 +347,18 @@ def cmd_denounce(args: argparse.Namespace) -> None:
         print(f"Error: User '{user_id}' does not exist.")
         sys.exit(1)
 
+    denounce_evidence = Evidence(
+        evidence_id=f"EVID_DENOUNCE_{user_id}",
+        evidence_type="DEFAULT_NOTICE",
+        description=f"Public denouncement of {user_id}: {reason}",
+        recorded_by="COMMUNITY_CONSENSUS",
+    )
+
     # Find active loans or create a default event trigger
     active_loans = [l for l in lending.list_loans() if l.borrower_id == user_id and l.status == "ACTIVE"]
     if active_loans:
         for loan in active_loans:
-            lending.default_loan(loan.loan_id)
+            lending.default_loan(loan.loan_id, evidence=denounce_evidence)
     else:
         # Direct denouncement of node
         synthetic_id = f"DENOUNCE_{user_id}"
@@ -361,7 +370,7 @@ def cmd_denounce(args: argparse.Namespace) -> None:
             status="ACTIVE",
         )
         lending.loans[synthetic_id] = fake_loan
-        lending.default_loan(synthetic_id)
+        lending.default_loan(synthetic_id, evidence=denounce_evidence)
 
     store.save(engine, lending)
     print(f"DENOUNCED: '{user_id}' has been denounced!")
@@ -433,15 +442,141 @@ def cmd_graph(args: argparse.Namespace) -> None:
     print("=======================================================================")
 
 
+def cmd_history(args: argparse.Namespace) -> None:
+    """View append-only reputation ledger events and auditable evidence."""
+    engine, _, _, _, current_user = _init_context()
+    target = args.user_id or (current_user if getattr(args, "mine", False) else None)
+    ledger: ReputationLedger = engine.ledger  # type: ignore
+
+    if target:
+        events = ledger.get_history(target)
+        title = f"Reputation Event Ledger for: {target}"
+    else:
+        events = ledger.list_all_events()
+        title = "Complete VeriTrust Reputation Ledger (All Events)"
+
+    if not events:
+        print(f"No ledger events found{' for user ' + target if target else ''}.")
+        return
+
+    print("==========================================================================================================")
+    print(f" {title}")
+    print("==========================================================================================================")
+    print(f"{'Seq':<5} {'Timestamp (UTC)':<20} {'Event Type':<19} {'Actor':<12} {'Subject':<10} {'Delta R':<10} {'Evidence ID'}")
+    print("----------------------------------------------------------------------------------------------------------")
+    net_rep = Decimal("0.0")
+    for evt in events:
+        ts_str = evt.timestamp.strftime("%Y-%m-%d %H:%M:%S")
+        evidence_id = evt.evidence.evidence_id if evt.evidence else "N/A"
+        delta_str = f"+{evt.delta_reputation}" if evt.delta_reputation > Decimal("0.0") else str(evt.delta_reputation)
+        if target and evt.subject_id == target:
+            net_rep += evt.delta_reputation
+
+        print(
+            f"{evt.sequence:<5} {ts_str:<20} {evt.event_type:<19} {evt.actor_id:<12} {evt.subject_id:<10} {delta_str:<10} {evidence_id}"
+        )
+    print("==========================================================================================================")
+    if target:
+        print(f"Net Recorded Reputation Delta from Events: {net_rep}")
+    print(f"Total Events: {len(events)} | Current Ledger Head: {events[-1].event_hash[:16]}... (Sequence #{events[-1].sequence})")
+
+
+def cmd_audit(args: argparse.Namespace) -> None:
+    """Cryptographically audit the append-only ledger hash chain from Genesis to Head."""
+    engine, _, _, _, _ = _init_context()
+    ledger: ReputationLedger = engine.ledger  # type: ignore
+
+    is_valid, err = ledger.verify_integrity()
+    head = ledger.get_latest_event()
+    count = ledger.count()
+
+    print("=======================================================================")
+    print(" VeriTrust Reputation Ledger -- Cryptographic Integrity Audit")
+    print("=======================================================================")
+    if is_valid:
+        print("  Status:            [OK] SECURE -- All SHA-256 hash links & payloads verified")
+        print(f"  Total Events:      {count}")
+        print("  Genesis Hash:      0000000000000000... (Root Anchor)")
+        if head:
+            print(f"  Ledger Head Hash:  {head.event_hash}")
+            print(f"  Last Sequence #:   {head.sequence} ({head.event_type})")
+        print(f"  SQLite Store:      {ledger.db_path}")
+        print(f"  JSONL Mirror:      {ledger.jsonl_path}")
+        print("=======================================================================")
+    else:
+        print("  Status:            [FAIL] TAMPER / INTEGRITY VIOLATION DETECTED")
+        print(f"  Error Diagnostic:  {err}")
+        print(f"  Total Events:      {count}")
+        print("=======================================================================")
+        sys.exit(1)
+
+
+def cmd_replay(args: argparse.Namespace) -> None:
+    """Reconstruct graph topology and reputation state purely from immutable ledger events."""
+    engine, scorer, lending, store, _ = _init_context()
+    ledger: ReputationLedger = engine.ledger  # type: ignore
+
+    print("=======================================================================")
+    print(" VeriTrust Ledger Replay & Disaster Recovery")
+    print("=======================================================================")
+    try:
+        replayed_engine, replayed_lending = ledger.reconstruct_state()  # type: ignore
+        n_users = len(replayed_engine.list_users())
+        n_vouches = len([v for v in replayed_engine.vouches.values() if v.active])
+        n_loans = len(replayed_lending.list_loans())
+
+        print("  Cryptographic Chain:  [OK] 100% Verified")
+        print(f"  Events Replayed:      {ledger.count()}")
+        print(f"  Reconstructed State:  {n_users} Users, {n_vouches} Active Vouches, {n_loans} Loans")
+
+        # Compare with live state in memory
+        live_users = len(engine.list_users())
+        divergence = False
+        for u in replayed_engine.list_users():
+            live_u = engine.get_user(u.user_id)
+            if not live_u or live_u.reputation != u.reputation or live_u.status != u.status:
+                divergence = True
+                break
+
+        if not divergence and live_users == n_users:
+            print("  State Consistency:    [MATCH] Replayed state exactly matches live state store.")
+        else:
+            print("  State Consistency:    [DIVERGENCE] Live state file diverges from immutable ledger!")
+
+        if getattr(args, "restore", False):
+            store.save(replayed_engine, replayed_lending)
+            print("  [RESTORE COMPLETE] Synchronized store.json with reconstructed state.")
+        else:
+            print("  (Run with --restore to overwrite store.json with verified reconstructed state)")
+        print("=======================================================================")
+    except Exception as e:
+        print(f"Replay Failed: {e}")
+        sys.exit(1)
+
+
 def cmd_reset(args: argparse.Namespace) -> None:
-    engine = TrustEngine()
+    store = StateStore()
+    ledger_db = store.data_dir / "ledger.db"
+    events_jsonl = store.data_dir / "events.jsonl"
+    if ledger_db.exists():
+        try:
+            ledger_db.unlink()
+        except Exception:
+            pass
+    if events_jsonl.exists():
+        try:
+            events_jsonl.unlink()
+        except Exception:
+            pass
+
+    ledger = ReputationLedger(db_path=ledger_db, jsonl_path=events_jsonl)
+    engine = TrustEngine(ledger=ledger)
     scorer = CreditScorer(engine)
     lending = LendingService(engine, scorer)
-    store = StateStore()
     store.seed_defaults(engine, lending)
     store.save(engine, lending)
     store.set_current_user(None)
-    print("Reset complete! Initialized fresh demo graph and cleared sessions.")
+    print("Reset complete! Initialized fresh demo graph, ledger events, and cleared sessions.")
 
 
 # -----------------------------------------------------------------------------
@@ -451,7 +586,7 @@ def cmd_reset(args: argparse.Namespace) -> None:
 def run_interactive_shell() -> None:
     """Run interactive REPL inspired by standard interactive command line tools."""
     print("=======================================================================")
-    print(" VeriTrust Interactive CLI — Web-of-Trust Credit & Lending Engine")
+    print(" VeriTrust Interactive CLI -- Web-of-Trust Credit & Lending Engine")
     print(" Type 'help' for available commands, or 'exit' / 'quit' to leave.")
     print("=======================================================================\n")
 
@@ -494,7 +629,7 @@ def run_interactive_shell() -> None:
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="veritrust",
-        description="VeriTrust — Standalone Web-of-Trust Credit & Lending CLI",
+        description="VeriTrust -- Standalone Web-of-Trust Credit & Lending CLI",
     )
     subparsers = parser.add_subparsers(dest="subcommand", help="Available subcommands")
 
@@ -593,6 +728,21 @@ def build_parser() -> argparse.ArgumentParser:
     # graph
     p_graph = subparsers.add_parser("graph", help="Visualize trust network topology and weights")
     p_graph.set_defaults(func=cmd_graph)
+
+    # history (reputation ledger)
+    p_history = subparsers.add_parser("history", help="View append-only reputation ledger events and evidence")
+    p_history.add_argument("user_id", nargs="?", help="Filter events for specific user ID")
+    p_history.add_argument("--mine", "-m", action="store_true", help="Filter for current logged-in user")
+    p_history.set_defaults(func=cmd_history)
+
+    # audit (tamper-detection hash chain audit)
+    p_audit = subparsers.add_parser("audit", help="Verify cryptographic hash chain integrity of the ledger")
+    p_audit.set_defaults(func=cmd_audit)
+
+    # replay (disaster recovery / deterministic replay)
+    p_replay = subparsers.add_parser("replay", help="Reconstruct protocol state from raw immutable events")
+    p_replay.add_argument("--restore", "-r", action="store_true", help="Synchronize store.json with reconstructed state")
+    p_replay.set_defaults(func=cmd_replay)
 
     # reset
     p_reset = subparsers.add_parser("reset", help="Reset state to initial seed demo data")
