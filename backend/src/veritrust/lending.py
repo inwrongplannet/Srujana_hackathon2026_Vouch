@@ -10,7 +10,7 @@ from typing import Optional
 
 from veritrust.config import get_settings
 from veritrust.engine import TrustEngine
-from veritrust.models import Loan, Transaction
+from veritrust.models import Evidence, Loan, Transaction
 from veritrust.scoring import CreditScorer
 
 
@@ -66,6 +66,7 @@ class LendingService:
         tenure_months: int = 6,
         interest_rate: Decimal = Decimal("0.10"),
         lender_id: Optional[str] = None,
+        event_id: Optional[str] = None,
     ) -> Loan:
         """Issue a loan to borrower_id after verifying their credit assessment limit.
 
@@ -75,6 +76,7 @@ class LendingService:
             tenure_months: Loan tenure in months.
             interest_rate: Annual interest rate as a decimal fraction.
             lender_id: Optional peer lender user ID.
+            event_id: Optional unique event ID for idempotency control.
 
         Returns:
             The newly created and activated Loan record.
@@ -98,6 +100,17 @@ class LendingService:
             )
 
         loan_id = self._next_loan_id()
+
+        # Record immutable event in ledger first (Source of Truth)
+        if self.engine.ledger is not None:
+            self.engine.ledger.append_event(
+                event_type="LOAN_DISBURSED",
+                actor_id=lender_id or borrower_id,
+                subject_id=borrower_id,
+                payload={"loan_id": loan_id, "principal": str(amount), "tenure_months": tenure_months},
+                event_id=event_id,
+            )
+
         loan = Loan(
             loan_id=loan_id,
             borrower_id=borrower_id,
@@ -118,6 +131,7 @@ class LendingService:
             tx_type="DISBURSEMENT",
         )
         self.transactions.append(tx)
+
         return loan
 
     def lend(
@@ -143,7 +157,13 @@ class LendingService:
             lender_id=lender_id,
         )
 
-    def repay(self, loan_id: str, amount: Decimal) -> Loan:
+    def repay(
+        self,
+        loan_id: str,
+        amount: Decimal,
+        evidence: Optional[Evidence] = None,
+        event_id: Optional[str] = None,
+    ) -> Loan:
         """Apply a repayment against an active loan.
 
         If the loan balance reaches zero, marks the loan REPAID, increments the
@@ -153,6 +173,8 @@ class LendingService:
         Args:
             loan_id: ID of the loan to repay.
             amount: Repayment amount in INR.
+            evidence: Optional settlement receipt evidence.
+            event_id: Optional unique event ID for idempotency control.
 
         Returns:
             The updated Loan record.
@@ -169,7 +191,24 @@ class LendingService:
 
         # Cap payment to outstanding balance
         actual_payment = min(amount, loan.outstanding_balance)
-        loan.outstanding_balance -= actual_payment
+        new_balance = loan.outstanding_balance - actual_payment
+
+        # Record repayment event in ledger first (Source of Truth)
+        if self.engine.ledger is not None:
+            self.engine.ledger.append_event(
+                event_type="LOAN_REPAID",
+                actor_id=loan.borrower_id,
+                subject_id=loan.borrower_id,
+                payload={
+                    "loan_id": loan_id,
+                    "payment_amount": str(actual_payment),
+                    "remaining_balance": str(new_balance),
+                },
+                evidence=evidence,
+                event_id=event_id,
+            )
+
+        loan.outstanding_balance = new_balance
 
         # Record repayment transaction
         tx = Transaction(
@@ -185,6 +224,22 @@ class LendingService:
             loan.status = "REPAID"
             borrower = self.engine.get_user(loan.borrower_id)
             if borrower:
+                settle_evidence = evidence or Evidence(
+                    evidence_id=f"EVID_SETTLE_{loan_id}",
+                    evidence_type="SETTLEMENT_RECEIPT",
+                    description=f"Full debt settlement receipt for loan {loan_id}",
+                    recorded_by=borrower.user_id,
+                )
+                if self.engine.ledger is not None:
+                    self.engine.ledger.append_event(
+                        event_type="REPUTATION_MINTED",
+                        actor_id="SYSTEM_SETTLEMENT_ORACLE",
+                        subject_id=borrower.user_id,
+                        delta_reputation=self.borrower_reward,
+                        payload={"reason": "borrower_loan_settled", "loan_id": loan_id},
+                        evidence=settle_evidence,
+                    )
+
                 # Mint borrower credibility yield
                 borrower.n_settled_loans += 1
                 borrower.reputation += self.borrower_reward
@@ -197,6 +252,22 @@ class LendingService:
                 for sponsor_id, _ in in_edges:
                     sponsor = self.engine.get_user(sponsor_id)
                     if sponsor and sponsor.status == "ACTIVE":
+                        if self.engine.ledger is not None:
+                            sponsor_evidence = Evidence(
+                                evidence_id=f"EVID_SPONSOR_{loan_id}_{sponsor_id}",
+                                evidence_type="COMMUNITY_VOUCH",
+                                description=f"Sponsorship reward for vouched borrower {borrower.user_id} settlement",
+                                recorded_by="SYSTEM_SETTLEMENT_ORACLE",
+                            )
+                            self.engine.ledger.append_event(
+                                event_type="REPUTATION_MINTED",
+                                actor_id="SYSTEM_SETTLEMENT_ORACLE",
+                                subject_id=sponsor_id,
+                                delta_reputation=self.sponsor_reward,
+                                payload={"reason": "sponsor_endorsement_yield", "loan_id": loan_id},
+                                evidence=sponsor_evidence,
+                            )
+
                         sponsor.reputation += self.sponsor_reward
                         sponsor.update_capacity()
                         self.engine._sync_node_to_graph(sponsor)
@@ -204,7 +275,13 @@ class LendingService:
 
         return loan
 
-    def default_loan(self, loan_id: str, delta0: Optional[Decimal] = None) -> None:
+    def default_loan(
+        self,
+        loan_id: str,
+        delta0: Optional[Decimal] = None,
+        evidence: Optional[Evidence] = None,
+        event_id: Optional[str] = None,
+    ) -> None:
         """Trigger an atomic 4-level slashing cascade on loan default.
 
         Rules (Skill: slashing-cascade):
@@ -213,7 +290,7 @@ class LendingService:
             k = 2 (Transitive ancestor Z): delta_Z = 0.25 * delta0; if R_Z < 0 -> RESTRICTED
             k >= 3: delta = 0 (Hard boundary cutoff)
 
-        All penalties and weight redistributions are applied atomically.
+        All penalties, evidence references, and weight redistributions are applied atomically.
         """
         loan = self.loans.get(loan_id)
         if not loan:
@@ -222,7 +299,6 @@ class LendingService:
         if loan.status != "ACTIVE":
             raise ValueError(f"Cannot default loan '{loan_id}' with status '{loan.status}'.")
 
-        loan.status = "DEFAULTED"
         slash_amount = delta0 if delta0 is not None else self.default_base_slash
         defaulter_id = loan.borrower_id
         defaulter = self.engine.get_user(defaulter_id)
@@ -230,9 +306,39 @@ class LendingService:
         if not defaulter:
             return
 
+        default_notice = evidence or Evidence(
+            evidence_id=f"EVID_DEFAULT_{loan_id}",
+            evidence_type="DEFAULT_NOTICE",
+            description=f"Grace period expired without debt servicing on loan {loan_id}",
+            recorded_by="SYSTEM_LOAN_ORACLE",
+        )
+
+        # Record immutable event in ledger first (Source of Truth)
+        if self.engine.ledger is not None:
+            self.engine.ledger.append_event(
+                event_type="LOAN_DEFAULTED",
+                actor_id="SYSTEM_LOAN_ORACLE",
+                subject_id=defaulter_id,
+                payload={"loan_id": loan_id, "outstanding_balance": str(loan.outstanding_balance)},
+                evidence=default_notice,
+                event_id=event_id,
+            )
+
+        loan.status = "DEFAULTED"
+
         # -------------------------------------------------------------
         # Level k = 0: Defaulter
         # -------------------------------------------------------------
+        if self.engine.ledger is not None:
+            self.engine.ledger.append_event(
+                event_type="REPUTATION_SLASHED",
+                actor_id="SYSTEM_SLASHING_ORACLE",
+                subject_id=defaulter_id,
+                delta_reputation=-slash_amount,
+                payload={"cascade_level": 0, "loan_id": loan_id, "delta0": str(slash_amount)},
+                evidence=default_notice,
+            )
+
         defaulter.reputation -= slash_amount
         defaulter.status = "DEFAULTED"
         defaulter.capacity = Decimal("0.0")
@@ -257,6 +363,22 @@ class LendingService:
 
             sponsor = self.engine.get_user(sponsor_id)
             if sponsor:
+                if self.engine.ledger is not None:
+                    self.engine.ledger.append_event(
+                        event_type="REPUTATION_SLASHED",
+                        actor_id="SYSTEM_SLASHING_ORACLE",
+                        subject_id=sponsor_id,
+                        delta_reputation=-delta_1,
+                        payload={
+                            "cascade_level": 1,
+                            "loan_id": loan_id,
+                            "defaulter_id": defaulter_id,
+                            "w_ab": str(w_ab),
+                            "penalty": str(delta_1),
+                        },
+                        evidence=default_notice,
+                    )
+
                 sponsor.reputation -= delta_1
                 if sponsor.reputation < Decimal("0.0") and sponsor.status == "ACTIVE":
                     sponsor.status = "RESTRICTED"
@@ -276,6 +398,21 @@ class LendingService:
         for ancestor_id in k2_ancestors:
             ancestor = self.engine.get_user(ancestor_id)
             if ancestor:
+                if self.engine.ledger is not None:
+                    self.engine.ledger.append_event(
+                        event_type="REPUTATION_SLASHED",
+                        actor_id="SYSTEM_SLASHING_ORACLE",
+                        subject_id=ancestor_id,
+                        delta_reputation=-delta_2,
+                        payload={
+                            "cascade_level": 2,
+                            "loan_id": loan_id,
+                            "defaulter_id": defaulter_id,
+                            "penalty": str(delta_2),
+                        },
+                        evidence=default_notice,
+                    )
+
                 ancestor.reputation -= delta_2
                 if ancestor.reputation < Decimal("0.0") and ancestor.status == "ACTIVE":
                     ancestor.status = "RESTRICTED"

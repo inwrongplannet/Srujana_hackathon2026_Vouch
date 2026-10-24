@@ -187,3 +187,72 @@ class CreditAssessment(BaseModel):
         default="Illustrative data — prototype recommendation, not validated financial advice."
     )
 
+
+class Evidence(BaseModel):
+    """Verifiable evidence backing a reputation mutation event."""
+
+    evidence_id: str = Field(description="Unique identifier for the evidence")
+    evidence_type: Literal[
+        "COMMUNITY_VOUCH",
+        "SETTLEMENT_RECEIPT",
+        "BANK_STATEMENT",
+        "DEFAULT_NOTICE",
+        "GOVERNANCE_OVERRIDE",
+        "IDENTITY_ANCHOR",
+    ] = Field(default="COMMUNITY_VOUCH", description="Category of evidence")
+    uri_or_hash: str = Field(default="", description="Content hash, DigiLocker URI, or receipt reference")
+    description: str = Field(description="Human-readable explanation of the evidence")
+    recorded_by: str = Field(description="Actor or authority who submitted this evidence")
+    timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+
+class LedgerEvent(BaseModel):
+    """Immutable, cryptographically chained event in the VeriTrust Reputation Ledger."""
+
+    event_id: str = Field(description="Unique event identifier (e.g. 'EVT_00001')")
+    sequence: int = Field(default=0, description="Sequential index in the append-only ledger")
+    event_type: Literal[
+        "USER_REGISTERED",
+        "VOUCH_CREATED",
+        "VOUCH_REVOKED",
+        "LOAN_DISBURSED",
+        "LOAN_REPAID",
+        "LOAN_DEFAULTED",
+        "REPUTATION_SLASHED",
+        "REPUTATION_MINTED",
+    ] = Field(description="Specific lifecycle event type")
+    actor_id: str = Field(description="Entity triggering this action (user, lender, or system)")
+    subject_id: str = Field(description="Target node whose trust or standing is affected")
+    timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    delta_reputation: Decimal = Field(
+        default=Decimal("0.0"), description="Signed change in subject reputation from this event"
+    )
+    evidence: Optional[Evidence] = Field(default=None, description="Auditable evidence reference")
+    payload: dict = Field(default_factory=dict, description="Event-specific metadata")
+    prev_hash: str = Field(default="", description="SHA-256 hash of the immediately preceding event")
+    event_hash: str = Field(default="", description="SHA-256 hash of this event's canonical fields")
+
+    @field_validator("delta_reputation", mode="before")
+    @classmethod
+    def parse_delta(cls, value: object) -> Decimal:
+        """Coerce delta_reputation to Decimal."""
+        if isinstance(value, Decimal):
+            return value
+        return Decimal(str(value))
+
+    def compute_hash(self) -> str:
+        """Compute deterministic SHA-256 hash for tamper detection."""
+        import hashlib, json
+        payload_canonical = json.dumps(self.payload, sort_keys=True, default=str)
+        if self.evidence:
+            evidence_str = json.dumps(self.evidence.model_dump(mode="json"), sort_keys=True, default=str)
+        else:
+            evidence_str = ""
+        raw = (
+            f"{self.prev_hash}|{self.event_id}|{self.sequence}|{self.event_type}|"
+            f"{self.actor_id}|{self.subject_id}|{str(self.delta_reputation)}|"
+            f"{self.timestamp.isoformat()}|{evidence_str}|{payload_canonical}"
+        )
+        return hashlib.sha256(raw.encode("utf-8")).hexdigest()
+
+

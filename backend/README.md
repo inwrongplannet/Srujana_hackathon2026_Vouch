@@ -5,7 +5,8 @@ Web-of-trust credit engine, dual-axis underwriting, and lending simulations.
 - **Core Engine Complete:** User nodes, NetworkX DiGraph builder, out-degree capacity conservation, and atomic sibling re-weighting.
 - **Propagation & Underwriting Complete:** Anchor path traversal, geometric hop attenuation ($\lambda = 0.5$), per-path cycle absorption, cash-flow scoring, and Lower Confidence Bound (LCB) loan limit derivation.
 - **Lending & Slashing Complete:** In-memory lending service, repayment boosts, and atomic 4-level slashing cascade on default.
-- **Test Suite Complete:** Unit tests covering models, vouch conservation, propagation, and slashing.
+- **Trust Lifecycle & Reputation Ledger Complete:** Immutable append-only event store (ACID SQLite + POSIX JSONL mirror), SHA-256 cryptographic hash chaining, strict idempotency enforcement, and disaster recovery via deterministic state replay.
+- **Test Suite Complete:** 43 comprehensive unit tests covering models, vouch conservation, propagation, slashing, and cryptographic ledger integrity.
 
 ## Run
 Create and activate a virtual environment, install dependencies, and run the engine:
@@ -61,6 +62,9 @@ python main.py vouch DAVID                    # Vouch for David as Alice
 python main.py borrow 15000                   # Borrow INR 15,000 within credit limit
 python main.py lend CHARLIE 5000              # Peer-to-peer lend to Charlie
 python main.py repay LN_00001 15000           # Repay active loan
+python main.py history BOB                    # View audit trail of all reputation events for Bob
+python main.py audit                          # Cryptographically audit SHA-256 ledger hash chain
+python main.py replay --restore               # Deterministically reconstruct state from raw events
 python main.py denounce CHARLIE               # Denounce bad actor and trigger slashing
 python main.py graph                          # Inspect Web-of-Trust graph topology
 python main.py --demo                         # Run automated walkthrough simulation
@@ -119,28 +123,41 @@ python main.py --demo                         # Run automated walkthrough simula
    ```
    *Full settlement achieved! David’s reputation is boosted ($R + 2.0$), and Alice receives sponsor yield ($R + 1.0$).*
 
-9. **Peer-to-peer lending (Alice funds Charlie directly):**
+9. **Audit the Cryptographic Reputation Ledger:**
    ```bash
-   python main.py login ALICE
-   python main.py vouch CHARLIE
-   python main.py lend CHARLIE 5000
+   python main.py history BOB
+   python main.py audit
    ```
-   *Alice funds Charlie's loan directly. The contract tracks Alice as the lender.*
+   *Displays the immutable history of all events impacting Bob's score, attached settlement evidence, and verifies the complete SHA-256 hash chain from Genesis to Head.*
 
-10. **View the Trust Graph:**
+10. **Peer-to-peer lending (Alice funds Charlie directly):**
+    ```bash
+    python main.py login ALICE
+    python main.py vouch CHARLIE
+    python main.py lend CHARLIE 5000
+    ```
+    *Alice funds Charlie's loan directly. The contract tracks Alice as the lender.*
+
+11. **View the Trust Graph:**
     ```bash
     python main.py graph
     ```
     *Displays an ASCII tree of all nodes, active endorsements, and edge weights.*
 
-11. **Denounce a bad actor / trigger default:**
+12. **Denounce a bad actor / trigger default:**
     ```bash
     python main.py denounce CHARLIE --reason "Default on micro-loan"
     python main.py check CHARLIE
     ```
     *Charlie is marked `DEFAULTED`, capacity is frozen to 0, and the **atomic 4-level slashing cascade** penalizes Alice and transitive ancestors.*
 
-12. **Reset state back to fresh seed data:**
+13. **Disaster Recovery & State Replay:**
+    ```bash
+    python main.py replay --restore
+    ```
+    *Replays all raw immutable events from genesis, verifies cryptographic integrity, and reconstructs the full graph and loan state.*
+
+14. **Reset state back to fresh seed data:**
     ```bash
     python main.py reset
     ```
@@ -162,6 +179,9 @@ python main.py --demo                         # Run automated walkthrough simula
 | `repay <loan_id> <amount>` | Repay an active loan (boosts reputation on full payment) |
 | `lend <borrower> <amount>` | Directly fund/lend to another user |
 | `loans [--mine]` | List active and past loans |
+| `history [user_id]` | View chronological reputation mutations, delta, and evidence |
+| `audit` | Verify SHA-256 hash chain from Genesis to Head for tamper detection |
+| `replay [--restore]` | Deterministically reconstruct protocol state from raw events |
 | `graph` | Visualize the Web-of-Trust network |
 | `denounce <id> [--reason]` | Denounce bad actor and trigger 4-level slashing cascade |
 | `reset` | Reset state to clean demo seed data |
@@ -169,12 +189,13 @@ python main.py --demo                         # Run automated walkthrough simula
 ## Structure
 - `localdocs/`: Architectural briefings and implementation specifications.
 - `src/veritrust/`: Production engine package.
-  - `models.py`: Pydantic domain entities (`User`, `Transaction`, `Vouch`, `Loan`, `CreditAssessment`).
-  - `engine.py`: NetworkX graph management, user creation, vouch/unvouch, and capacity conservation.
+  - `models.py`: Pydantic domain entities (`User`, `Transaction`, `Vouch`, `Loan`, `CreditAssessment`, `Evidence`, `LedgerEvent`).
+  - `ledger.py`: Append-only event store (`ReputationLedger`), SHA-256 cryptographic hash chaining, idempotency enforcement, and state reconstruction.
+  - `engine.py`: NetworkX graph management, user creation, vouch/unvouch, capacity conservation, and ledger event dispatch.
   - `config.py`: Dynamic configuration loaded from environment or `.env` (`K`, `ALPHA`, `BETA`, `HOP_DECAY`, `GAMMA`, etc.).
   - `scoring.py`: Credibility path enumeration, hop decay, cycle absorption, and dual-axis underwriting.
-  - `lending.py`: In-memory loan lifecycle, repayments, and 4-level slashing cascade.
-- `tests/`: Pytest unit tests for all mathematical invariants and state transitions.
+  - `lending.py`: In-memory loan lifecycle, repayments, 4-level slashing cascade, and settlement yields.
+- `tests/`: Pytest unit tests for all mathematical invariants, state transitions, and ledger integrity.
 - `main.py`: End-to-end interactive CLI demonstration.
 - `requirements.txt`: Python package requirements (`pydantic`, `networkx`, `pytest`).
 
@@ -182,6 +203,7 @@ python main.py --demo                         # Run automated walkthrough simula
 - **`TrustEngine`**: Core graph state manager exposing `create_user()`, `vouch()`, `unvouch()`.
 - **`CreditScorer`**: Underwriting interface exposing `assess_credit(user_id) -> CreditAssessment`.
 - **`LendingService`**: Lending lifecycle interface exposing `borrow()`, `repay()`, `default_loan()`.
+- **`ReputationLedger`**: Immutable event store exposing `append_event()`, `get_history()`, `verify_integrity()`, `reconstruct_state()`.
 - **CLI**: Executed via `python main.py`.
 
 ## Config
@@ -211,6 +233,7 @@ pytest tests/test_trust.py       # Out-degree conservation, hop decay, multi-anc
 pytest tests/test_cycles.py      # Per-path cycle absorption, Sybil ring absorption
 pytest tests/test_credit.py      # Dual-axis scoring, thin vs rich file, LCB derivation
 pytest tests/test_reputation.py  # Repayment yields, atomic 4-level slashing cascade
+pytest tests/test_ledger.py      # Cryptographic hash chain, tamper detection, replay
 pytest tests/test_models.py      # Pydantic schemas, Decimal validation
 ```
 

@@ -146,6 +146,55 @@ class StateStore:
                 )
                 lending.transactions.append(tx)
 
+            # If ledger exists and is empty, bootstrap genesis events for audit continuity
+            if getattr(engine, "ledger", None) is not None and engine.ledger.count() == 0:
+                from veritrust.models import Evidence
+                for u in engine.list_users():
+                    engine.ledger.append_event(
+                        event_type="USER_REGISTERED",
+                        actor_id="GENESIS_ANCHOR" if u.is_anchor else u.user_id,
+                        subject_id=u.user_id,
+                        delta_reputation=u.reputation,
+                        payload={
+                            "name": u.name,
+                            "is_anchor": u.is_anchor,
+                            "financial_features": u.financial_features.model_dump(mode="json") if u.financial_features else None,
+                        },
+                        evidence=Evidence(
+                            evidence_id=f"EVID_GENESIS_{u.user_id}",
+                            evidence_type="IDENTITY_ANCHOR" if u.is_anchor else "COMMUNITY_VOUCH",
+                            description=f"Genesis bootstrapping of node {u.user_id}",
+                            recorded_by="SYSTEM_BOOTSTRAP",
+                        ),
+                    )
+                for v in engine.vouches.values():
+                    if v.active:
+                        engine.ledger.append_event(
+                            event_type="VOUCH_CREATED",
+                            actor_id=v.source,
+                            subject_id=v.target,
+                            payload={"assigned_weight": str(v.weight)},
+                            evidence=Evidence(
+                                evidence_id=f"EVID_GENESIS_VOUCH_{v.source}_{v.target}",
+                                evidence_type="COMMUNITY_VOUCH",
+                                description=f"Genesis endorsement from {v.source} to {v.target}",
+                                recorded_by="SYSTEM_BOOTSTRAP",
+                            ),
+                        )
+                for l in lending.list_loans():
+                    engine.ledger.append_event(
+                        event_type="LOAN_DISBURSED",
+                        actor_id=l.lender_id or l.borrower_id,
+                        subject_id=l.borrower_id,
+                        payload={"loan_id": l.loan_id, "principal": str(l.principal), "tenure_months": l.tenure_months},
+                        evidence=Evidence(
+                            evidence_id=f"EVID_GENESIS_LOAN_{l.loan_id}",
+                            evidence_type="SETTLEMENT_RECEIPT",
+                            description=f"Genesis loan contract {l.loan_id}",
+                            recorded_by="SYSTEM_BOOTSTRAP",
+                        ),
+                    )
+
             return True
         except Exception:
             self.seed_defaults(engine, lending)
