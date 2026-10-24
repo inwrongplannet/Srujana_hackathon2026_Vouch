@@ -1,6 +1,6 @@
 # VeriTrust — Implementation & Architecture Plan
 
-**Status:** Implemented & Verified (All 5 Stages Complete)  
+**Status:** Awaiting User Approval (No Code Implemented Yet)  
 **Location:** `backend/localdocs/Implementation_Doc.md`  
 **Reference:** `backend/localdocs/Init_Arch.md`  
 **Design Principle:** Clean, modular, and uncomplicated. Python standard library + NetworkX + Pydantic. No smart contracts.
@@ -202,13 +202,12 @@ backend/
 
 ---
 
-## 4. Implementation Verification
+## 4. Approval Request
 
-All 5 core stages have been fully implemented, integrated, and verified against unit tests:
-1. `models.py` (User, Transaction, Vouch, Loan, CreditAssessment, Evidence, LedgerEvent)
-2. `engine.py` (User creation, Graph ingestion, Vouch & Unvouch with capacity conservation)
-3. `lending.py` (Borrow, Repay, Default cascade, Settlement reputation yields)
-4. `scoring.py` (Hop decay trust propagation, cycle absorption, Dual-axis underwriting)
-5. `ledger.py` (Append-only SQLite + JSONL event ledger with SHA-256 hash chaining)
-6. Comprehensive unit test suite (44 tests passing) and `main.py` CLI walkthrough.
+Please review this revised, focused 5-stage plan. Once approved, I will immediately begin implementation of:
+1. `models.py` (User, Transaction, Vouch, Loan)
+2. `engine.py` (User creation, Graph ingestion, Vouch/Unvouch)
+3. `lending.py` (Borrow, Repay, Default cascade)
+4. `scoring.py` (Trust propagation & Dual-axis scoring)
+5. Comprehensive unit tests and `main.py` CLI runner.
 
