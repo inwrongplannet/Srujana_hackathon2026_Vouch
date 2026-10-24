@@ -106,7 +106,7 @@ The simulation uses fixed pseudo-random seeds. Running the simulation on Plan A 
 
 Google OR-Tools and Monte Carlo stress testing do not operate in isolation. They form a four-layer verification pipeline:
 
-```
+```text
 +-------------------------------------------------------------+
 | LAYER 1: Rule-Based Affordability Engine                     |
 | Computes: D = I - E - B                                     |
