@@ -1,5 +1,6 @@
 """Synthetic dataset generator: known-answer money maths, determinism and self-consistency."""
 
+import csv
 from decimal import Decimal
 
 import pytest
@@ -112,3 +113,22 @@ def test_features_never_read_the_truth_table(borrowers):
     truth_only = {"discipline", "stacker", "inflator", "true_dti_with_new", "default_driver", "expense_ratio"}
     for rows in borrowers:
         assert not truth_only & set(rows["features"][0])
+
+
+def test_combine_tags_every_row_with_its_source(tmp_path):
+    import json
+
+    from veritrust.combine import combine
+    from veritrust.synth.generate import generate
+
+    synth, anchored = tmp_path / "synth", tmp_path / "anchored"
+    generate(8, synth, 2)
+    generate(5, anchored, 1)                      # stand-in for the anchored build: same schema
+    (anchored / "injections.csv").write_bytes((anchored / "truth.csv").read_bytes())
+    manifest = combine(synth, anchored, tmp_path / "combined")
+    assert manifest["files"]["outcomes.csv"]["rows"] == 13
+    with (tmp_path / "combined" / "outcomes.csv").open(encoding="utf-8") as handle:
+        rows = list(csv.DictReader(handle))
+    assert {r["source"] for r in rows} == {"real_anchored", "simulated"}
+    assert all(r["label_definition"] for r in rows)
+    assert json.loads((tmp_path / "combined" / "manifest.json").read_text(encoding="utf-8"))["warning"]

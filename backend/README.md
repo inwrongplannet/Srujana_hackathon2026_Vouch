@@ -177,6 +177,9 @@ PYTHONPATH=src python -m veritrust.anchor.download       # Berka + Home Credit i
 PYTHONPATH=src python -m veritrust.anchor.berka          # refresh berka_calibration.json
 PYTHONPATH=src python -m veritrust.anchor.build --n 30000
 PYTHONPATH=src python -m veritrust.anchor.validate
+
+# One dataset: stack both into ../data/combined (source column on every row)
+PYTHONPATH=src python -m veritrust.combine
 ```
 
 ### Command Cheat Sheet
@@ -213,6 +216,7 @@ PYTHONPATH=src python -m veritrust.anchor.validate
   - `scoring.py`: Credibility path enumeration, hop decay, cycle absorption, and dual-axis underwriting.
   - `lending.py`: In-memory loan lifecycle, repayments, 4-level slashing cascade, and settlement yields.
   - `synth/`: simulated credit world: `params.py` (every assumption), `people.py`, `simulate.py` (monthly cash flow, default emerges), `observe.py` (what a lender sees, reason-coded gaps), `transactions.py` (statement lines and the extractor), `features.py` (model row from observed data only), `generate.py`, `validate.py`.
+  - `combine.py`: stacks the simulated and anchored datasets into one (`source`, `label_definition`, `recommended_use` columns).
   - `anchor/`: hybrid dataset on real Home Credit applicants: `download.py`, `berka.py` (calibration on real Berka accounts, writes `berka_calibration.json`), `build.py`, `validate.py`.
 - `tests/`: Pytest unit tests for all mathematical invariants, state transitions, and ledger integrity.
 - `main.py`: End-to-end interactive CLI demonstration.

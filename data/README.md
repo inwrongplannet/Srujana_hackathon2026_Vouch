@@ -12,6 +12,7 @@
 |---|---|---|
 | `synth/` | `python -m veritrust.synth` | **Simulated world.** Fully synthetic borrowers whose months are simulated; default emerges from cash flow. The hidden truth is known, so "no history" vs "cannot pay" can be checked. |
 | `anchored/` | `python -m veritrust.anchor.build` | **Hybrid.** Real Home Credit applicants (real bureau grids, repayment history, missing values and default label) plus synthetic bank statements generated from each person's real columns. |
+| `combined/` | `python -m veritrust.combine` | **One dataset.** Both of the above stacked into the same tables, every row tagged `source` (`real_anchored` or `simulated`), outcomes tagged `label_definition`, and both answer keys merged into `answer_key.csv`. Fit and calibrate per source; never pool the labels. |
 | `external/` | `python -m veritrust.anchor.download` | Raw public sources: Home Credit mirror (pinned revision) and Berka. Real anonymised rows: never commit, never paste into prompts. |
 
 Commands and requirements: `backend/README.md` (Credit datasets).
