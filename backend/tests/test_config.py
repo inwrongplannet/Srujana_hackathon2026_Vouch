@@ -51,3 +51,4 @@ def test_env_override_alpha_and_gamma(monkeypatch: pytest.MonkeyPatch):
     assert scorer.alpha == Decimal("0.75")
     assert scorer.base_unit_inr == Decimal("15000.00")
     assert lending.gamma == Decimal("0.35")
+

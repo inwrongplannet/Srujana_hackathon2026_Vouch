@@ -150,5 +150,9 @@ def run_demo() -> None:
 
 
 if __name__ == "__main__":
-    run_demo()
+    if len(sys.argv) > 1 and sys.argv[1] == "--demo":
+        run_demo()
+    else:
+        from veritrust.cli import main as cli_main
+        cli_main()
 

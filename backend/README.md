@@ -23,8 +23,22 @@ source .venv/bin/activate
 # Install dependencies
 pip install -r requirements.txt
 
-# Run the CLI demo walkthrough
+# Run the interactive CLI shell (inspired by mitchellh/vouch)
 python main.py
+
+# Or run individual CLI commands directly:
+python main.py users                          # List all users
+python main.py signup DAVID "David Miller"    # Create a new user
+python main.py login ALICE                    # Log in as Alice
+python main.py whoami                         # View current session details & credit limit
+python main.py check BOB                      # Check vouch status & credit limit
+python main.py vouch DAVID                    # Vouch for David as Alice
+python main.py borrow 15000                   # Borrow INR 15,000 within credit limit
+python main.py lend CHARLIE 5000              # Peer-to-peer lend to Charlie
+python main.py repay LN_00001 15000           # Repay active loan
+python main.py denounce CHARLIE               # Denounce bad actor and trigger slashing
+python main.py graph                          # Inspect Web-of-Trust graph topology
+python main.py --demo                         # Run automated walkthrough simulation
 ```
 
 ## Structure

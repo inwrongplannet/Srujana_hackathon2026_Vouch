@@ -126,3 +126,4 @@ class Settings(BaseModel):
 def get_settings() -> Settings:
     """Return an instantiated Settings configuration instance."""
     return Settings()
+

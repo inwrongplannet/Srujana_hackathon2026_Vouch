@@ -135,6 +135,7 @@ class Loan(BaseModel):
 
     loan_id: str = Field(description="Unique loan ID")
     borrower_id: str = Field(description="Borrower user ID")
+    lender_id: Optional[str] = Field(default=None, description="Lender user ID for peer-to-peer lending")
     principal: Decimal = Field(description="Principal loan amount in INR")
     outstanding_balance: Decimal = Field(description="Remaining balance to be settled in INR")
     interest_rate: Decimal = Field(

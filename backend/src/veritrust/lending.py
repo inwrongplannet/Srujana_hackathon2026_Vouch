@@ -65,6 +65,7 @@ class LendingService:
         amount: Decimal,
         tenure_months: int = 6,
         interest_rate: Decimal = Decimal("0.10"),
+        lender_id: Optional[str] = None,
     ) -> Loan:
         """Issue a loan to borrower_id after verifying their credit assessment limit.
 
@@ -73,6 +74,7 @@ class LendingService:
             amount: Requested principal in INR.
             tenure_months: Loan tenure in months.
             interest_rate: Annual interest rate as a decimal fraction.
+            lender_id: Optional peer lender user ID.
 
         Returns:
             The newly created and activated Loan record.
@@ -99,6 +101,7 @@ class LendingService:
         loan = Loan(
             loan_id=loan_id,
             borrower_id=borrower_id,
+            lender_id=lender_id,
             principal=amount,
             outstanding_balance=amount,
             interest_rate=interest_rate,
@@ -116,6 +119,29 @@ class LendingService:
         )
         self.transactions.append(tx)
         return loan
+
+    def lend(
+        self,
+        lender_id: str,
+        borrower_id: str,
+        amount: Decimal,
+        tenure_months: int = 6,
+        interest_rate: Decimal = Decimal("0.10"),
+    ) -> Loan:
+        """Peer-to-peer lending: lender funds a borrower's loan up to their approved limit."""
+        lender = self.engine.get_user(lender_id)
+        if not lender:
+            raise ValueError(f"Lender '{lender_id}' does not exist.")
+        if lender.status != "ACTIVE":
+            raise ValueError(f"Lender '{lender_id}' has status '{lender.status}' and cannot lend.")
+
+        return self.borrow(
+            borrower_id=borrower_id,
+            amount=amount,
+            tenure_months=tenure_months,
+            interest_rate=interest_rate,
+            lender_id=lender_id,
+        )
 
     def repay(self, loan_id: str, amount: Decimal) -> Loan:
         """Apply a repayment against an active loan.
