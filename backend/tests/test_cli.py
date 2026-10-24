@@ -97,3 +97,4 @@ def test_peer_to_peer_lending():
     assert loan.borrower_id == "BOB"
     assert loan.principal == Decimal("10000.00")
     assert loan.status == "ACTIVE"
+
