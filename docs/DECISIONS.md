@@ -1,7 +1,1 @@
-# Decisions
-
-> PLACEHOLDER. Edit only via `/decide`. Newest first.
-
-**Why this file exists:** a running log of what we chose and why (especially new dependencies). Stops repeat debates and doubles as pitch material.
-
-<!-- ENTRIES -->
+2026-10-24: AWS CLI configured with Noodles profile — credentials and config already present in user's ~/.aws/ directory. No changes needed.
