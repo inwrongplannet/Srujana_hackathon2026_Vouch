@@ -48,7 +48,7 @@ Creditworthiness is unbundled into two distinct, mathematically verifiable vecto
 
 Enforce strict **1 Person = 1 Node** while preventing identity leaks:
 
-```
+```text
 Identity Secret  sk  = Poseidon(Aadhaar_raw, Salt_user)
 Node ID (Nullifier)  = Poseidon(sk, Protocol_Salt)
 ```
@@ -73,7 +73,7 @@ Let `X in (0,1)` be the geometric hop decay factor (default `X = 0.5`).
 
 For every simple path `P = (v0, v1, ..., vk)` where `v0 in InstitutionalAnchors` and `vk = T`:
 
-```
+```text
 Trust(P) = W_{v0,v1} * prod_{i=1}^{k-1} (W_{vi,vi+1} * X)
 ```
 
@@ -97,7 +97,7 @@ Downstream defaults are mathematically isolated beyond 2 hops to prevent systemi
 
 The underwriting engine produces a 2D decision vector:
 
-```
+```text
 Decision Vector = [mu_composite, sigma2_epistem]
 
 mu_composite = alpha * R_graph + (1 - alpha) * S_cashflow

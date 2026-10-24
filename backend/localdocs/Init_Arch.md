@@ -43,7 +43,7 @@ NetworkX handles graph traversal and cycle-related operations. Your trust formul
 
 Represent users as nodes and vouches as directed edges.
 
-```
+```json
 user = {    "user_id": "U001",    "reputation": 10.0,    "financial_features": {        "monthly_income": 25000,        "monthly_debt": 5000,        "income_volatility": 0.15    }}vouch = {    "source": "U001",    "target": "U002",    "active": True}
 ```
 
@@ -66,7 +66,7 @@ Use a configurable decay factor, initially \\(\lambda=0.5\\).
 
 The reputation engine consumes simulated events:
 
-```
+```text
 LOAN_REPAID
     → Increase borrower reputation
     → Apply sponsor reward
@@ -97,7 +97,7 @@ The financial model and uncertainty calculation still need to be defined. For th
 
 ## 5. Suggested project structure
 
-```
+```text
 veritrust-engine/
 ├── data/
 │   ├── users.json
