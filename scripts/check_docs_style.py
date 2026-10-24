@@ -12,7 +12,7 @@ from pathlib import Path
 
 from _common import ROOT, project_files
 
-SKIP_PREFIXES = ("docs/templates/",)
+SKIP_PREFIXES = ("docs/templates/", ".claude/skills/")  # skill files are agent instructions, not project docs
 SKIP_FILES = {".github/pull_request_template.md"}
 SKIP_TERMS = {"docs/STYLE.md"}  # documents the banned terms on purpose
 NO_H1_PREFIXES = (".opencode/",)  # thin wrappers: frontmatter plus a few lines

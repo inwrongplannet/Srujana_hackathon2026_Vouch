@@ -129,3 +129,4 @@ Add a line when a human corrects you or you hit a repo-specific gotcha. Prune li
 2026-10-24: Trust score products must use Decimal throughout — float drift silently corrupts graph scores (finance-domain skill).
 2026-10-24: Absence of vouch/cash-flow history means sigma2=1.0 (high uncertainty), NOT R=-1; conflating the two is the exact bureau failure we are solving (dual-axis-scoring skill).
 2026-10-24: Cycle absorption visited-set is per-path, not global — a global set causes valid multi-path trust to be incorrectly zeroed (graph-trust-engine skill).
+2026-10-24: `.claude/skills/` is excluded from `check_docs_style.py` (SKIP_PREFIXES) — skill files are agent instructions authored by tooling with their own conventions, not project documentation.
