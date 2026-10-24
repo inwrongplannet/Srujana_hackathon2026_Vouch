@@ -33,7 +33,7 @@ export function AppShell() {
       <header className="sticky top-0 z-20 border-b border-rule bg-paper/85 backdrop-blur-md">
         <div className="mx-auto grid h-16 max-w-[1320px] grid-cols-[1fr_auto_1fr] items-center gap-4 px-4 sm:px-8">
           <div className="flex items-center gap-4">
-            <Link to="/login" aria-label="VeriTrust home">
+            <Link to="/" aria-label="VeriTrust home">
               <Logo size={24} />
             </Link>
             <span className="hidden h-5 w-px bg-rule-2 lg:block" />

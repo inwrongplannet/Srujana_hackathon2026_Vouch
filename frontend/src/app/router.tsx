@@ -5,9 +5,10 @@ import { BorrowerPage } from '@/routes/BorrowerPage';
 import { VoucherPage } from '@/routes/VoucherPage';
 import { LenderPage } from '@/routes/LenderPage';
 import { ApplicantPage } from '@/routes/ApplicantPage';
+import { LandingPage } from '@/routes/LandingPage';
 
 export const router = createBrowserRouter([
-  { path: '/', element: <Navigate to="/login" replace /> },
+  { path: '/', element: <LandingPage /> },
   { path: '/login', element: <OnboardingPage /> },
   {
     path: '/app',
@@ -20,5 +21,5 @@ export const router = createBrowserRouter([
       { path: 'lender/:nodeId', element: <ApplicantPage /> },
     ],
   },
-  { path: '*', element: <Navigate to="/login" replace /> },
+  { path: '*', element: <Navigate to="/" replace /> },
 ]);

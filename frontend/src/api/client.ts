@@ -89,6 +89,15 @@ export const api = {
     server.reset();
   },
 
+  /** The borrower's file after her first vouch, computed on a scratch server (landing page hero). */
+  async storyPreview(): Promise<VouchPreview> {
+    const scratch = new MockServer(protocolSalt);
+    await scratch.ready;
+    await scratch.register(BORROWER_SEED.rawId!);
+    const snap = scratch.getSnapshot();
+    return scratch.previewVouch(snap.voucherId, snap.borrowerId);
+  },
+
   /**
    * Presenter fallback: replays the story up to `step` (e.g. `?jump=approve` in the URL), so any
    * scene can be shown without clicking through the ones before it.
