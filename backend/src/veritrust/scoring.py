@@ -10,8 +10,9 @@ Implements:
 
 from decimal import Decimal
 import math
-from typing import Iterator
+from typing import Iterator, Optional
 
+from veritrust.config import get_settings
 from veritrust.engine import TrustEngine
 from veritrust.models import ContributingPath, CreditAssessment, FinancialFeatures, User
 
@@ -35,28 +36,29 @@ class CreditScorer:
     def __init__(
         self,
         engine: TrustEngine,
-        hop_decay: Decimal = Decimal("0.5"),
-        alpha: Decimal = Decimal("0.6"),
-        beta: Decimal = Decimal("0.1"),
-        kappa: Decimal = Decimal("1.0"),
-        base_unit_inr: Decimal = Decimal("10000.00"),
+        hop_decay: Optional[Decimal] = None,
+        alpha: Optional[Decimal] = None,
+        beta: Optional[Decimal] = None,
+        kappa: Optional[Decimal] = None,
+        base_unit_inr: Optional[Decimal] = None,
     ) -> None:
-        """Initialize scorer with canonical project weights.
+        """Initialize scorer with configurable parameters.
 
         Args:
             engine: The active TrustEngine instance.
-            hop_decay: Geometric decay factor per intermediate hop (default 0.5).
-            alpha: Weight of graph trust vs cash-flow in composite score (default 0.6).
-            beta: Multiplier exponent for settled loans and incoming vouches (default 0.1).
-            kappa: Epistemic uncertainty penalty parameter for LCB (default 1.0).
-            base_unit_inr: Monetary scale factor per score point (default 10,000 INR).
+            hop_decay: Geometric decay factor per intermediate hop (fallback: config/env).
+            alpha: Weight of graph trust vs cash-flow in composite score (fallback: config/env).
+            beta: Multiplier exponent for settled loans and incoming vouches (fallback: config/env).
+            kappa: Epistemic uncertainty penalty parameter k / kappa for LCB (fallback: config/env).
+            base_unit_inr: Monetary scale factor per score point (fallback: config/env).
         """
+        settings = get_settings()
         self.engine = engine
-        self.hop_decay = hop_decay
-        self.alpha = alpha
-        self.beta = beta
-        self.kappa = kappa
-        self.base_unit_inr = base_unit_inr
+        self.hop_decay = hop_decay if hop_decay is not None else settings.hop_decay
+        self.alpha = alpha if alpha is not None else settings.alpha
+        self.beta = beta if beta is not None else settings.beta
+        self.kappa = kappa if kappa is not None else settings.kappa
+        self.base_unit_inr = base_unit_inr if base_unit_inr is not None else settings.base_unit_inr
 
     def enumerate_paths(
         self,

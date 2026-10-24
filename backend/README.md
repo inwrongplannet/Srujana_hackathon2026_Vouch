@@ -32,6 +32,7 @@ python main.py
 - `src/veritrust/`: Production engine package.
   - `models.py`: Pydantic domain entities (`User`, `Transaction`, `Vouch`, `Loan`, `CreditAssessment`).
   - `engine.py`: NetworkX graph management, user creation, vouch/unvouch, and capacity conservation.
+  - `config.py`: Dynamic configuration loaded from environment or `.env` (`K`, `ALPHA`, `BETA`, `HOP_DECAY`, `GAMMA`, etc.).
   - `scoring.py`: Credibility path enumeration, hop decay, cycle absorption, and dual-axis underwriting.
   - `lending.py`: In-memory loan lifecycle, repayments, and 4-level slashing cascade.
 - `tests/`: Pytest unit tests for all mathematical invariants and state transitions.
@@ -45,8 +46,19 @@ python main.py
 - **CLI**: Executed via `python main.py`.
 
 ## Config
-- No external secrets required for standalone in-memory mode.
-- Arithmetic context: Python `decimal.Decimal` with explicit rounding.
+All algorithmic parameters can be configured via environment variables or a `.env` file (see `.env.example`):
+- `K` / `KAPPA`: Epistemic uncertainty penalty parameter for LCB (default: `1.0`).
+- `ALPHA`: Weight of graph trust vs cash-flow in composite capacity $\mu$ (default: `0.6`).
+- `BETA`: Settled loan and vouch boost exponent (default: `0.1`).
+- `HOP_DECAY` / `LAMBDA`: Geometric hop decay factor (default: `0.5`).
+- `BASE_UNIT_INR`: Base monetary conversion scale per score point in INR (default: `10000.00`).
+- `DEFAULT_BASE_SLASH`: Primary default slash amount $\delta_0$ (default: `10.0`).
+- `GAMMA`: Direct sponsor penalty damping fraction (default: `0.5`).
+- `BORROWER_REWARD`: Settlement reputation reward for borrower (default: `2.0`).
+- `SPONSOR_REWARD`: Settlement reputation reward for sponsor (default: `1.0`).
+- `CIRCUIT_BREAKER_THRESHOLD`: Cluster default rate pause threshold $\theta$ (default: `0.30`).
+- `POSEIDON_PROTOCOL_SALT`: Simulated identity anchor protocol salt (`# ZK_STUB`).
+- `DEMO_MODE`: Boolean flag for deterministic demo paths (default: `true`).
 
 ## Testing
 Run the complete test suite:

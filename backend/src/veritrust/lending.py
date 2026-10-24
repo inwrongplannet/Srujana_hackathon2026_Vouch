@@ -8,6 +8,7 @@ from datetime import datetime, timezone
 from decimal import Decimal
 from typing import Optional
 
+from veritrust.config import get_settings
 from veritrust.engine import TrustEngine
 from veritrust.models import Loan, Transaction
 from veritrust.scoring import CreditScorer
@@ -20,9 +21,10 @@ class LendingService:
         self,
         engine: TrustEngine,
         scorer: CreditScorer,
-        borrower_reward: Decimal = Decimal("2.0"),
-        sponsor_reward: Decimal = Decimal("1.0"),
-        default_base_slash: Decimal = Decimal("10.0"),
+        borrower_reward: Optional[Decimal] = None,
+        sponsor_reward: Optional[Decimal] = None,
+        default_base_slash: Optional[Decimal] = None,
+        gamma: Optional[Decimal] = None,
     ) -> None:
         """Initialize the lending service.
 
@@ -32,12 +34,17 @@ class LendingService:
             borrower_reward: Credibility increment minted to borrower on full repayment.
             sponsor_reward: Credibility increment awarded to direct sponsors on repayment.
             default_base_slash: Primary default penalty delta0.
+            gamma: Sponsor penalty fraction (delta1 = gamma * W_AB * delta0).
         """
+        settings = get_settings()
         self.engine = engine
         self.scorer = scorer
-        self.borrower_reward = borrower_reward
-        self.sponsor_reward = sponsor_reward
-        self.default_base_slash = default_base_slash
+        self.borrower_reward = borrower_reward if borrower_reward is not None else settings.borrower_reward
+        self.sponsor_reward = sponsor_reward if sponsor_reward is not None else settings.sponsor_reward
+        self.default_base_slash = (
+            default_base_slash if default_base_slash is not None else settings.default_base_slash
+        )
+        self.gamma = gamma if gamma is not None else settings.gamma
 
         self.loans: dict[str, Loan] = {}
         self.transactions: list[Transaction] = []
@@ -220,7 +227,7 @@ class LendingService:
 
         for sponsor_id in direct_sponsors:
             w_ab = self.engine.graph[sponsor_id][defaulter_id].get("weight", Decimal("0.0"))
-            delta_1 = Decimal("0.5") * w_ab * slash_amount
+            delta_1 = self.gamma * w_ab * slash_amount
 
             sponsor = self.engine.get_user(sponsor_id)
             if sponsor:
@@ -239,7 +246,7 @@ class LendingService:
         # -------------------------------------------------------------
         # Level k = 2: Transitive Ancestors (Z vouched for A)
         # -------------------------------------------------------------
-        delta_2 = Decimal("0.25") * slash_amount
+        delta_2 = (self.gamma * self.gamma) * slash_amount
         for ancestor_id in k2_ancestors:
             ancestor = self.engine.get_user(ancestor_id)
             if ancestor:
