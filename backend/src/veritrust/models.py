@@ -199,6 +199,8 @@ class Evidence(BaseModel):
         "DEFAULT_NOTICE",
         "GOVERNANCE_OVERRIDE",
         "IDENTITY_ANCHOR",
+        "CONTESTED_RECORD",
+        "DISPUTE_RESOLUTION",
     ] = Field(default="COMMUNITY_VOUCH", description="Category of evidence")
     uri_or_hash: str = Field(default="", description="Content hash, DigiLocker URI, or receipt reference")
     description: str = Field(description="Human-readable explanation of the evidence")
@@ -220,6 +222,8 @@ class LedgerEvent(BaseModel):
         "LOAN_DEFAULTED",
         "REPUTATION_SLASHED",
         "REPUTATION_MINTED",
+        "DISPUTE_FILED",
+        "DISPUTE_RESOLVED",
     ] = Field(description="Specific lifecycle event type")
     actor_id: str = Field(description="Entity triggering this action (user, lender, or system)")
     subject_id: str = Field(description="Target node whose trust or standing is affected")

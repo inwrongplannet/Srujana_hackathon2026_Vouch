@@ -195,3 +195,81 @@ class MonteCarloStressTester:
             resilience_summary=summary,
             reproducibility_seed=cfg.random_seed,
         )
+
+    def compare_plans(
+        self,
+        monthly_income: Decimal,
+        essential_expenses: Decimal,
+        plan_a_emi: Decimal,
+        plan_a_tenure: int,
+        plan_b_emi: Decimal,
+        plan_b_tenure: int,
+        plan_a_name: str = "Plan A (Requested)",
+        plan_b_name: str = "Plan B (Restructured)",
+        initial_cash_buffer: Decimal = Decimal("3000.00"),
+    ) -> "PlanComparativeStressReport":
+        """Compare two loan plans under the EXACT same pseudo-random economic futures."""
+        report_a = self.stress_test(
+            monthly_income=monthly_income,
+            essential_expenses=essential_expenses,
+            monthly_emi=plan_a_emi,
+            tenure_months=plan_a_tenure,
+            initial_cash_buffer=initial_cash_buffer,
+        )
+
+        report_b = self.stress_test(
+            monthly_income=monthly_income,
+            essential_expenses=essential_expenses,
+            monthly_emi=plan_b_emi,
+            tenure_months=plan_b_tenure,
+            initial_cash_buffer=initial_cash_buffer,
+        )
+
+        delta_shortfall = report_b.shortfall_frequency_pct - report_a.shortfall_frequency_pct
+        delta_cash_p05 = report_b.residual_cash_p05 - report_a.residual_cash_p05
+
+        if delta_shortfall < Decimal("0.0"):
+            verdict = f"{plan_b_name} IS SIGNIFICANTLY SAFER"
+            summary = (
+                f"{plan_b_name} reduces default shortfall risk by {abs(delta_shortfall)}% "
+                f"(from {report_a.shortfall_frequency_pct}% down to {report_b.shortfall_frequency_pct}%) "
+                f"and improves the 5th-percentile adverse cash buffer by INR {delta_cash_p05:,.2f} "
+                f"across {self.config.n_simulations:,} identical stochastic economic scenarios."
+            )
+        elif delta_shortfall > Decimal("0.0"):
+            verdict = f"{plan_a_name} HAS LOWER DEFAULT RISK"
+            summary = (
+                f"{plan_a_name} exhibits lower shortfall risk ({report_a.shortfall_frequency_pct}% vs {report_b.shortfall_frequency_pct}%), "
+                f"retaining INR {abs(delta_cash_p05):,.2f} more cash cushion in adverse scenarios."
+            )
+        else:
+            verdict = "BOTH PLANS EXHIBIT EQUAL RESILIENCE"
+            summary = (
+                f"Both plans show identical {report_a.shortfall_frequency_pct}% shortfall probability under stress."
+            )
+
+        return PlanComparativeStressReport(
+            plan_a_name=plan_a_name,
+            plan_b_name=plan_b_name,
+            plan_a_report=report_a,
+            plan_b_report=report_b,
+            delta_shortfall_pct=delta_shortfall,
+            delta_residual_cash_p05=delta_cash_p05,
+            risk_reduction_verdict=verdict,
+            tradeoff_summary=summary,
+            simulations_evaluated=self.config.n_simulations,
+        )
+
+
+class PlanComparativeStressReport(BaseModel):
+    """Side-by-side comparative stress testing report for two loan plans under identical scenarios."""
+
+    plan_a_name: str
+    plan_b_name: str
+    plan_a_report: StressTestReport
+    plan_b_report: StressTestReport
+    delta_shortfall_pct: Decimal  # Shortfall_B - Shortfall_A (negative means B is safer)
+    delta_residual_cash_p05: Decimal  # Cash_B - Cash_A (positive means B has higher cushion)
+    risk_reduction_verdict: str
+    tradeoff_summary: str
+    simulations_evaluated: int

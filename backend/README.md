@@ -188,6 +188,11 @@ python main.py --demo                         # Run automated walkthrough simula
 | `audit` | Verify SHA-256 hash chain from Genesis to Head for tamper detection |
 | `replay [--restore]` | Deterministically reconstruct protocol state from raw events |
 | `optimize <amt> [-t tenure] [-b borrower] [--objective MIN_COST/MAX_PRINCIPAL]` | Run rule-based affordability, OR-Tools optimization, Monte Carlo stress testing & explanation |
+| `counterfactual <amt> [-t tenure] [-b borrower]` | Deterministic what-if simulator computing exact Delta I, Delta E, Delta T, Delta P remedies |
+| `stress-compare -pa <amt> -ta <t> -pb <amt> -tb <t>` | Compare two loan plans side-by-side under identical seeded Monte Carlo futures |
+| `simulate-attack [--attack sybil/collusion/dilution/burst/all]` | Adversarial attack simulator testing graph invariants & defensive safeguards |
+| `audit-decision <amt> [-t tenure] [-b borrower]` | Forensic decision explorer: explicit rule traces, primary evidence, paths, and sensitivity |
+| `recourse file/resolve/audit` | Borrower dispute workflow, evidence quality classification & score recalculation audit |
 | `graph` | Visualize the Web-of-Trust network |
 | `denounce <id> [--reason]` | Denounce bad actor and trigger 4-level slashing cascade |
 | `reset` | Reset state to clean demo seed data |
@@ -203,8 +208,12 @@ python main.py --demo                         # Run automated walkthrough simula
   - `lending.py`: In-memory loan lifecycle, repayments, 4-level slashing cascade, and settlement yields.
   - `affordability.py`: Rule-based affordability engine ($D = I - E - B$, protected cash buffer $B$, ITI/FOIR $\le 40\%$, DTI $\le 50\%$).
   - `optimizer.py`: Google OR-Tools CP-SAT optimizer for loan plan restructuring (`MIN_COST` vs `MAX_PRINCIPAL`).
-  - `stress_tester.py`: Seeded pseudo-random Monte Carlo stress tester (5,000 simulations, shortfall frequency, adverse cash cushion).
+  - `stress_tester.py`: Seeded pseudo-random Monte Carlo stress tester (5,000 simulations, comparative dashboards).
   - `explainer.py`: Multi-dimensional explanation and evidence engine across Financial Capacity, Evidence Reliability, Graph Reputation, and Stress Resilience.
+  - `counterfactual.py`: Deterministic counterfactual loan simulator computing sensitivity margins and remedies.
+  - `attack_simulator.py`: Web-of-Trust attack simulator (Sybil cliques, collusion rings, sponsor dilution, burst anomalies).
+  - `audit_explorer.py`: Forensic decision explorer detailing numerical rule traces, evidence links, and sensitivity deltas.
+  - `recourse.py`: Borrower recourse protocol, evidence-quality tracking (`MISSING`, `STALE`, `DUPLICATED`, `DISPUTED`), and recalculation audit.
 - `tests/`: Pytest unit tests for all mathematical invariants, state transitions, and ledger integrity.
 - `main.py`: End-to-end interactive CLI demonstration.
 - `requirements.txt`: Python package requirements (`pydantic`, `networkx`, `ortools`, `pytest`).
@@ -216,8 +225,11 @@ python main.py --demo                         # Run automated walkthrough simula
 - **`ReputationLedger`**: Immutable event store exposing `append_event()`, `get_history()`, `verify_integrity()`, `reconstruct_state()`.
 - **`AffordabilityEngine`**: Evaluates disposable income, minimum cash buffer, and maximum affordable EMI.
 - **`LoanOptimizer`**: Google OR-Tools CP-SAT solver generating optimal feasible plans and restructuring alternatives.
-- **`MonteCarloStressTester`**: Evaluates shortfall risk, adverse 5th-percentile cash, and income shock tolerance.
-- **`ExplanationEngine`**: Generates natural language audit trails across 4 orthogonal dimensions.
+- **`MonteCarloStressTester`**: Evaluates shortfall risk, adverse 5th-percentile cash, and side-by-side plan comparisons.
+- **`CounterfactualSimulator`**: Evaluates parameter sweeps and derives exact required adjustments ($\Delta I, \Delta E, \Delta T, \Delta P$).
+- **`TrustGraphAttackSimulator`**: Evaluates Sybil cliques, collusion rings, sponsor dilution, and temporal burst anomalies.
+- **`DecisionAuditExplorer`**: Forensic inspection of rule thresholds, graph paths, evidence, and input sensitivity.
+- **`BorrowerRecourseWorkflow`**: Dispute filing, evidence corrections, recalculation tracking, and quality auditing.
 - **CLI**: Executed via `python main.py`.
 
 ## Config

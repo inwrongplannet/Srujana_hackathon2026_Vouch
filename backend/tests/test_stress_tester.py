@@ -95,3 +95,28 @@ def test_stress_tester_resilient_under_healthy_buffer():
     assert report.stress_rating == "RESILIENT"
     assert report.shortfall_probability <= Decimal("0.05")
     assert report.residual_cash_p05 > Decimal("0.00")
+
+
+def test_compare_plans_under_identical_futures():
+    """Verify side-by-side comparison of Plan A (tight tenure) vs Plan B (extended tenure)
+    under the exact same stochastic macro realizations.
+    """
+    tester = MonteCarloStressTester(StressTestScenarioConfig(n_simulations=1000, random_seed=42))
+
+    comparison = tester.compare_plans(
+        monthly_income=Decimal("40000.00"),
+        essential_expenses=Decimal("20000.00"),
+        plan_a_emi=Decimal("15000.00"),  # Aggressive: leaves only 5k cushion
+        plan_a_tenure=6,
+        plan_b_emi=Decimal("7000.00"),   # Extended: leaves 13k cushion
+        plan_b_tenure=12,
+        plan_a_name="Plan A (6m)",
+        plan_b_name="Plan B (12m)",
+    )
+
+    assert comparison.plan_a_name == "Plan A (6m)"
+    assert comparison.plan_b_name == "Plan B (12m)"
+    assert comparison.delta_shortfall_pct < Decimal("0.0")  # Plan B significantly reduces default risk
+    assert comparison.delta_residual_cash_p05 > Decimal("0.0")  # Plan B retains more adverse cushion
+    assert "SIGNIFICANTLY SAFER" in comparison.risk_reduction_verdict
+    assert "Plan B (12m) reduces default shortfall risk" in comparison.tradeoff_summary
