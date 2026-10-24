@@ -55,10 +55,12 @@ Run the complete test suite:
 # In backend directory with .venv activated
 pytest -v
 
-# Run an individual test file
-pytest tests/test_vouch.py
-pytest tests/test_scoring.py
-pytest tests/test_lending.py
+# Run individual test files
+pytest tests/test_trust.py       # Out-degree conservation, hop decay, multi-anchor sum
+pytest tests/test_cycles.py      # Per-path cycle absorption, Sybil ring absorption
+pytest tests/test_credit.py      # Dual-axis scoring, thin vs rich file, LCB derivation
+pytest tests/test_reputation.py  # Repayment yields, atomic 4-level slashing cascade
+pytest tests/test_models.py      # Pydantic schemas, Decimal validation
 ```
 
 ## Notes
