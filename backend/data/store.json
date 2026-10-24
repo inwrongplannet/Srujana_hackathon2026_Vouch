@@ -1,0 +1,78 @@
+{
+  "version": "1.0",
+  "updated_at": "2026-10-24T18:04:50.858693+00:00",
+  "users": [
+    {
+      "user_id": "ANCHOR_BANK",
+      "name": "Microfinance Institutional Anchor",
+      "reputation": "20.0",
+      "capacity": "20.0",
+      "status": "ACTIVE",
+      "is_anchor": true,
+      "financial_features": null,
+      "n_settled_loans": 0,
+      "created_at": "2026-10-24T18:04:50.803496Z"
+    },
+    {
+      "user_id": "ALICE",
+      "name": "Alice (Community Leader)",
+      "reputation": "10.0",
+      "capacity": "10.0",
+      "status": "ACTIVE",
+      "is_anchor": false,
+      "financial_features": null,
+      "n_settled_loans": 0,
+      "created_at": "2026-10-24T18:04:50.814322Z"
+    },
+    {
+      "user_id": "BOB",
+      "name": "Bob (Micro-Business Owner)",
+      "reputation": "0.0",
+      "capacity": "0.0",
+      "status": "ACTIVE",
+      "is_anchor": false,
+      "financial_features": {
+        "monthly_income": "35000.00",
+        "monthly_debt": "6000.00",
+        "net_operating_income": "22000.00",
+        "debt_service": "5000.00",
+        "income_volatility": "0.10",
+        "cashflow_volatility": "0.12",
+        "completeness": "0.90"
+      },
+      "n_settled_loans": 0,
+      "created_at": "2026-10-24T18:04:50.824839Z"
+    },
+    {
+      "user_id": "CHARLIE",
+      "name": "Charlie (New Farmer)",
+      "reputation": "0.0",
+      "capacity": "0.0",
+      "status": "ACTIVE",
+      "is_anchor": false,
+      "financial_features": null,
+      "n_settled_loans": 0,
+      "created_at": "2026-10-24T18:04:50.836188Z"
+    }
+  ],
+  "vouches": [
+    {
+      "vouch_id": "V_ANCHOR_BANK_ALICE",
+      "source": "ANCHOR_BANK",
+      "target": "ALICE",
+      "weight": "20.0",
+      "active": true,
+      "created_at": "2026-10-24T18:04:50.847648Z"
+    },
+    {
+      "vouch_id": "V_ALICE_BOB",
+      "source": "ALICE",
+      "target": "BOB",
+      "weight": "10.0",
+      "active": true,
+      "created_at": "2026-10-24T18:04:50.858558Z"
+    }
+  ],
+  "loans": [],
+  "transactions": []
+}
