@@ -221,3 +221,26 @@ export interface RegisterResponse {
   /** The nullifier already existed: re-registration resolved to the same record. */
   existing: boolean;
 }
+
+export interface VouchPreview {
+  voucherId: string;
+  requesterId: string;
+  capacity: string;
+  /** Each existing edge's weight now, and every edge's weight if this vouch is added. */
+  weightBefore: string | null;
+  weightAfter: string;
+  outDegreeAfter: number;
+  /** The principal the exposure is computed for (open application, or the standard ₹5,000). */
+  principal: Money;
+  delta0: string;
+  /** k=1 penalty on the voucher if the requester defaults. */
+  penaltyIfDefault: string;
+  /** Yield to the voucher if the requester repays. */
+  yieldIfRepaid: string;
+  /** k=2 ancestors who would also be slashed, with their penalty. */
+  ancestors: { node: string; delta: string }[];
+  requesterBefore: ApiAssessment;
+  requesterAfter: ApiAssessment;
+  /** Existing vouchees whose graph trust is diluted by this vouch. */
+  dilution: { node: string; before: string; after: string }[];
+}

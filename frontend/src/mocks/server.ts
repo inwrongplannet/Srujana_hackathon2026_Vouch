@@ -17,6 +17,7 @@ import type {
   Snapshot,
   StoryStep,
   DemoIdentity,
+  VouchPreview,
 } from '@/api/types';
 import { D, Decimal, PARAMS } from './engine/params';
 import { capacity, edgeWeights, edgeKey, rGraph, type GraphNode } from './engine/graph';
@@ -416,6 +417,47 @@ export class MockServer {
       penalties.map((p) => p.node),
       penalties.map<ApiDelta>((p) => ({ node: p.node, delta: p.delta.neg().toString(), k: p.k })),
     );
+  }
+
+  // ---------- vouch preview ----------
+
+  /** What a vouch would cost and change, computed on a throwaway edge, never committed. */
+  previewVouch(voucherId: string, requesterId: string): VouchPreview {
+    const s = this.state;
+    const voucher = s.nodes.get(voucherId)!;
+    const c = capacity(voucher.R);
+    const out = s.edges.filter((e) => e.from === voucherId);
+    const open = s.loans.find((l) => l.borrower === requesterId && l.status === 'APPLIED');
+    const principal = open?.principal ?? D(5000);
+    const d0 = delta0For(principal);
+    const weightAfter = c.div(out.length + 1);
+    const ancestors = s.edges
+      .filter((e) => e.to === voucherId)
+      .map((e) => ({ node: e.from, delta: PARAMS.GAMMA.pow(2).mul(d0).toString() }));
+
+    const requesterBefore = this.assess(requesterId);
+    const siblingsBefore = out.map((e) => ({ node: e.to, before: this.assess(e.to).rGraph }));
+    s.edges.push({ from: voucherId, to: requesterId, createdDay: s.day, lockedLoanId: null });
+    const requesterAfter = this.assess(requesterId);
+    const dilution = siblingsBefore.map((x) => ({ ...x, after: this.assess(x.node).rGraph }));
+    s.edges.pop();
+
+    return {
+      voucherId,
+      requesterId,
+      capacity: c.toString(),
+      weightBefore: out.length ? c.div(out.length).toString() : null,
+      weightAfter: weightAfter.toString(),
+      outDegreeAfter: out.length + 1,
+      principal: inr(principal),
+      delta0: d0.toString(),
+      penaltyIfDefault: PARAMS.GAMMA.mul(weightAfter).mul(d0).toString(),
+      yieldIfRepaid: PARAMS.SPONSOR_YIELD.mul(d0).toString(),
+      ancestors,
+      requesterBefore,
+      requesterAfter,
+      dilution,
+    };
   }
 
   // ---------- what-if ----------

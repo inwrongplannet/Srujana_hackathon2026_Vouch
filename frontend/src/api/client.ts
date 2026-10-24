@@ -11,6 +11,7 @@ import type {
   SimulateRequest,
   SimulateResponse,
   Snapshot,
+  VouchPreview,
 } from './types';
 
 // ZK_STUB: the demo protocol salt is a public test value, not a secret; production uses the
@@ -74,6 +75,10 @@ export const api = {
   async restructure(clusterId: string): Promise<void> {
     await latency();
     server.restructure(clusterId);
+  },
+  async previewVouch(voucherId: string, requesterId: string): Promise<VouchPreview> {
+    await latency(220);
+    return server.previewVouch(voucherId, requesterId);
   },
   async simulate(req: SimulateRequest): Promise<SimulateResponse> {
     await latency(140);

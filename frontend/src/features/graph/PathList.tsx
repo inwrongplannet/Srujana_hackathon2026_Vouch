@@ -30,8 +30,8 @@ export function PathList({
       <thead>
         <tr className="border-b border-ink text-left">
           <th className="eyebrow pb-2 font-medium">Path from an anchor</th>
-          <th className="eyebrow pb-2 text-right font-medium">Hops</th>
-          <th className="eyebrow pb-2 text-right font-medium">Trust</th>
+          <th className="eyebrow w-16 pb-2 pl-4 text-right font-medium">Hops</th>
+          <th className="eyebrow w-24 pb-2 pl-4 text-right font-medium">Trust</th>
         </tr>
       </thead>
       <tbody>
@@ -67,8 +67,8 @@ export function PathList({
                   <span className="block h-full rounded-full bg-neel-500" style={{ width: `${share}%` }} />
                 </span>
               </td>
-              <td className="num py-3 text-right text-ink-2">{p.nodes.length - 1}</td>
-              <td className="num py-3 text-right font-mono">+{fmt(p.trust)}</td>
+              <td className="num py-3 pl-4 text-right text-ink-2">{p.nodes.length - 1}</td>
+              <td className="num py-3 pl-4 text-right font-mono">+{fmt(p.trust)}</td>
             </tr>
           );
         })}
@@ -77,8 +77,8 @@ export function PathList({
             <td className="py-3 pr-3">
               {a.absorbed} loop{a.absorbed > 1 ? 's' : ''} re-entered a node already on the path and {a.absorbed > 1 ? 'were' : 'was'} absorbed
             </td>
-            <td className="py-3 text-right">—</td>
-            <td className="num py-3 text-right font-mono">0.00</td>
+            <td className="py-3 pl-4 text-right">—</td>
+            <td className="num py-3 pl-4 text-right font-mono">0.00</td>
           </tr>
         ) : null}
       </tbody>

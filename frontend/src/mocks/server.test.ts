@@ -78,3 +78,20 @@ describe('demo story on the mock server', () => {
     expect(snap.nodes.p_girija.R).toBe('1');
   });
 });
+
+describe('vouch preview', () => {
+  it("prices Meena's exposure on Lakshmi: W 0.7, default -0.35, yield +0.1, limit 0 -> 6,000", async () => {
+    const s = new MockServer('test-salt');
+    await s.ready;
+    await s.register('000000004821');
+    const p = s.previewVouch('p_meena', BORROWER_ID);
+    expect(p.weightBefore).toBe('0.9333333333333333333333333333333333333333');
+    expect(p.weightAfter).toBe('0.7');
+    expect(p.penaltyIfDefault).toBe('0.35');
+    expect(p.yieldIfRepaid).toBe('0.1');
+    expect(p.requesterBefore.limit.amount).toBe('0');
+    expect(p.requesterAfter.limit.amount).toBe('6000');
+    // Preview never commits.
+    expect(s.getSnapshot().edges.some((e) => e.to === BORROWER_ID)).toBe(false);
+  });
+});

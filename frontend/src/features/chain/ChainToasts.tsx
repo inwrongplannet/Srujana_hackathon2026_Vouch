@@ -22,7 +22,7 @@ export function ChainToasts({ onOpenLedger }: { onOpenLedger: () => void }) {
     const fresh = confirmed.filter((e) => !seen.current!.has(e.id));
     if (fresh.length === 0) return;
     fresh.forEach((e) => seen.current!.add(e.id));
-    setQueue((q) => [...fresh.reverse(), ...q].slice(0, 3));
+    setQueue((q) => [...fresh.reverse(), ...q].slice(0, 2));
   }, [events]);
 
   return (
@@ -42,7 +42,7 @@ export function ChainToasts({ onOpenLedger }: { onOpenLedger: () => void }) {
             fuseColor={isAdverse(e) ? '#A8352A' : '#3D56C2'}
             width={360}
             radius={12}
-            duration={5200}
+            duration={4200}
             className="text-[13px] [&_[role=status]]:border [&_[role=status]]:border-rule [&_[role=status]]:shadow-[var(--shadow-float)]"
           />
         </div>
