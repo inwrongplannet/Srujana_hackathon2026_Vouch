@@ -1,0 +1,20 @@
+# Why: an automatic gate that works without any agent, so a broken or undocumented PR is caught
+# even when nobody ran /review-pr.
+name: check
+on:
+  pull_request:
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    env:
+      CHECK_BASE: origin/${{ github.base_ref }}
+      PR_BODY: ${{ github.event.pull_request.body }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # the docs gates compare against the base branch
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      # TODO(scaffold): set up node (actions/setup-node) and install deps once backend and frontend exist
+      - run: make check

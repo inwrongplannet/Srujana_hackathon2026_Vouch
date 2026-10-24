@@ -1,0 +1,11 @@
+#!/usr/bin/env bash
+# Runs the first working Python 3.10+ it can find, so Makefile, hooks and CI behave the same
+# on Windows (py launcher), macOS and Linux. Usage: bash scripts/py <script.py> [args...]
+for candidate in python3 python py; do
+  if command -v "$candidate" >/dev/null 2>&1 \
+     && "$candidate" -c 'import sys; sys.exit(0 if sys.version_info >= (3, 10) else 1)' >/dev/null 2>&1; then
+    exec "$candidate" "$@"
+  fi
+done
+echo "scripts/py: Python 3.10+ not found (tried python3, python, py)" >&2
+exit 127

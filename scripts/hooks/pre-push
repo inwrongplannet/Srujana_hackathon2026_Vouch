@@ -1,0 +1,9 @@
+#!/usr/bin/env bash
+# Blocks a push when the agent files or docs are out of sync (the same gates CI runs).
+# Installed by `make hooks`. Fix the docs, or add `Docs-Impact: none (<reason>)` /
+# `Agents-Impact: none (<reason>)` to a commit message when there is truly nothing to document.
+# Never bypass with --no-verify.
+cd "$(git rev-parse --show-toplevel)" || exit 1
+bash scripts/py scripts/check_agents.py \
+  && bash scripts/py scripts/check_docs_style.py \
+  && bash scripts/py scripts/check_docs.py

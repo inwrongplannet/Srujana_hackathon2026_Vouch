@@ -1,0 +1,83 @@
+id,date,account_id,merchant,category,amount,currency
+txn_00001,2024-11-05,acc_001,City Transit,transport,-11.14,USD
+txn_00002,2024-11-05,acc_001,Power Co,utilities,-48.96,USD
+txn_00003,2024-11-11,acc_001,Green Grocer,groceries,-60.88,USD
+txn_00004,2024-11-11,acc_001,Water Works,utilities,-75.93,USD
+txn_00005,2024-11-12,acc_001,City Transit,transport,-12.18,USD
+txn_00006,2024-11-13,acc_001,RideNow,transport,-21.20,USD
+txn_00007,2024-11-14,acc_001,Market Hall,groceries,-86.40,USD
+txn_00008,2024-11-14,acc_001,RideNow,transport,-27.27,USD
+txn_00009,2024-11-15,acc_001,Noodle Bar,dining,-25.96,USD
+txn_00010,2024-11-15,acc_001,Power Co,utilities,-95.00,USD
+txn_00011,2024-11-15,acc_001,RideNow,transport,-22.10,USD
+txn_00012,2024-11-16,acc_001,Cafe Aroma,dining,-19.38,USD
+txn_00013,2024-11-18,acc_001,Cafe Aroma,dining,-22.78,USD
+txn_00014,2024-11-18,acc_001,Cinema 9,entertainment,-19.27,USD
+txn_00015,2024-11-22,acc_001,Cinema 9,entertainment,-12.75,USD
+txn_00016,2024-11-24,acc_001,StreamBox,entertainment,-36.75,USD
+txn_00017,2024-11-25,acc_001,Cafe Aroma,dining,-14.08,USD
+txn_00018,2024-11-26,acc_001,Noodle Bar,dining,-21.55,USD
+txn_00019,2024-11-26,acc_001,Water Works,utilities,-74.44,USD
+txn_00020,2024-11-28,acc_001,Noodle Bar,dining,-32.50,USD
+txn_00021,2024-11-28,acc_001,StreamBox,entertainment,-34.80,USD
+txn_00022,2024-11-29,acc_001,Green Grocer,groceries,-64.99,USD
+txn_00023,2024-11-29,acc_001,RideNow,transport,-8.24,USD
+txn_00024,2024-12-01,acc_001,Acme Payroll,income,3200.00,USD
+txn_00025,2024-12-01,acc_001,Power Co,utilities,-128.18,USD
+txn_00026,2024-12-02,acc_001,City Transit,transport,-23.92,USD
+txn_00027,2024-12-02,acc_001,Taco Corner,dining,-19.59,USD
+txn_00028,2024-12-04,acc_001,City Transit,transport,-10.74,USD
+txn_00029,2024-12-04,acc_001,RideNow,transport,-13.86,USD
+txn_00030,2024-12-06,acc_001,Cinema 9,entertainment,-16.47,USD
+txn_00031,2024-12-06,acc_001,Water Works,utilities,-49.17,USD
+txn_00032,2024-12-09,acc_001,RideNow,transport,-11.04,USD
+txn_00033,2024-12-09,acc_001,StreamBox,entertainment,-28.08,USD
+txn_00034,2024-12-12,acc_001,Fresh Basket,groceries,-52.44,USD
+txn_00035,2024-12-15,acc_001,Power Co,utilities,-95.00,USD
+txn_00036,2024-12-19,acc_001,Green Grocer,groceries,-48.73,USD
+txn_00037,2024-12-22,acc_001,Noodle Bar,dining,-68.88,USD
+txn_00038,2024-12-25,acc_001,Fresh Basket,groceries,-62.28,USD
+txn_00039,2024-12-25,acc_001,StreamBox,entertainment,-13.22,USD
+txn_00040,2024-12-27,acc_001,Cinema 9,entertainment,-11.39,USD
+txn_00041,2024-12-27,acc_001,Taco Corner,dining,-9.01,USD
+txn_00042,2025-01-01,acc_001,Acme Payroll,income,3200.00,USD
+txn_00043,2025-01-01,acc_001,StreamBox,entertainment,-14.39,USD
+txn_00044,2025-01-03,acc_001,Green Grocer,groceries,-71.78,USD
+txn_00045,2025-01-04,acc_001,Noodle Bar,dining,-16.20,USD
+txn_00046,2025-01-06,acc_001,City Transit,transport,-6.15,USD
+txn_00047,2025-01-06,acc_001,Market Hall,groceries,-26.37,USD
+txn_00048,2025-01-08,acc_001,Market Hall,groceries,-106.00,USD
+txn_00049,2025-01-09,acc_001,Market Hall,groceries,-56.26,USD
+txn_00050,2025-01-09,acc_001,Power Co,utilities,-111.27,USD
+txn_00051,2025-01-10,acc_001,RideNow,transport,-10.03,USD
+txn_00052,2025-01-10,acc_001,StreamBox,entertainment,-9.03,USD
+txn_00053,2025-01-12,acc_001,Water Works,utilities,-55.92,USD
+txn_00054,2025-01-14,acc_001,Fresh Basket,groceries,-76.37,USD
+txn_00055,2025-01-15,acc_001,Power Co,utilities,-127.40,USD
+txn_00056,2025-01-15,acc_001,Power Co,utilities,-95.00,USD
+txn_00057,2025-01-16,acc_001,City Transit,transport,-14.81,USD
+txn_00058,2025-01-16,acc_001,Power Co,utilities,-53.65,USD
+txn_00059,2025-01-17,acc_001,Power Co,utilities,-77.41,USD
+txn_00060,2025-01-17,acc_001,RideNow,transport,-7.49,USD
+txn_00061,2025-01-19,acc_001,City Transit,transport,-8.26,USD
+txn_00062,2025-01-20,acc_001,Power Co,utilities,-105.15,USD
+txn_00063,2025-01-20,acc_001,RideNow,transport,-8.77,USD
+txn_00064,2025-01-21,acc_001,Noodle Bar,dining,-12.61,USD
+txn_00065,2025-01-22,acc_001,Cafe Aroma,dining,-33.55,USD
+txn_00066,2025-01-23,acc_001,Cafe Aroma,dining,-28.92,USD
+txn_00067,2025-01-23,acc_001,StreamBox,entertainment,-24.61,USD
+txn_00068,2025-01-24,acc_001,Cinema 9,entertainment,-4.97,USD
+txn_00069,2025-01-24,acc_001,Noodle Bar,dining,-9.43,USD
+txn_00070,2025-01-25,acc_001,RideNow,transport,-7.46,USD
+txn_00071,2025-01-26,acc_001,RideNow,transport,-8.70,USD
+txn_00072,2025-01-27,acc_001,Cafe Aroma,dining,-12.60,USD
+txn_00073,2025-01-27,acc_001,Water Works,utilities,-74.33,USD
+txn_00074,2025-01-28,acc_001,Fresh Basket,groceries,12.50,USD
+txn_00075,2025-01-28,acc_001,Power Co,utilities,-76.70,USD
+txn_00076,2025-01-28,acc_001,RideNow,transport,-4.96,USD
+txn_00077,2025-01-29,acc_001,RideNow,transport,-16.17,USD
+txn_00078,2025-01-29,acc_001,Water Works,utilities,-66.27,USD
+txn_00079,2025-01-30,acc_001,RideNow,transport,-14.75,USD
+txn_00080,2025-01-30,acc_001,StreamBox,entertainment,-16.00,USD
+txn_00081,2025-01-30,acc_001,StreamBox,entertainment,-16.00,USD
+txn_00082,2025-01-30,acc_001,Taco Corner,dining,-24.99,USD

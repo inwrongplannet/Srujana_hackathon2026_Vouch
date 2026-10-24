@@ -1,0 +1,14 @@
+[
+  {
+    "currency": "USD",
+    "id": "acc_001",
+    "name": "Everyday Checking",
+    "type": "checking"
+  },
+  {
+    "currency": "USD",
+    "id": "acc_002",
+    "name": "Rainy Day Savings",
+    "type": "savings"
+  }
+]

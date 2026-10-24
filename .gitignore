@@ -1,0 +1,18 @@
+# Why: keeps secrets, local databases and build output out of git.
+.env
+.env.*
+!.env.example
+__pycache__/
+*.pyc
+.venv/
+node_modules/
+dist/
+build/
+*.db
+*.sqlite
+.DS_Store
+.opencode/node_modules/
+.opencode/bun.lock
+.opencode/package-lock.json
+.idea/
+.vscode/
