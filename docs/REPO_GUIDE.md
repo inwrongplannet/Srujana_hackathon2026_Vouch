@@ -49,6 +49,7 @@ A zone is a top-level folder with its own `AGENTS.md` (`backend/`, `frontend/`, 
 | `.claude/skills/` | Reusable how-to instructions Claude loads on demand | Before event; add problem-specific ones at kickoff |
 | `docs/PROBLEM.md` | Single source of truth for the PS and judging criteria | At kickoff |
 | `docs/IDEA.md` | Initial abstract technical design: web-of-trust graph, dual-axis scoring, ZK identity, slashing dynamics, hackathon scope reductions | At kickoff |
+| `docs/SPEC.md` | Integrated project spec: vouch as supplementary evidence, explainable ML, conformal uncertainty, stress testing and repayment optimization | Under discussion |
 | `docs/ARCHITECTURE.md` | The agreed technical plan | At kickoff via `/kickoff` |
 | `docs/API_CONTRACT.md` | Lets frontend and backend be built in parallel | At kickoff, then ongoing |
 | `docs/TASKS.md` | Task board; how work is assigned | Via `/task` |
@@ -60,6 +61,8 @@ A zone is a top-level folder with its own `AGENTS.md` (`backend/`, `frontend/`, 
 | `frontend/` | User-facing app, scaffolded by whoever the task is assigned to | Event day |
 | `spikes/` | Sandbox for experiments; messy is fine, findings must be written | During event |
 | `data/` | Small sample and seed files | During event |
+| `data/synth/`, `data/anchored/`, `data/external/` | Generated credit datasets and raw public sources (git-ignored; built by `veritrust.synth` and `veritrust.anchor`, see `data/README.md`) | During event |
+| `backend/requirements-data.txt` | Data-build-only dependencies for `veritrust.anchor` | During event |
 | `scripts/` | Automation behind the Makefile and skills, including the docs and agent-file gates and the pre-push hook in `scripts/hooks/` | Before/during event |
 
 ## How work flows
