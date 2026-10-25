@@ -16,3 +16,6 @@ build/
 .opencode/package-lock.json
 .idea/
 .vscode/
+# Why: data/combined holds real anonymised Home Credit rows (Kaggle competition rules) plus generated datasets; never commit rows.
+data/combined/*
+!data/combined/README.md

@@ -193,6 +193,7 @@ python main.py --demo                         # Run automated walkthrough simula
 | `simulate-attack [--attack sybil/collusion/dilution/burst/all]` | Adversarial attack simulator testing graph invariants & defensive safeguards |
 | `audit-decision <amt> [-t tenure] [-b borrower]` | Forensic decision explorer: explicit rule traces, primary evidence, paths, and sensitivity |
 | `recourse file/resolve/audit` | Borrower dispute workflow, evidence quality classification & score recalculation audit |
+| `serve [--host host] [--port port]` | Launch FastAPI REST API server (Swagger UI at `/docs`) |
 | `graph` | Visualize the Web-of-Trust network |
 | `denounce <id> [--reason]` | Denounce bad actor and trigger 4-level slashing cascade |
 | `reset` | Reset state to clean demo seed data |
@@ -214,13 +215,14 @@ python main.py --demo                         # Run automated walkthrough simula
   - `attack_simulator.py`: Web-of-Trust attack simulator (Sybil cliques, collusion rings, sponsor dilution, burst anomalies).
   - `audit_explorer.py`: Forensic decision explorer detailing numerical rule traces, evidence links, and sensitivity deltas.
   - `recourse.py`: Borrower recourse protocol, evidence-quality tracking (`MISSING`, `STALE`, `DUPLICATED`, `DISPUTED`), and recalculation audit.
+  - `api/`: FastAPI REST API package exposing endpoints for applications, evidence, endorsements, assessments, scenarios, and disputes.
 - `tests/`: Pytest unit tests for all mathematical invariants, state transitions, and ledger integrity.
 - `main.py`: End-to-end interactive CLI demonstration.
-- `requirements.txt`: Python package requirements (`pydantic`, `networkx`, `ortools`, `pytest`).
+- `requirements.txt`: Python package requirements (`pydantic`, `networkx`, `ortools`, `fastapi`, `uvicorn`, `httpx`, `pytest`).
 
 ## Interfaces
 - **`TrustEngine`**: Core graph state manager exposing `create_user()`, `vouch()`, `unvouch()`.
-- **`CreditScorer`**: Underwriting interface exposing `assess_credit(user_id) -> CreditAssessment`.
+- **`CreditScorer`**: Underwriting interface exposing `assess_credit()`, `compute_vouch_score()`, `assess_combined()`.
 - **`LendingService`**: Lending lifecycle interface exposing `borrow()`, `repay()`, `default_loan()`.
 - **`ReputationLedger`**: Immutable event store exposing `append_event()`, `get_history()`, `verify_integrity()`, `reconstruct_state()`.
 - **`AffordabilityEngine`**: Evaluates disposable income, minimum cash buffer, and maximum affordable EMI.
@@ -230,6 +232,7 @@ python main.py --demo                         # Run automated walkthrough simula
 - **`TrustGraphAttackSimulator`**: Evaluates Sybil cliques, collusion rings, sponsor dilution, and temporal burst anomalies.
 - **`DecisionAuditExplorer`**: Forensic inspection of rule thresholds, graph paths, evidence, and input sensitivity.
 - **`BorrowerRecourseWorkflow`**: Dispute filing, evidence corrections, recalculation tracking, and quality auditing.
+- **`FastAPI REST API`**: Interactive OpenAPI docs available at `http://localhost:8000/docs`.
 - **CLI**: Executed via `python main.py`.
 
 ## Config

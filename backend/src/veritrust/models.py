@@ -260,3 +260,117 @@ class LedgerEvent(BaseModel):
         return hashlib.sha256(raw.encode("utf-8")).hexdigest()
 
 
+# -----------------------------------------------------------------------------
+# Master Documentation v2 Schemas (Section 5, 6, 8)
+# -----------------------------------------------------------------------------
+
+BureauStatus = Literal["AVAILABLE", "NO_FILE", "UNAVAILABLE", "NOT_AUTHORIZED"]
+
+
+class BureauReport(BaseModel):
+    """Credit bureau signal representation (Section 8 of Master Doc v2)."""
+
+    status: BureauStatus = Field(default="NO_FILE", description="Bureau data availability status")
+    score: Optional[int] = Field(default=None, description="Official credit score (300-900), or None if NO_FILE")
+    source: Optional[str] = Field(default=None, description="Credit bureau authority (e.g. CIBIL, Experian)")
+    as_of: Optional[datetime] = Field(default=None, description="Timestamp of bureau pull")
+
+
+class VouchScoreReport(BaseModel):
+    """Bounded Vouch Score (0-100) from Section 6.2 of Master Doc v2."""
+
+    vouch_score: Decimal = Field(default=Decimal("0.0"), description="Bounded score in [0, 100]")
+    status: Literal["PROVISIONAL", "ACTIVE", "RESTRICTED"] = Field(
+        default="ACTIVE", description="Vouch score standing"
+    )
+    confidence: Literal["LOW", "MEDIUM", "HIGH"] = Field(
+        default="MEDIUM", description="Confidence rating based on data depth"
+    )
+    eligible_endorsements: int = Field(default=0, description="Count of active contributing endorsements")
+    raw_support: Decimal = Field(default=Decimal("0.0"), description="Diminishing returns support: 1 - exp(-W/tau)")
+    quality_factor: Decimal = Field(default=Decimal("0.5"), description="Historical outcome quality: clamp(C, 0, 1)")
+
+    @field_validator("vouch_score", "raw_support", "quality_factor", mode="before")
+    @classmethod
+    def parse_vouch_score_decimals(cls, value: object) -> Decimal:
+        """Coerce numeric values to Decimal."""
+        if isinstance(value, Decimal):
+            return value
+        return Decimal(str(value))
+
+
+class EndorsementItem(BaseModel):
+    """Fine-grained endorsement with edge quality factors (Section 6.1 of Master Doc v2)."""
+
+    endorsement_id: str = Field(description="Unique identifier for the endorsement")
+    endorser_id: str = Field(description="User ID of the endorser (x)")
+    recipient_id: str = Field(description="User ID of the recipient (y)")
+    application_id: Optional[str] = Field(default=None, description="Optional loan application link")
+    statement: str = Field(default="", description="Optional vouch statement or rationale")
+    r_x: Decimal = Field(default=Decimal("1.0"), description="Endorser reputation factor in [0, 1]")
+    q_x: Decimal = Field(default=Decimal("1.0"), description="Endorser verification / data quality factor in [0, 1]")
+    e_xy: Decimal = Field(default=Decimal("1.0"), description="Edge strength after policy checks in [0, 1]")
+    d_xy: Decimal = Field(default=Decimal("1.0"), description="Evidence relevance factor in [0, 1]")
+    p_xy: Decimal = Field(default=Decimal("0.0"), description="Abuse and collusion penalty factor in [0, 1]")
+    effective_weight: Decimal = Field(
+        default=Decimal("0.0"), description="w_xy = clamp(r_x * q_x * e_xy * d_xy * (1 - p_xy), 0, 1)"
+    )
+    status: Literal["ACTIVE", "REVOKED", "EXPIRED", "DISPUTED"] = Field(
+        default="ACTIVE", description="Lifecycle status of this endorsement"
+    )
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    expiry: Optional[datetime] = Field(default=None, description="Optional expiry timestamp")
+
+    @field_validator("r_x", "q_x", "e_xy", "d_xy", "p_xy", "effective_weight", mode="before")
+    @classmethod
+    def parse_endorsement_decimals(cls, value: object) -> Decimal:
+        """Coerce numeric factors to Decimal."""
+        if isinstance(value, Decimal):
+            return value
+        return Decimal(str(value))
+
+
+class LoanApplication(BaseModel):
+    """Formal loan application record (Section 5 & 10 of Master Doc v2)."""
+
+    application_id: str = Field(description="Unique application ID (e.g. 'APP_00001')")
+    borrower_id: str = Field(description="Target applicant user ID")
+    principal: Decimal = Field(description="Requested principal amount in INR")
+    annual_rate: Decimal = Field(default=Decimal("0.12"), description="Annual interest rate (e.g. 0.12 = 12%)")
+    term_months: int = Field(default=12, description="Requested tenure in months")
+    purpose_category: str = Field(default="GENERAL", description="Loan purpose category")
+    status: Literal["SUBMITTED", "UNDERWRITING", "APPROVED", "REJECTED", "FUNDED"] = Field(
+        default="SUBMITTED", description="Current application status"
+    )
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+    @field_validator("principal", "annual_rate", mode="before")
+    @classmethod
+    def parse_app_decimals(cls, value: object) -> Decimal:
+        """Coerce numeric values to Decimal."""
+        if isinstance(value, Decimal):
+            return value
+        return Decimal(str(value))
+
+
+class CombinedAssessment(BaseModel):
+    """Side-by-side combined credit assessment (Section 8 of Master Doc v2)."""
+
+    assessment_id: str = Field(description="Unique assessment snapshot identifier")
+    application_id: Optional[str] = Field(default=None, description="Associated loan application ID")
+    borrower_id: str = Field(description="Evaluated borrower user ID")
+    bureau: BureauReport = Field(description="Conventional bureau signal (unblended)")
+    vouch: VouchScoreReport = Field(description="Bounded Vouch score (0-100) and confidence")
+    affordability: dict = Field(description="Cash-flow affordability and EMI capacity metrics")
+    data_quality: Literal["HIGH_CONFIDENCE_VERIFIED", "MEDIUM", "LOW"] = Field(
+        default="MEDIUM", description="Data completeness and verification grade"
+    )
+    positive_factors: list[dict] = Field(default_factory=list, description="Evidence-backed positive reason codes")
+    risk_factors: list[dict] = Field(default_factory=list, description="Evidence-backed risk reason codes")
+    missing_information: list[str] = Field(default_factory=list, description="Missing or unverified fields")
+    review_flags: list[str] = Field(default_factory=list, description="Flags requiring human underwriter review")
+    algorithm_version: str = Field(default="vouch-v2.0", description="Version of credit assessment rules")
+    timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+
+

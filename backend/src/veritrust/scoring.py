@@ -14,7 +14,17 @@ from typing import Iterator, Optional
 
 from veritrust.config import get_settings
 from veritrust.engine import TrustEngine
-from veritrust.models import ContributingPath, CreditAssessment, FinancialFeatures, User
+from veritrust.models import (
+    BureauReport,
+    BureauStatus,
+    CombinedAssessment,
+    ContributingPath,
+    CreditAssessment,
+    FinancialFeatures,
+    LoanApplication,
+    User,
+    VouchScoreReport,
+)
 
 
 def _decimal_exp(x: Decimal, terms: int = 15) -> Decimal:
@@ -255,4 +265,250 @@ class CreditScorer:
             max_loan_limit=max_loan,
             contributing_paths=contributing_paths,
         )
+
+    @staticmethod
+    def compute_endorsement_weight(
+        r_x: Decimal,
+        q_x: Decimal = Decimal("1.0"),
+        e_xy: Decimal = Decimal("1.0"),
+        d_xy: Decimal = Decimal("1.0"),
+        p_xy: Decimal = Decimal("0.0"),
+    ) -> Decimal:
+        """Calculate effective edge weight (Section 6.1 of Master Doc v2).
+
+        w_xy = clamp(r_x * q_x * e_xy * d_xy * (1 - p_xy), 0, 1)
+        """
+        raw = r_x * q_x * e_xy * d_xy * (Decimal("1.0") - p_xy)
+        return min(Decimal("1.0"), max(Decimal("0.0"), raw))
+
+    def compute_vouch_score(
+        self, target_id: str, tau: Decimal = Decimal("5.0")
+    ) -> VouchScoreReport:
+        """Calculate bounded Vouch Score in [0, 100] (Section 6.2 of Master Doc v2).
+
+        W = sum(w_xy) for all incoming eligible endorsements.
+        support = 1 - exp(-W / tau)
+        quality = clamp(C, 0, 1)
+        VouchScore = round(100 * support * (0.35 + 0.65 * quality))
+        """
+        user = self.engine.get_user(target_id)
+        if not user:
+            return VouchScoreReport()
+
+        in_edges = list(self.engine.graph.in_edges(target_id))
+        total_w = Decimal("0.0")
+        total_settled = 0
+        total_defaults = 0
+
+        for source_id, _ in in_edges:
+            edge_weight = self.engine.graph[source_id][target_id].get("weight", Decimal("0.0"))
+            source_user = self.engine.get_user(source_id)
+            if not source_user:
+                continue
+
+            r_x = min(Decimal("1.0"), max(Decimal("0.0"), source_user.reputation / Decimal("10.0")))
+            q_x = Decimal("1.0") if source_user.is_anchor else Decimal("0.85")
+            e_xy = Decimal("1.0") if source_user.status == "ACTIVE" else Decimal("0.0")
+            d_xy = Decimal("1.0")
+            p_xy = Decimal("0.0")
+
+            w_xy = self.compute_endorsement_weight(r_x, q_x, e_xy, d_xy, p_xy)
+            total_w += edge_weight * w_xy
+
+            total_settled += source_user.n_settled_loans
+            if source_user.status == "DEFAULTED":
+                total_defaults += 1
+
+        # Laplace smoothing quality factor C
+        c_denom = Decimal(total_settled + total_defaults + 2)
+        c_factor = Decimal(total_settled + 1) / c_denom
+        quality = min(Decimal("1.0"), max(Decimal("0.0"), c_factor))
+
+        # Support with diminishing returns: 1 - exp(-W / tau)
+        if total_w > Decimal("0.0") and tau > Decimal("0.0"):
+            neg_exponent = -(total_w / tau)
+            support = Decimal("1.0") - _decimal_exp(neg_exponent)
+            support = min(Decimal("1.0"), max(Decimal("0.0"), support))
+        else:
+            support = Decimal("0.0")
+
+        raw_vouch_score = Decimal("100.0") * support * (Decimal("0.35") + (Decimal("0.65") * quality))
+        vouch_score = raw_vouch_score.quantize(Decimal("1.0"))
+
+        confidence = "LOW"
+        if len(in_edges) >= 3 and total_w >= Decimal("2.0"):
+            confidence = "HIGH"
+        elif len(in_edges) >= 1:
+            confidence = "MEDIUM"
+
+        status = "PROVISIONAL" if user.n_settled_loans == 0 and not in_edges else "ACTIVE"
+
+        return VouchScoreReport(
+            vouch_score=vouch_score,
+            status=status,
+            confidence=confidence,
+            eligible_endorsements=len(in_edges),
+            raw_support=support.quantize(Decimal("0.0001")),
+            quality_factor=quality.quantize(Decimal("0.0001")),
+        )
+
+    @staticmethod
+    def compute_reputation_update(
+        old_reputation: Decimal,
+        outcome_y: int,
+        expected_p: Decimal = Decimal("0.90"),
+        edge_weight: Decimal = Decimal("1.0"),
+        evidence_reliability: Decimal = Decimal("1.0"),
+        learning_rate: Decimal = Decimal("0.10"),
+    ) -> Decimal:
+        """Calculate outcome-conditioned reputation delta (Section 6.3 of Master Doc v2).
+
+        error = y - p
+        delta = learning_rate * edge_weight * error * evidence_reliability
+        new_reputation = clamp(old_reputation + delta, 0, R_max)
+        """
+        error = Decimal(str(outcome_y)) - expected_p
+        delta = learning_rate * edge_weight * error * evidence_reliability
+        return max(Decimal("0.0"), old_reputation + delta).quantize(Decimal("0.01"))
+
+    def assess_combined(
+        self,
+        borrower_id: str,
+        loan_app: Optional[LoanApplication] = None,
+        bureau_score: Optional[int] = None,
+        bureau_status: BureauStatus = "NO_FILE",
+    ) -> CombinedAssessment:
+        """Produce the unblended side-by-side assessment (Section 8 of Master Doc v2)."""
+        import uuid
+        from veritrust.affordability import AffordabilityEngine, AffordabilityInput, calculate_emi
+
+        user = self.engine.get_user(borrower_id)
+        if not user:
+            raise ValueError(f"Borrower '{borrower_id}' does not exist.")
+
+        # 1. Bureau Signal
+        bureau_report = BureauReport(
+            status=bureau_status if bureau_score is None else "AVAILABLE",
+            score=bureau_score,
+            source="CIBIL" if bureau_score else None,
+        )
+
+        # 2. Vouch Signal
+        vouch_report = self.compute_vouch_score(borrower_id)
+
+        # 3. Affordability Signal
+        fin = user.financial_features
+        monthly_income = fin.monthly_income if fin else Decimal("0.0")
+        monthly_debt = fin.monthly_debt if fin else Decimal("0.0")
+        essential_expenses = fin.net_operating_income if fin and fin.net_operating_income > 0 else Decimal("10000.00")
+
+        affordability_engine = AffordabilityEngine()
+        aff_profile = affordability_engine.evaluate(
+            AffordabilityInput(
+                monthly_income=monthly_income,
+                essential_expenses=essential_expenses,
+                existing_debt_service=monthly_debt,
+            )
+        )
+
+        # 4. Reason Codes & Factor Synthesis (Section 9 of Master Doc v2)
+        positive_factors: list[dict] = []
+        risk_factors: list[dict] = []
+        missing_information: list[str] = []
+        review_flags: list[str] = []
+
+        if monthly_income > Decimal("0.0"):
+            positive_factors.append({
+                "code": "INCOME_PRESENT",
+                "text": f"Verified recurring monthly income of INR {monthly_income:,.2f} documented",
+                "source": "BANK_STATEMENT",
+            })
+        if fin and fin.income_volatility <= Decimal("0.15"):
+            positive_factors.append({
+                "code": "INCOME_STABLE",
+                "text": f"Income volatility is low ({fin.income_volatility * 100:.1f}%), indicating predictable earnings",
+                "source": "ACCOUNT_AGGREGATOR",
+            })
+        if vouch_report.eligible_endorsements > 0:
+            positive_factors.append({
+                "code": "COMMUNITY_VOUCH_ACTIVE",
+                "text": f"Endorsed by {vouch_report.eligible_endorsements} active community member(s) with Vouch score {vouch_report.vouch_score}",
+                "source": "WEB_OF_TRUST_GRAPH",
+            })
+        if aff_profile.disposable_income > Decimal("0.0"):
+            positive_factors.append({
+                "code": "DISPOSABLE_INCOME_SUFFICIENT",
+                "text": f"Net disposable monthly surplus of INR {aff_profile.disposable_income:,.2f} after non-discretionary expenses and buffer",
+                "source": "AFFORDABILITY_ENGINE",
+            })
+
+        if bureau_report.status == "NO_FILE":
+            missing_information.append("Credit bureau history is unavailable on file (thin-file applicant)")
+        elif bureau_score is not None and bureau_score < 650:
+            risk_factors.append({
+                "code": "BUREAU_SCORE_BELOW_PRIME",
+                "text": f"Bureau score {bureau_score} is below prime threshold; investigating current cash-flow evidence",
+                "source": "BUREAU_PULL",
+            })
+
+        if monthly_income > Decimal("0.0") and (monthly_debt / monthly_income) >= Decimal("0.40"):
+            risk_factors.append({
+                "code": "UTILIZATION_SPIKE",
+                "text": f"High debt-service obligations ({monthly_debt / monthly_income * 100:.1f}% of income)",
+                "source": "DEBT_RECORDS",
+            })
+            review_flags.append("OBLIGATION_SURGE_REVIEW")
+
+        if fin and fin.completeness < Decimal("0.80"):
+            missing_information.append("Living costs and cash-flow statements not fully documented")
+            review_flags.append("DATA_COMPLETENESS_REVIEW")
+
+        if loan_app and aff_profile.max_affordable_emi > Decimal("0.0"):
+            app_emi = calculate_emi(
+                principal=loan_app.principal,
+                annual_rate=loan_app.annual_rate,
+                tenure_months=loan_app.term_months,
+            )
+            if app_emi > aff_profile.max_affordable_emi:
+                risk_factors.append({
+                    "code": "AFFORDABILITY_DEFICIT",
+                    "text": f"Requested instalment of INR {app_emi:,.2f} exceeds affordable limit of INR {aff_profile.max_affordable_emi:,.2f}",
+                    "source": "AFFORDABILITY_ENGINE",
+                })
+                review_flags.append("RESTRUCTURING_RECOMMENDED")
+
+        aff_status = "SUFFICIENT"
+        if aff_profile.disposable_income <= Decimal("0.0"):
+            aff_status = "INSUFFICIENT"
+        elif aff_profile.disposable_income < Decimal("3000.00"):
+            aff_status = "BORDERLINE"
+
+        data_quality = "HIGH_CONFIDENCE_VERIFIED"
+        if fin is None or fin.completeness < Decimal("0.50"):
+            data_quality = "LOW"
+        elif fin.completeness < Decimal("0.85") or bureau_report.status == "NO_FILE":
+            data_quality = "MEDIUM"
+
+        return CombinedAssessment(
+            assessment_id=f"ASM_{uuid.uuid4().hex[:12].upper()}",
+            application_id=loan_app.application_id if loan_app else None,
+            borrower_id=borrower_id,
+            bureau=bureau_report,
+            vouch=vouch_report,
+            affordability={
+                "status": aff_status,
+                "gross_monthly_income": str(aff_profile.monthly_income),
+                "disposable_income": str(aff_profile.disposable_income),
+                "protected_cash_buffer": str(aff_profile.protected_buffer),
+                "max_affordable_emi": str(aff_profile.max_affordable_emi),
+                "binding_constraint": aff_profile.binding_policy_rule,
+            },
+            data_quality=data_quality,
+            positive_factors=positive_factors,
+            risk_factors=risk_factors,
+            missing_information=missing_information,
+            review_flags=review_flags,
+            algorithm_version="vouch-v2.0",
+        )
+
 
