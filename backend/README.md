@@ -83,6 +83,22 @@ python main.py treasury                       # Inspect platform treasury fees a
 python main.py --demo                         # Run automated walkthrough simulation
 ```
 
+### Mode C: Docker Execution (Full-Stack Automated Launch)
+
+Run the backend and frontend together with automatic port forwarding:
+
+```bash
+# From repository root
+./docker-run.sh        # On Linux/macOS/Git Bash
+.\docker-run.ps1       # On Windows PowerShell
+docker compose up      # Standard Docker Compose
+```
+
+Accessible at:
+- **Frontend UI:** `http://localhost:5173`
+- **Backend API & Swagger Docs:** `http://localhost:8000/docs`
+- **Health Check:** `http://localhost:8000/health`
+
 ### Step-by-Step Walkthrough
 
 1. **View all nodes in the network:**
