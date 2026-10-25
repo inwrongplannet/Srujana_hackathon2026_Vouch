@@ -13,6 +13,7 @@ TODO: setup commands (verified against the Makefile).
 <!-- BEGIN:features -->
 | Feature | Status | Assignee | What it does |
 |---|---|---|---|
+| Assessment desk | in-progress | Reehan | The first screen on the real FastAPI backend (`/app/assess`): pick a backend applicant, run the assessment, and see bureau, Vouch Score, affordability and evidence apart, with the best plan, a stress test, cited reasons and what-if sliders re-checked by `/scenarios`; tells the presenter how to start the API when it is down |
 | Borrower dashboard | in-progress | Reehan | See a two-axis score, ask for a vouch and borrow |
 | Community | in-progress | Reehan | Hybrid vouching platform: borrowers post an ask and choose what strangers may see; anyone can vouch as someone who knows them (KNOWN) or as a stranger who read their verified summary (EVIDENCE, weighted by the voucher's track record and capped); vouchers stand by or step back after a setback |
 | Default cascade | in-progress | Reehan | Watch a default slash sponsors and stop at two hops |

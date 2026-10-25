@@ -8,6 +8,13 @@
 
 <!-- ENTRIES -->
 
+### 2026-10-25: Frontend-backend wiring, option C (hybrid)
+- **Decision:** The assessment flow runs on the real FastAPI backend: a new Assessment desk (`/app/assess`) calls `/health`, `/api/v1/users`, `/applications`, `/assessments` and `/scenarios` through `frontend/src/api/http.ts` and `backend.ts`, via a Vite dev proxy to `localhost:8000` (or `VITE_API_BASE_URL`). The mock story screens (borrower, voucher, lender, community, demo controls) stay on the in-browser mock until the backend has endpoints for them. The desk shows the backend's own Vouch Score (tau 5, `scoring.py`); the landing page keeps its illustrative tau 3.
+- **Why:** the four-signal assessment is what F-04 judges, and the backend already computes it; the mock keeps the rest of the demo working if the API is down.
+- **Alternatives considered:** the backend serving the mock's snapshot model (fast, but bypasses the REST contract); moving every screen to REST now (most of the endpoints they need do not exist).
+- **Consequences:** `make types` (`npx openapi-typescript`, MIT, run on demand, not installed) now generates `frontend/src/types/api.d.ts` from the backend's OpenAPI; two Vouch Score scales exist until the team picks one tau; the backend still needs endpoints for vouch requests, loan decisions, default and slashing, and the community, plus `response_model`s so `make types` types every response.
+- **By:** Reehan
+
 ### 2026-10-25: Community platform: hybrid known and evidence vouching
 - **Decision:** Two kinds of vouch on one score (`frontend/src/mocks/engine/community.ts`). KNOWN: weight from the voucher's smoothed track record and the relationship's quality, growing over ten years known. EVIDENCE (a stranger who read the borrower's verified summary): the same proposal formula, but reliability counts only after 5 resolved outcomes, edge quality is a flat 0.6, and evidence weight counts up to 0.6 plus two-thirds of the known weight. A vouch keeps the utilisation it was staked at. Strangers see platform-verified summaries the borrower switched on, never statements. Reward on outcome = 100 x 0.1 x w x (y - p), so backing an underrated borrower who repays earns most.
 - **Why:** strangers looking at the data a lender already sees add judgement, not facts (the Vouch proposal warns against double-counting a signal); weighting them by a proven record and capping their share keeps the score from being farmed or carried by strangers.
