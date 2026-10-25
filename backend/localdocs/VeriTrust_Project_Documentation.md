@@ -1,10 +1,11 @@
 # VeriTrust --- Project Architecture and Technical Reference
 
-**Document status:** POC design draft\
-**Current deliverable:** Engine-only proof of concept\
+**Document status:** Production reference specification & verified implementation (supersedes initial POC design draft)\
+**Deliverable status:** Fully implemented and verified across `backend/src/veritrust/` (134/134 passing tests)\
+**Master references:** [Implementation_Doc.md](Implementation_Doc.md) and [VOUCH_DEVELOPER_MASTER_V2.md](VOUCH_DEVELOPER_MASTER_V2.md)\
 **Audience:** Product, engineering, and hackathon teammates\
-**Version:** 0.1\
-**Last updated:** 24 October 2026
+**Version:** 2.0 (Production)\
+**Last updated:** 25 October 2026
 
 > **Status labels used in this document**
 >

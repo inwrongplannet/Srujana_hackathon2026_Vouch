@@ -1,0 +1,740 @@
+{
+  "n_samples": 4502,
+  "n_train": 2700,
+  "n_calib": 901,
+  "n_test": 901,
+  "noise_profile": "realistic",
+  "levels": {
+    "Level_A_Conventional_Baseline": {
+      "name": "Model A: Conventional Financial & Bureau Only",
+      "description": "Standard bureau & fintech features without social/network data",
+      "n_features": 21,
+      "features": [
+        "pre_bureau_score",
+        "post_bureau_score",
+        "bureau_drop_points",
+        "bureau_shock",
+        "shock_type",
+        "severity",
+        "insured",
+        "expense_minor",
+        "income_factor",
+        "income_est_minor",
+        "dti_est",
+        "bank_surplus_median_minor",
+        "bank_income_cv",
+        "new_emi_minor",
+        "pre_bureau_score_was_missing",
+        "post_bureau_score_was_missing",
+        "bureau_drop_points_was_missing",
+        "income_est_minor_was_missing",
+        "dti_est_was_missing",
+        "bank_surplus_median_minor_was_missing",
+        "bank_income_cv_was_missing"
+      ],
+      "models": {
+        "xgboost_gpu": {
+          "n": 901,
+          "auc": 0.8835,
+          "pr_auc": 0.9193,
+          "brier": 0.1224,
+          "ks": 0.6467,
+          "accuracy": 0.8424,
+          "f1": 0.8828,
+          "approval_rate": 0.3019
+        },
+        "pytorch_gpu": {
+          "n": 901,
+          "auc": 0.8788,
+          "pr_auc": 0.9039,
+          "brier": 0.123,
+          "ks": 0.6561,
+          "accuracy": 0.8291,
+          "f1": 0.8719,
+          "approval_rate": 0.313
+        },
+        "lightgbm": {
+          "n": 901,
+          "auc": 0.8813,
+          "pr_auc": 0.912,
+          "brier": 0.1223,
+          "ks": 0.6378,
+          "accuracy": 0.8435,
+          "f1": 0.884,
+          "approval_rate": 0.2986
+        },
+        "logistic": {
+          "n": 901,
+          "auc": 0.832,
+          "pr_auc": 0.8681,
+          "brier": 0.1652,
+          "ks": 0.5803,
+          "accuracy": 0.7758,
+          "f1": 0.82,
+          "approval_rate": 0.4018
+        },
+        "generalized_ensemble": {
+          "n": 901,
+          "auc": 0.8841,
+          "pr_auc": 0.9129,
+          "brier": 0.1204,
+          "ks": 0.6541,
+          "accuracy": 0.8368,
+          "f1": 0.878,
+          "approval_rate": 0.3097
+        }
+      },
+      "conformal_90": {
+        "threshold": 0.6813,
+        "coverage": 0.9112,
+        "avg_set_size": 1.178,
+        "singleton_rate": 0.822
+      }
+    },
+    "Level_B_Degree_Centrality": {
+      "name": "Model B: A + Simple Network Topology (Degree Centrality)",
+      "description": "Adds degree centrality, cluster density, and edge count",
+      "n_features": 26,
+      "features": [
+        "pre_bureau_score",
+        "post_bureau_score",
+        "bureau_drop_points",
+        "bureau_shock",
+        "shock_type",
+        "severity",
+        "insured",
+        "expense_minor",
+        "income_factor",
+        "income_est_minor",
+        "dti_est",
+        "bank_surplus_median_minor",
+        "bank_income_cv",
+        "new_emi_minor",
+        "eligible_incoming",
+        "distinct_anchors",
+        "reciprocal_edges",
+        "cluster_concentration",
+        "pre_bureau_score_was_missing",
+        "post_bureau_score_was_missing",
+        "bureau_drop_points_was_missing",
+        "income_est_minor_was_missing",
+        "dti_est_was_missing",
+        "bank_surplus_median_minor_was_missing",
+        "bank_income_cv_was_missing",
+        "cluster_concentration_was_missing"
+      ],
+      "models": {
+        "xgboost_gpu": {
+          "n": 901,
+          "auc": 0.8806,
+          "pr_auc": 0.9178,
+          "brier": 0.1252,
+          "ks": 0.6447,
+          "accuracy": 0.8346,
+          "f1": 0.8778,
+          "approval_rate": 0.2941
+        },
+        "pytorch_gpu": {
+          "n": 901,
+          "auc": 0.8763,
+          "pr_auc": 0.909,
+          "brier": 0.1273,
+          "ks": 0.6181,
+          "accuracy": 0.8269,
+          "f1": 0.8715,
+          "approval_rate": 0.2997
+        },
+        "lightgbm": {
+          "n": 901,
+          "auc": 0.8782,
+          "pr_auc": 0.9172,
+          "brier": 0.1278,
+          "ks": 0.6461,
+          "accuracy": 0.8335,
+          "f1": 0.876,
+          "approval_rate": 0.3041
+        },
+        "logistic": {
+          "n": 901,
+          "auc": 0.8363,
+          "pr_auc": 0.8679,
+          "brier": 0.1589,
+          "ks": 0.5849,
+          "accuracy": 0.7991,
+          "f1": 0.8425,
+          "approval_rate": 0.3718
+        },
+        "generalized_ensemble": {
+          "n": 901,
+          "auc": 0.8842,
+          "pr_auc": 0.9154,
+          "brier": 0.1228,
+          "ks": 0.6518,
+          "accuracy": 0.8424,
+          "f1": 0.8832,
+          "approval_rate": 0.2974
+        }
+      },
+      "conformal_90": {
+        "threshold": 0.6749,
+        "coverage": 0.9068,
+        "avg_set_size": 1.182,
+        "singleton_rate": 0.818
+      }
+    },
+    "Level_C_Endorser_Quality": {
+      "name": "Model C: B + Endorser Reliability & Direct Stake",
+      "description": "Adds voucher historical reliability and pre-application support",
+      "n_features": 32,
+      "features": [
+        "pre_bureau_score",
+        "post_bureau_score",
+        "bureau_drop_points",
+        "bureau_shock",
+        "shock_type",
+        "severity",
+        "insured",
+        "expense_minor",
+        "income_factor",
+        "income_est_minor",
+        "dti_est",
+        "bank_surplus_median_minor",
+        "bank_income_cv",
+        "new_emi_minor",
+        "eligible_incoming",
+        "distinct_anchors",
+        "reciprocal_edges",
+        "cluster_concentration",
+        "total_weight",
+        "mean_voucher_reliability",
+        "max_contributor_share",
+        "support_before_application_minor",
+        "pre_bureau_score_was_missing",
+        "post_bureau_score_was_missing",
+        "bureau_drop_points_was_missing",
+        "income_est_minor_was_missing",
+        "dti_est_was_missing",
+        "bank_surplus_median_minor_was_missing",
+        "bank_income_cv_was_missing",
+        "cluster_concentration_was_missing",
+        "mean_voucher_reliability_was_missing",
+        "max_contributor_share_was_missing"
+      ],
+      "models": {
+        "xgboost_gpu": {
+          "n": 901,
+          "auc": 0.8881,
+          "pr_auc": 0.9226,
+          "brier": 0.1201,
+          "ks": 0.6535,
+          "accuracy": 0.8479,
+          "f1": 0.8854,
+          "approval_rate": 0.3208
+        },
+        "pytorch_gpu": {
+          "n": 901,
+          "auc": 0.8705,
+          "pr_auc": 0.8981,
+          "brier": 0.1276,
+          "ks": 0.6401,
+          "accuracy": 0.828,
+          "f1": 0.8722,
+          "approval_rate": 0.3008
+        },
+        "lightgbm": {
+          "n": 901,
+          "auc": 0.887,
+          "pr_auc": 0.9218,
+          "brier": 0.1199,
+          "ks": 0.6584,
+          "accuracy": 0.8479,
+          "f1": 0.8857,
+          "approval_rate": 0.3163
+        },
+        "logistic": {
+          "n": 901,
+          "auc": 0.8345,
+          "pr_auc": 0.8719,
+          "brier": 0.1627,
+          "ks": 0.5858,
+          "accuracy": 0.7847,
+          "f1": 0.8283,
+          "approval_rate": 0.3929
+        },
+        "generalized_ensemble": {
+          "n": 901,
+          "auc": 0.8857,
+          "pr_auc": 0.9173,
+          "brier": 0.1202,
+          "ks": 0.6624,
+          "accuracy": 0.8479,
+          "f1": 0.8854,
+          "approval_rate": 0.3208
+        }
+      },
+      "conformal_90": {
+        "threshold": 0.6753,
+        "coverage": 0.9046,
+        "avg_set_size": 1.159,
+        "singleton_rate": 0.841
+      }
+    },
+    "Level_D_Full_VeriTrust": {
+      "name": "Model D: Full VeriTrust Reputation Framework",
+      "description": "Adds multi-hop propagation, chronological rank discount, and vouch held",
+      "n_features": 37,
+      "features": [
+        "pre_bureau_score",
+        "post_bureau_score",
+        "bureau_drop_points",
+        "bureau_shock",
+        "shock_type",
+        "severity",
+        "insured",
+        "expense_minor",
+        "income_factor",
+        "income_est_minor",
+        "dti_est",
+        "bank_surplus_median_minor",
+        "bank_income_cv",
+        "new_emi_minor",
+        "eligible_incoming",
+        "distinct_anchors",
+        "reciprocal_edges",
+        "cluster_concentration",
+        "total_weight",
+        "mean_voucher_reliability",
+        "max_contributor_share",
+        "support_before_application_minor",
+        "pre_vouch_score",
+        "post_vouch_score",
+        "vouch_held",
+        "pre_bureau_score_was_missing",
+        "post_bureau_score_was_missing",
+        "bureau_drop_points_was_missing",
+        "income_est_minor_was_missing",
+        "dti_est_was_missing",
+        "bank_surplus_median_minor_was_missing",
+        "bank_income_cv_was_missing",
+        "cluster_concentration_was_missing",
+        "mean_voucher_reliability_was_missing",
+        "max_contributor_share_was_missing",
+        "pre_vouch_score_was_missing",
+        "post_vouch_score_was_missing"
+      ],
+      "models": {
+        "xgboost_gpu": {
+          "n": 901,
+          "auc": 0.8888,
+          "pr_auc": 0.9273,
+          "brier": 0.1195,
+          "ks": 0.6535,
+          "accuracy": 0.8524,
+          "f1": 0.89,
+          "approval_rate": 0.3052
+        },
+        "pytorch_gpu": {
+          "n": 901,
+          "auc": 0.8761,
+          "pr_auc": 0.9013,
+          "brier": 0.1297,
+          "ks": 0.6235,
+          "accuracy": 0.8169,
+          "f1": 0.8601,
+          "approval_rate": 0.3385
+        },
+        "lightgbm": {
+          "n": 901,
+          "auc": 0.8901,
+          "pr_auc": 0.9237,
+          "brier": 0.1188,
+          "ks": 0.6581,
+          "accuracy": 0.8524,
+          "f1": 0.8898,
+          "approval_rate": 0.3074
+        },
+        "logistic": {
+          "n": 901,
+          "auc": 0.8473,
+          "pr_auc": 0.883,
+          "brier": 0.1594,
+          "ks": 0.574,
+          "accuracy": 0.7858,
+          "f1": 0.8272,
+          "approval_rate": 0.4073
+        },
+        "generalized_ensemble": {
+          "n": 901,
+          "auc": 0.8892,
+          "pr_auc": 0.9191,
+          "brier": 0.119,
+          "ks": 0.6655,
+          "accuracy": 0.8402,
+          "f1": 0.88,
+          "approval_rate": 0.3152
+        }
+      },
+      "conformal_90": {
+        "threshold": 0.6737,
+        "coverage": 0.9101,
+        "avg_set_size": 1.176,
+        "singleton_rate": 0.824
+      }
+    },
+    "Level_E1_No_Rank_Discount": {
+      "name": "Model E1: VeriTrust without Rank Discount / Attenuation",
+      "description": "Tests vulnerability to raw connection counts without rank discount",
+      "n_features": 33,
+      "features": [
+        "pre_bureau_score",
+        "post_bureau_score",
+        "bureau_drop_points",
+        "bureau_shock",
+        "shock_type",
+        "severity",
+        "insured",
+        "expense_minor",
+        "income_factor",
+        "income_est_minor",
+        "dti_est",
+        "bank_surplus_median_minor",
+        "bank_income_cv",
+        "new_emi_minor",
+        "eligible_incoming",
+        "distinct_anchors",
+        "reciprocal_edges",
+        "cluster_concentration",
+        "total_weight",
+        "mean_voucher_reliability",
+        "max_contributor_share",
+        "support_before_application_minor",
+        "vouch_held",
+        "pre_bureau_score_was_missing",
+        "post_bureau_score_was_missing",
+        "bureau_drop_points_was_missing",
+        "income_est_minor_was_missing",
+        "dti_est_was_missing",
+        "bank_surplus_median_minor_was_missing",
+        "bank_income_cv_was_missing",
+        "cluster_concentration_was_missing",
+        "mean_voucher_reliability_was_missing",
+        "max_contributor_share_was_missing"
+      ],
+      "models": {
+        "xgboost_gpu": {
+          "n": 901,
+          "auc": 0.8925,
+          "pr_auc": 0.9262,
+          "brier": 0.1177,
+          "ks": 0.6555,
+          "accuracy": 0.8479,
+          "f1": 0.885,
+          "approval_rate": 0.3252
+        },
+        "pytorch_gpu": {
+          "n": 901,
+          "auc": 0.8687,
+          "pr_auc": 0.8936,
+          "brier": 0.1287,
+          "ks": 0.6269,
+          "accuracy": 0.8246,
+          "f1": 0.8674,
+          "approval_rate": 0.3241
+        },
+        "lightgbm": {
+          "n": 901,
+          "auc": 0.8895,
+          "pr_auc": 0.926,
+          "brier": 0.119,
+          "ks": 0.671,
+          "accuracy": 0.8502,
+          "f1": 0.8874,
+          "approval_rate": 0.3163
+        },
+        "logistic": {
+          "n": 901,
+          "auc": 0.8377,
+          "pr_auc": 0.8726,
+          "brier": 0.1606,
+          "ks": 0.5569,
+          "accuracy": 0.7814,
+          "f1": 0.8264,
+          "approval_rate": 0.3873
+        },
+        "generalized_ensemble": {
+          "n": 901,
+          "auc": 0.8897,
+          "pr_auc": 0.9162,
+          "brier": 0.1189,
+          "ks": 0.6741,
+          "accuracy": 0.8491,
+          "f1": 0.8861,
+          "approval_rate": 0.3219
+        }
+      },
+      "conformal_90": {
+        "threshold": 0.665,
+        "coverage": 0.9123,
+        "avg_set_size": 1.172,
+        "singleton_rate": 0.828
+      }
+    },
+    "Level_E2_No_Pre_Support": {
+      "name": "Model E2: VeriTrust without Pre-Application Liquidity Support",
+      "description": "Evaluates pure graph reputation without direct financial support",
+      "n_features": 36,
+      "features": [
+        "pre_bureau_score",
+        "post_bureau_score",
+        "bureau_drop_points",
+        "bureau_shock",
+        "shock_type",
+        "severity",
+        "insured",
+        "expense_minor",
+        "income_factor",
+        "income_est_minor",
+        "dti_est",
+        "bank_surplus_median_minor",
+        "bank_income_cv",
+        "new_emi_minor",
+        "eligible_incoming",
+        "distinct_anchors",
+        "reciprocal_edges",
+        "cluster_concentration",
+        "total_weight",
+        "mean_voucher_reliability",
+        "max_contributor_share",
+        "pre_vouch_score",
+        "post_vouch_score",
+        "vouch_held",
+        "pre_bureau_score_was_missing",
+        "post_bureau_score_was_missing",
+        "bureau_drop_points_was_missing",
+        "income_est_minor_was_missing",
+        "dti_est_was_missing",
+        "bank_surplus_median_minor_was_missing",
+        "bank_income_cv_was_missing",
+        "cluster_concentration_was_missing",
+        "mean_voucher_reliability_was_missing",
+        "max_contributor_share_was_missing",
+        "pre_vouch_score_was_missing",
+        "post_vouch_score_was_missing"
+      ],
+      "models": {
+        "xgboost_gpu": {
+          "n": 901,
+          "auc": 0.8881,
+          "pr_auc": 0.9214,
+          "brier": 0.1189,
+          "ks": 0.6641,
+          "accuracy": 0.8513,
+          "f1": 0.8881,
+          "approval_rate": 0.3174
+        },
+        "pytorch_gpu": {
+          "n": 901,
+          "auc": 0.8697,
+          "pr_auc": 0.8933,
+          "brier": 0.1303,
+          "ks": 0.6192,
+          "accuracy": 0.8213,
+          "f1": 0.8641,
+          "approval_rate": 0.3319
+        },
+        "lightgbm": {
+          "n": 901,
+          "auc": 0.8877,
+          "pr_auc": 0.9239,
+          "brier": 0.1192,
+          "ks": 0.6549,
+          "accuracy": 0.8524,
+          "f1": 0.8893,
+          "approval_rate": 0.3141
+        },
+        "logistic": {
+          "n": 901,
+          "auc": 0.8395,
+          "pr_auc": 0.8716,
+          "brier": 0.1642,
+          "ks": 0.5718,
+          "accuracy": 0.778,
+          "f1": 0.8214,
+          "approval_rate": 0.404
+        },
+        "generalized_ensemble": {
+          "n": 901,
+          "auc": 0.8886,
+          "pr_auc": 0.9163,
+          "brier": 0.1194,
+          "ks": 0.6575,
+          "accuracy": 0.8491,
+          "f1": 0.8863,
+          "approval_rate": 0.3196
+        }
+      },
+      "conformal_90": {
+        "threshold": 0.6481,
+        "coverage": 0.9001,
+        "avg_set_size": 1.147,
+        "singleton_rate": 0.853
+      }
+    },
+    "Level_E3_Graph_Only_Cold_Start": {
+      "name": "Model E3: VeriTrust Graph-Only (Unscorable / Thin-File Cold Start)",
+      "description": "Zero traditional bureau history; relying purely on social collateral",
+      "n_features": 30,
+      "features": [
+        "shock_type",
+        "severity",
+        "insured",
+        "expense_minor",
+        "income_factor",
+        "income_est_minor",
+        "dti_est",
+        "bank_surplus_median_minor",
+        "bank_income_cv",
+        "new_emi_minor",
+        "eligible_incoming",
+        "distinct_anchors",
+        "reciprocal_edges",
+        "cluster_concentration",
+        "total_weight",
+        "mean_voucher_reliability",
+        "max_contributor_share",
+        "support_before_application_minor",
+        "pre_vouch_score",
+        "post_vouch_score",
+        "vouch_held",
+        "income_est_minor_was_missing",
+        "dti_est_was_missing",
+        "bank_surplus_median_minor_was_missing",
+        "bank_income_cv_was_missing",
+        "cluster_concentration_was_missing",
+        "mean_voucher_reliability_was_missing",
+        "max_contributor_share_was_missing",
+        "pre_vouch_score_was_missing",
+        "post_vouch_score_was_missing"
+      ],
+      "models": {
+        "xgboost_gpu": {
+          "n": 901,
+          "auc": 0.8644,
+          "pr_auc": 0.9037,
+          "brier": 0.1323,
+          "ks": 0.5955,
+          "accuracy": 0.8191,
+          "f1": 0.8656,
+          "approval_rate": 0.3008
+        },
+        "pytorch_gpu": {
+          "n": 901,
+          "auc": 0.8533,
+          "pr_auc": 0.8939,
+          "brier": 0.1388,
+          "ks": 0.5652,
+          "accuracy": 0.8169,
+          "f1": 0.8666,
+          "approval_rate": 0.2741
+        },
+        "lightgbm": {
+          "n": 901,
+          "auc": 0.862,
+          "pr_auc": 0.9036,
+          "brier": 0.1328,
+          "ks": 0.5929,
+          "accuracy": 0.8213,
+          "f1": 0.8668,
+          "approval_rate": 0.3052
+        },
+        "logistic": {
+          "n": 901,
+          "auc": 0.8379,
+          "pr_auc": 0.8758,
+          "brier": 0.1647,
+          "ks": 0.5557,
+          "accuracy": 0.7814,
+          "f1": 0.8239,
+          "approval_rate": 0.4051
+        },
+        "generalized_ensemble": {
+          "n": 901,
+          "auc": 0.8678,
+          "pr_auc": 0.9002,
+          "brier": 0.1306,
+          "ks": 0.6098,
+          "accuracy": 0.8257,
+          "f1": 0.8712,
+          "approval_rate": 0.2941
+        }
+      },
+      "conformal_90": {
+        "threshold": 0.695,
+        "coverage": 0.9101,
+        "avg_set_size": 1.244,
+        "singleton_rate": 0.756
+      }
+    }
+  },
+  "hypothesis_tests": {
+    "veritrust_vs_conventional_baseline": {
+      "delta_auc": 0.0051,
+      "ci_95": [
+        -0.0028,
+        0.0127
+      ],
+      "statistically_significant": false
+    },
+    "veritrust_vs_degree_centrality": {
+      "delta_auc": 0.0049,
+      "ci_95": [
+        -0.0031,
+        0.0132
+      ],
+      "statistically_significant": false
+    },
+    "degree_centrality_vs_conventional": {
+      "delta_auc": 0.0002,
+      "ci_95": [
+        -0.0109,
+        0.0101
+      ],
+      "statistically_significant": false
+    }
+  },
+  "subgroups": {
+    "All_Test_Borrowers": {
+      "n": 901,
+      "default_rate": 0.6471,
+      "conventional_approval_rate": 0.3097,
+      "veritrust_approval_rate": 0.3152,
+      "approval_rate_gain": 0.0055,
+      "conventional_auc": 0.8841,
+      "veritrust_auc": 0.8892
+    },
+    "Severe_Bureau_Shock_Borrowers": {
+      "n": 153,
+      "default_rate": 0.4248,
+      "conventional_approval_rate": 0.5882,
+      "veritrust_approval_rate": 0.6209,
+      "approval_rate_gain": 0.0327,
+      "conventional_auc": 0.8474,
+      "veritrust_auc": 0.8292
+    },
+    "Stable_Bureau_Borrowers": {
+      "n": 748,
+      "default_rate": 0.6925,
+      "conventional_approval_rate": 0.2527,
+      "veritrust_approval_rate": 0.2527,
+      "approval_rate_gain": 0.0,
+      "conventional_auc": 0.8776,
+      "veritrust_auc": 0.8866
+    }
+  },
+  "invisible_primes": {
+    "n_unlocked": 26,
+    "share_of_rejected_unlocked": 0.0418,
+    "default_rate_of_unlocked": 0.3846,
+    "population_default_rate": 0.6471
+  }
+}
