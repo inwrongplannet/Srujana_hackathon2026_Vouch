@@ -185,3 +185,4 @@ def test_predict_missing_information_disclosures(client):
     assert "MISSING_BUREAU_FILE" in codes
     assert "MISSING_GST" in codes
     assert "MISSING_DECLARED_INCOME" in codes
+
