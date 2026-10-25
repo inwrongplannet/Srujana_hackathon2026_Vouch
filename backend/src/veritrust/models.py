@@ -153,6 +153,9 @@ class Vouch(BaseModel):
     )
     active: bool = Field(default=True, description="Whether this endorsement is currently active")
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    last_reaffirmed_at: Optional[datetime] = Field(
+        default=None, description="Timestamp when vouch was last explicitly re-affirmed"
+    )
 
     @field_validator("weight", "alpha", mode="before")
     @classmethod
@@ -219,6 +222,49 @@ class CreditAssessment(BaseModel):
     disclaimer: str = Field(
         default="Illustrative data — prototype recommendation, not validated financial advice."
     )
+
+
+class TemporalConfidenceReport(BaseModel):
+    """Multi-source evidence freshness confidence factors."""
+
+    vouch_confidence: Decimal = Field(description="Confidence factor C_v in [0, 1] for peer endorsements")
+    cashflow_confidence: Decimal = Field(description="Confidence factor C_cf in [0, 1] for cash-flow evidence")
+    repayment_confidence: Decimal = Field(description="Confidence factor C_r in [0, 1] for repayment track record")
+    composite_confidence: Decimal = Field(description="Blended overall evidence freshness confidence in [0, 1]")
+    delta_months: Decimal = Field(description="Elapsed time since observation in months")
+    half_lives: dict[str, Decimal] = Field(default_factory=dict, description="Active half-life parameters in months")
+
+
+class TemporalCreditAssessment(BaseModel):
+    """Credit assessment augmented with temporal freshness and epistemic uncertainty inflation."""
+
+    user_id: str = Field(description="Evaluated borrower user ID")
+    base_assessment: CreditAssessment = Field(description="Baseline unattenuated credit assessment")
+    temporal_confidence: TemporalConfidenceReport = Field(description="Freshness confidence breakdown")
+    effective_r_graph: Decimal = Field(description="Freshness-adjusted graph trust score")
+    effective_s_cashflow: Decimal = Field(description="Freshness-adjusted cash-flow score")
+    mu_effective: Decimal = Field(description="Freshness-adjusted expected capacity")
+    sigma2_temporal: Decimal = Field(description="Temporally inflated epistemic uncertainty")
+    score_final: Decimal = Field(description="Freshness-adjusted Lower Confidence Bound score")
+    max_loan_limit: Decimal = Field(description="Approved loan limit in INR under temporal uncertainty")
+    currency: str = Field(default="INR", description="ISO 4217 currency code")
+    timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    is_stale: bool = Field(default=False, description="True if evidence is aged beyond acceptable threshold")
+
+
+class TemporalSimulationSnapshot(BaseModel):
+    """Single point in a longitudinal temporal decay simulation trajectory."""
+
+    month: int = Field(description="Elapsed months from baseline")
+    vouch_confidence: Decimal = Field(description="C_vouch(t)")
+    cashflow_confidence: Decimal = Field(description="C_cashflow(t)")
+    repayment_confidence: Decimal = Field(description="C_repayment(t)")
+    mu_effective: Decimal = Field(description="Freshness-adjusted mu")
+    sigma2_temporal: Decimal = Field(description="Temporally inflated sigma2")
+    score_final: Decimal = Field(description="Final LCB score")
+    max_loan_limit: Decimal = Field(description="Approved limit in INR")
+    vouch_score: int = Field(description="Bounded Vouch Score [0, 100]")
+    confidence_rating: str = Field(description="Category: HIGH, MEDIUM, LOW, EXPIRED")
 
 
 class Evidence(BaseModel):

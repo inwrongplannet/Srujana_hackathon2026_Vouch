@@ -1050,6 +1050,42 @@ def cmd_recourse(args: argparse.Namespace) -> None:
         print("=======================================================================")
 
 
+def cmd_temporal(args: argparse.Namespace) -> None:
+    """Simulate temporal uncertainty, evidence freshness decay, and rejuvenation."""
+    engine, scorer, _, _, current_user = _init_context()
+    target_id = args.user_id or current_user
+    if not target_id:
+        print("Error: Target user ID must be provided or session logged in.")
+        return
+
+    from veritrust.temporal import simulate_temporal_trajectory, simulate_rejuvenation_scenarios
+
+    print("================================================================================================================")
+    print(f" VeriTrust Temporal Uncertainty & Evidence Freshness Trajectory for: {target_id}")
+    print("================================================================================================================")
+    print(" Month | C_vouch | C_cashflow | C_repay | Effective mu | sigma2 (Uncertainty) | Score (LCB) | Limit (INR) | VouchScore")
+    print("----------------------------------------------------------------------------------------------------------------")
+    snapshots = simulate_temporal_trajectory(scorer, target_id)
+    for s in snapshots:
+        print(
+            f" {s.month:5d} | {s.vouch_confidence:7.4f} | {s.cashflow_confidence:10.4f} | {s.repayment_confidence:7.4f} | "
+            f"{s.mu_effective:12.4f} | {s.sigma2_temporal:20.4f} | {s.score_final:11.4f} | {s.max_loan_limit:11.2f} | {s.vouch_score:10d} ({s.confidence_rating})"
+        )
+    print("================================================================================================================")
+
+    rejuv = simulate_rejuvenation_scenarios(scorer, target_id, stale_months=36)
+    print("\n--- Evidence Rejuvenation & Recovery Scenarios at Month 36 (3 Years Inactive) ---")
+    stale = rejuv["stale_baseline"]
+    bank = rejuv["bank_statement_refreshed"]
+    vouch = rejuv["vouch_reaffirmed"]
+    both = rejuv["fully_rejuvenated"]
+    print(f"  1. 36-Month Inactive Baseline:  Limit = INR {stale.max_loan_limit:9.2f} | sigma2 = {stale.sigma2_temporal:.4f} | LCB = {stale.score_final:.4f}")
+    print(f"  2. Bank Statement Refreshed:    Limit = INR {bank.max_loan_limit:9.2f} | sigma2 = {bank.sigma2_temporal:.4f} | LCB = {bank.score_final:.4f}")
+    print(f"  3. Peer Vouch Re-affirmed:      Limit = INR {vouch.max_loan_limit:9.2f} | sigma2 = {vouch.sigma2_temporal:.4f} | LCB = {vouch.score_final:.4f}")
+    print(f"  4. Both Refreshed (Full Reset): Limit = INR {both.max_loan_limit:9.2f} | sigma2 = {both.sigma2_temporal:.4f} | LCB = {both.score_final:.4f}")
+    print("================================================================================================================")
+
+
 # -----------------------------------------------------------------------------
 # Interactive REPL Shell
 # -----------------------------------------------------------------------------
@@ -1285,6 +1321,11 @@ def build_parser() -> argparse.ArgumentParser:
     p_rec.add_argument("--income", type=str, help="Corrected monthly income")
     p_rec.add_argument("--debt", type=str, help="Corrected monthly debt")
     p_rec.set_defaults(func=cmd_recourse)
+
+    # temporal (evidence freshness decay & rejuvenation)
+    p_temp = subparsers.add_parser("temporal", help="Simulate temporal evidence freshness decay, epistemic uncertainty, and recovery")
+    p_temp.add_argument("user_id", nargs="?", help="Borrower user ID to simulate (defaults to logged-in user)")
+    p_temp.set_defaults(func=cmd_temporal)
 
     # serve
     p_serve = subparsers.add_parser("serve", help="Start FastAPI REST API server")

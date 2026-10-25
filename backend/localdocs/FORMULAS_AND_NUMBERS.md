@@ -2,7 +2,7 @@
 
 **Document Version:** 2.0 (Production Master Specification)  
 **Location:** `backend/localdocs/FORMULAS_AND_NUMBERS.md`  
-**Related Specs:** [Implementation_Doc.md](Implementation_Doc.md) | [VOUCH_DEVELOPER_MASTER_V2.md](VOUCH_DEVELOPER_MASTER_V2.md) | [VERITRUST_SYSTEM_FLOW.md](VERITRUST_SYSTEM_FLOW.md)  
+**Related Specs:** [Implementation_Doc.md](Implementation_Doc.md) | [VOUCH_DEVELOPER_MASTER_V2.md](VOUCH_DEVELOPER_MASTER_V2.md) | [VERITRUST_SYSTEM_FLOW.md](VERITRUST_SYSTEM_FLOW.md) | [TEMPORAL_UNCERTAINTY_AND_FRESHNESS.md](TEMPORAL_UNCERTAINTY_AND_FRESHNESS.md)  
 **Strict Implementation Standard:** All money values in integer paise / strict Python `Decimal` with ISO 4217 currency code `INR`. Zero floating-point arithmetic.
 
 ---
