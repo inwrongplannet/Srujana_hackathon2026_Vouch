@@ -12,8 +12,9 @@
 |---|---|---|
 | `synth/` | `python -m veritrust.synth` | **Simulated world.** Fully synthetic borrowers whose months are simulated; default emerges from cash flow. The hidden truth is known, so "no history" vs "cannot pay" can be checked. |
 | `anchored/` | `python -m veritrust.anchor.build` | **Hybrid.** Real Home Credit applicants (real bureau grids, repayment history, missing values and default label) plus synthetic bank statements generated from each person's real columns. |
-| `combined/` | `python -m veritrust.combine` | **One dataset.** Both of the above stacked into the same tables, every row tagged `source` (`real_anchored` or `simulated`), outcomes tagged `label_definition`, and both answer keys merged into `answer_key.csv`. Fit and calibrate per source; never pool the labels. |
-| `external/` | `python -m veritrust.anchor.download` | Raw public sources: Home Credit mirror (pinned revision) and Berka. Real anonymised rows: never commit, never paste into prompts. |
+| `prosper/` | `python -m veritrust.anchor.prosper` | **Real endorsements.** 113,937 real Prosper loans (US, 2005-2014) with credit score, score change, endorsements and outcome, plus `prosper_check.json`. Real anonymised rows: never commit. |
+| `combined/` | `python -m veritrust.combine` | **One dataset.** All three stacked into the same tables, every row tagged `source` (`real_anchored`, `simulated` or `real_prosper`), outcomes tagged `label_definition`, and the answer keys merged into `answer_key.csv`. Fit and calibrate per source; never pool the labels. |
+| `external/` | `python -m veritrust.anchor.download` | Raw public sources: Home Credit mirror (pinned revision), Berka and Prosper (pinned SHA-256). Real anonymised rows: never commit, never paste into prompts. |
 
 Commands and requirements: `backend/README.md` (Credit datasets).
 
@@ -27,10 +28,21 @@ Money is integer paise (`*_minor`) with `currency` INR. Ratios are 4-dp decimal 
 | `transactions` | statement line (sample only) | date, narration (NEFT/UPI/NACH/ATM style, fictional names), type `CREDIT`/`DEBIT`/`RETURN`, amount, running balance |
 | `bureau_tradelines` | credit line | lender type, opened, sanctioned, EMI, status, outstanding, `dpd_grid` (24 months, oldest first) |
 | `gst_filings` | GST month (registered businesses) | `FILED` with turnover, or `MISSED` |
-| `vouches` | vouch (simulated world only) | relationship, months known, voucher's own on-time share |
+| `vouches` | vouch active at application (simulated only) | relationship, months known, voucher's reliability |
 | `outcomes` | applicant | `default_12m` label |
-| `features` | applicant | the model row, built only from the tables above |
+| `features` | applicant | the model row, built only from the tables above as of the application month; `cohort` and `sample_weight` |
 | `truth` (simulated) / `injections` (anchored) | applicant | the answer key; never a model input |
+| `bureau_snapshots` | borrower-month, 24 per borrower (simulated) | illustrative 300-900 bureau-style score, band, 3-month change, DPD, utilisation, enquiries, top reason codes; `NO_FILE` or `THIN_FILE` status |
+| `bureau_events` | event that moved the score (simulated) | `DPD_30/60/90`, `WRITE_OFF`, `NEW_ENQUIRY`, `NEW_TRADELINE`, `UTILISATION_JUMP`, points, reason code, linked tradeline |
+| `vouch_events` | endorsement event (simulated) | `CREATED`, `RENEWED`, `WITHDRAWN`, `EXPIRED`; voucher, recipient, stake in reputation points, utilisation |
+| `vouch_scores` | borrower-month, 24 per borrower (simulated) | Vouch Score 0-100 replayed from the events; `NO_RECORD`, `PROVISIONAL` or `ESTABLISHED` |
+| `vouch_outcomes` | endorsement active when the loan was taken (simulated) | loan status, `y`, expected rate, reputation change, dispute status |
+| `loan_performance` | month of the applied-for loan, 12 per borrower (simulated) | due, paid, DPD, status, shock active, support received |
+| `shock_events` | shocked borrower (simulated) | type, severity, insured, bureau drop, pre/post bureau and vouch scores, `vouch_held`, support mobilised (answer-key grade: never a model input) |
+| `bureau_trajectory` | borrower-month (anchored) | real worst DPD, reporting lines, rolling 30+ months, new lines, delinquency spike; `NO_SCORE_AVAILABLE` |
+| `prosper_loans` | loan (Prosper) | credit score band, score change since last loan, delinquencies, endorsements, outcome (`bad`) |
+
+Simulated rows come in two cohorts (`cohort` column): `main` (20,000, a population; shocks oversampled and reweighted by `sample_weight`) and `shock_study` (15,000 borrowers with live credit, one planned shock each; a designed sample with no weight).
 
 ### Reason codes for gaps
 | Code | Meaning | Example |

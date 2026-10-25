@@ -166,3 +166,93 @@ P_UNDISCLOSED_LOAN = 0.10        # an honest applicant forgets one small loan
 
 # Naive legacy policy, used only to measure who a history-only lender would turn away.
 LEGACY_MAX_DTI = Decimal("0.50")
+
+# --- Shocks, bureau-style score and vouch graph (market-shock dataset, docs/DECISIONS.md) ---
+
+# Share of simulated borrowers given one planned shock shortly before they apply. Deliberately
+# oversampled so the shocked group is large enough to test (about 1,450 per arm detects a 4 pp
+# gap at 80% power); `sample_weight` rescales it to SHOCK_REAL_INCIDENCE.
+SHOCK_SHARE = {"active_credit": 0.45, "other": 0.12}   # by stratum: has a live reported loan or not
+# Assumed real six-month chance of a shock big enough to dent a bureau score. Anchors, not a
+# measurement: NSS 75th round in-patient care 2.9% of persons a year; PLFS quarterly exits from
+# work 2.6-7.4% for urban men; NSS 77th round crop loss reported by 38% of farm households.
+SHOCK_REAL_INCIDENCE = 0.05
+# Shock-study cohort: extra borrowers, ids from STUDY_OFFSET + 1, drawn from the same generator but
+# kept only if they carry live reported credit (only they can show a bureau drop), each given one
+# planned shock. A designed sample for the shock question, tagged cohort=shock_study; it is not
+# part of the main population, so its rows carry no sample_weight.
+STUDY_OFFSET = 500_000
+STUDY_MAX_DRAWS = 200
+SHOCK_LEAD = (6, 2)                     # shock starts 6 to 2 months before the application month
+SHOCK_TYPES = {
+    "salaried_formal": {"MEDICAL": 0.45, "JOB_LOSS": 0.35, "FAMILY": 0.20},
+    "gig_platform": {"MEDICAL": 0.40, "JOB_LOSS": 0.40, "FAMILY": 0.20},
+    "kirana_msme": {"BUSINESS_DISRUPTION": 0.45, "MEDICAL": 0.40, "FAMILY": 0.15},
+    "smallholder_farmer": {"CROP": 0.55, "MEDICAL": 0.35, "FAMILY": 0.10},
+    "informal_daily_wage": {"MEDICAL": 0.50, "JOB_LOSS": 0.30, "FAMILY": 0.20},
+}
+SHOCK_SEVERITY = (0.45, 0.35, 0.20)     # weights of severity 1, 2, 3
+SHOCK_EXPENSE = {1: 1.0, 2: 2.0, 3: 3.5}                     # one-time cost, x monthly income
+# Planned shocks are the ones the question is about: big enough to exhaust the liquid buffer. On
+# the first shock month this share of the borrower's savings goes too (emergency spending, lost
+# stock, borrowing repaid to family). Their rarity is handled by SHOCK_REAL_INCIDENCE weights.
+SHOCK_BUFFER_DRAIN = (0.85, 1.0)
+SHOCK_INCOME_COST = 0.5                 # income shocks also carry this share of SHOCK_EXPENSE
+SHOCK_INCOME = {1: (0.65, 2), 2: (0.40, 3), 3: (0.15, 4)}   # (income multiplier, months)
+EXPENSE_SHOCKS = {"MEDICAL", "FAMILY"}
+P_INSURED = {"salaried_formal": 0.35, "gig_platform": 0.10, "kirana_msme": 0.12,
+             "smallholder_farmer": 0.15, "informal_daily_wage": 0.05}
+INSURED_COVER = 0.6                     # share of a medical bill insurance pays
+P_SHOCK_ENQUIRY = 0.6                   # short of cash during a shock, a borrower with a file asks for credit
+P_ENQUIRY_APPROVED = 0.55
+
+# Illustrative bureau-style scorecard, 300-900. Not CIBIL or any real bureau's method: points move
+# only with what the simulated bureau sees (DPD, write-offs, utilisation, enquiries, new lines).
+SCORE_RANGE = (300, 900)
+SCORE_BASE = 720
+SCORE_HISTORY_POINTS = 60               # earned linearly over SCORE_HISTORY_MONTHS of history
+SCORE_HISTORY_MONTHS = 120
+SCORE_DPD_POINTS = {30: 40, 60: 80, 90: 130}   # by current worst days past due
+SCORE_PER_LATE_MONTH = 12               # per month with 30+ DPD in the last 24 months
+SCORE_LATE_MONTHS_CAP = 120
+SCORE_WRITE_OFF_POINTS = 150
+SCORE_UTILISATION_FREE = Decimal("0.70")       # utilisation above this costs points
+SCORE_UTILISATION_POINTS = 60           # per 1.00 of utilisation above the free level
+SCORE_PER_ENQUIRY = 8                   # in the last 6 months
+SCORE_ENQUIRY_CAP = 48
+SCORE_PER_NEW_LINE = 10                 # opened in the last 6 months
+SCORE_NEW_LINE_CAP = 40
+THIN_FILE_MONTHS = 6
+SCORE_BANDS = ((550, "POOR"), (650, "FAIR"), (700, "GOOD"), (750, "VERY_GOOD"), (901, "EXCELLENT"))
+SHOCK_DROP_POINTS = -50                 # a "bureau shock": score falls this much within 3 months of the shock
+SHOCK_DROP_WINDOW = 3
+UTILISATION_JUMP = Decimal("0.10")
+
+# Vouch graph. Score formula from the Vouch scoring proposal: w = R/100 * h * exp(-lambda*U) * g,
+# S = 100 * (1 - exp(-W/tau)). Commitments are reputation points, never money.
+VOUCH_TAU = Decimal(3)
+VOUCH_LAMBDA = Decimal(1)
+VOUCH_COVERAGE = {"salaried_formal": 0.45, "gig_platform": 0.45, "kirana_msme": 0.65,
+                  "smallholder_farmer": 0.70, "informal_daily_wage": 0.60}
+VOUCHERS_PER_STATE = 4000
+P_INSTITUTION = 0.08                    # employer or SHG federation rather than a person
+VOUCH_BUDGET = (60, 100)                # reputation budget, points
+VOUCH_STAKE = (8, 25)                   # points staked on one endorsement
+VOUCH_EXPIRY = (12, 24)                 # months an endorsement lasts unless renewed
+VOUCH_AGE = (1, 48)                     # months before the application an endorsement was first given
+P_RENEW = 0.7
+P_WITHDRAW_MONTHLY = 0.004              # background churn
+P_WITHDRAW_AFTER_SHOCK = 0.55           # times (1 - discipline)^2: endorsers who know them walk away
+P_RING = 0.10                           # of low-discipline borrowers (< 0.45), share who buy a ring of fake endorsements
+RING_SIZE = (5, 9)
+RING_PENALTY = Decimal("0.10")          # edge quality kept by a reciprocal ring edge
+VOUCH_SUPPORT_SHARE = 0.35              # support a fully backed network can mobilise, x monthly income per unit of W
+VOUCH_HELD_FLOOR = 50
+VOUCH_HELD_SLACK = 5
+VOUCH_RELATIONSHIPS = {"COLLEAGUE": (0.80, 1.00), "FAMILY": (0.55, 0.75), "COMMUNITY": (0.75, 0.95),
+                       "TRADE": (0.70, 0.95), "NEIGHBOUR": (0.65, 0.90)}   # edge-quality range
+VOUCH_LEARNING_RATE = Decimal("0.10")
+VOUCH_EXPECTED_REPAY = Decimal("0.92")  # p in the reputation update
+P_DISPUTE = 0.08
+VOUCH_ALGORITHM = "vouch-v0.2"
+SCORE_ALGORITHM = "bureau-sim-v1"

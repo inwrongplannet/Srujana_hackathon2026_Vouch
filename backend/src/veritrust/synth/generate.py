@@ -13,17 +13,20 @@ from pathlib import Path
 from statistics import median
 
 from . import params as P
-from .features import build_features
+from . import bureau
+from .features import build_features, shock_vouch_features
 from .model import Loan, month_label
 from .money import emi, principal_for_emi, round_to, rupees, scale
-from .observe import (bank_view, bureau_view, declared_view, existing_emi_true, gst_view,
-                      statement_months, vouch_view)
+from .observe import bank_view, bureau_view, declared_view, existing_emi_true, gst_view, statement_months
 from .people import lognormal, pick, sample_borrower
+from .shocks import plan_shock, stratum
 from .simulate import simulate
 from .transactions import to_transactions
+from .vouch import VoucherPool, event_rows, outcome_rows, plan_vouches, score_at, weight_by_month
 
 TABLES = ("applications", "monthly_cashflow", "bureau_tradelines", "gst_filings", "vouches",
-          "outcomes", "truth", "features", "transactions")
+          "outcomes", "truth", "features", "transactions", "bureau_snapshots", "bureau_events",
+          "vouch_events", "vouch_scores", "vouch_outcomes", "loan_performance", "shock_events")
 
 
 def _application_loan(b, rng: random.Random) -> Loan:
@@ -65,13 +68,112 @@ def _default_driver(b, outcome: dict, performance, true_dti: Decimal) -> str:
     return "LIQUIDITY"
 
 
-def generate_one(index: int, with_transactions: bool) -> dict[str, list[dict]]:
-    """All rows for one borrower, keyed by table name."""
-    rng = random.Random(f"{P.SEED}:{index}")
-    b = sample_borrower(index, rng)
+def _sample_weight(shocked: bool, group: str) -> str:
+    """Reweights the oversampled shocked group back to SHOCK_REAL_INCIDENCE within its stratum."""
+    real, share = Decimal(repr(P.SHOCK_REAL_INCIDENCE)), Decimal(repr(P.SHOCK_SHARE[group]))
+    weight = real / share if shocked else (1 - real) / (1 - share)
+    return str(weight.quantize(Decimal("0.000001")))
+
+
+def _loan_performance(b, new: Loan, performance, application_id: str) -> list[dict]:
+    """The applied-for loan month by month: due, paid, days past due, and help received."""
+    by_month = {t.month: t for t in performance}
+    rows = []
+    for k in range(1, P.PERFORMANCE_MONTHS + 1):
+        m = b.app_month + k
+        t = by_month[m]
+        due = new.emi if new.is_due(m) else 0
+        paid = sum(p.amount for p in t.payments if p.loan_id == new.loan_id)
+        dpd = new.grid.get(m, 0)
+        if new.written_off_month is not None and new.written_off_month <= m:
+            status = "CHARGED_OFF"
+        elif new.dues_by(m) >= new.tenure and dpd == 0:
+            status = "SETTLED"
+        elif dpd == 0:
+            status = "ON_TIME"
+        elif paid:
+            status = "LATE"
+        else:
+            status = "MISSED"
+        rows.append({
+            "application_id": application_id, "borrower_id": b.borrower_id, "month": k,
+            "calendar_month": month_label(m), "due_minor": due, "paid_minor": paid, "dpd_days": dpd,
+            "status": status, "shock_active": int(bool(t.shock or t.lumpy)),
+            "support_received_minor": t.informal_support + t.vouch_support,
+            "vouch_support_minor": t.vouch_support,
+        })
+    return rows
+
+
+def _shock_row(b, group: str, snaps: list[dict], vouch_rows: list[dict], events: list[dict], history,
+               performance) -> dict:
+    """The shock under analysis: when the bureau score fell, by how much, and what the vouch did."""
+    plan = b.shock
+    score = {r["snapshot_month"]: r["bureau_score"] for r in snaps}
+    vouch = {r["snapshot_month"]: r["vouch_score"] for r in vouch_rows}
+    # Pre-shock = the month before the shock; the drop is the lowest score in the next
+    # SHOCK_DROP_WINDOW months (all before the application), relative to that.
+    pre_label = month_label(plan.start - 1)
+    before = score.get(pre_label, "")
+    drop_month, drop = None, None
+    for m in range(plan.start, min(plan.start + P.SHOCK_DROP_WINDOW, b.app_month)):
+        now = score.get(month_label(m), "")
+        if now != "" and before != "" and (drop is None or now - before < drop):
+            drop_month, drop = m, now - before
+    post_label = month_label(drop_month) if drop_month is not None else month_label(b.app_month - 1)
+    window = {month_label(m) for m in range(plan.start, plan.start + P.SHOCK_DROP_WINDOW)}
+    explained = any(e["event_month"] in window and e["magnitude_points"] < 0 for e in events)
+    pre_v, post_v = vouch.get(pre_label, ""), vouch.get(post_label, "")
+    held = pre_v != "" and post_v != "" and post_v >= pre_v - P.VOUCH_HELD_SLACK and post_v >= P.VOUCH_HELD_FLOOR
+    support_pre = sum(t.vouch_support for t in history if t.month >= plan.start)
+    support_post = sum(t.vouch_support for t in performance)
+    return {
+        "shock_id": f"{b.borrower_id}-S1", "borrower_id": b.borrower_id, "shock_month": month_label(plan.start),
+        "stratum": group,
+        "shock_type": plan.kind, "severity": plan.severity, "insured": int(plan.insured),
+        "expense_minor": plan.expense, "income_factor": f"{plan.income_factor:.2f}", "shock_months": plan.months,
+        "drop_month": month_label(drop_month) if drop_month is not None else "",
+        "pre_bureau_score": before if drop_month is not None else "",
+        "post_bureau_score": score.get(post_label, "") if drop_month is not None else "",
+        "bureau_score_at_application": score.get(month_label(b.app_month - 1), ""),
+        "bureau_drop_points": drop if drop is not None else "",
+        "bureau_shock": int(drop is not None and drop <= P.SHOCK_DROP_POINTS and explained),
+        "pre_vouch_score": pre_v, "post_vouch_score": post_v, "vouch_held": int(held),
+        "support_mobilised_minor": support_pre + support_post,
+        "support_before_application_minor": support_pre,
+    }
+
+
+def _study_borrower(index: int):
+    """A shock-study borrower: redraw (deterministically) until they carry live reported credit."""
+    for attempt in range(P.STUDY_MAX_DRAWS):
+        rng = random.Random(f"{P.SEED}:{index}:study:{attempt}")
+        b = sample_borrower(index, rng)
+        if stratum(b) == "active_credit":
+            return b, rng
+    raise RuntimeError(f"no borrower with live credit after {P.STUDY_MAX_DRAWS} draws for {index}")
+
+
+def generate_one(index: int, with_transactions: bool, pool: VoucherPool | None = None,
+                 cohort: str = "main") -> dict[str, list[dict]]:
+    """All rows for one borrower, keyed by table name.
+
+    `pool` holds the endorsers shared across borrowers (their staked points are a ledger); a
+    standalone call gets a fresh pool. `cohort` is "main" (the population) or "shock_study".
+    """
+    if cohort == "shock_study":
+        b, rng = _study_borrower(index)
+    else:
+        rng = random.Random(f"{P.SEED}:{index}")
+        b = sample_borrower(index, rng)
     initial_income = b.base_income
     new = _application_loan(b, rng)
-    history, performance = simulate(b, rng, new)
+    group = stratum(b)
+    b.shock = plan_shock(b, random.Random(f"{P.SEED}:{index}:shock"), force=cohort == "shock_study")
+    received, given = plan_vouches(b, pool or VoucherPool(), random.Random(f"{P.SEED}:{index}:vouch"))
+    b.vouch_weight = weight_by_month(
+        received, range(b.app_month - P.HISTORY_MONTHS, b.app_month + P.PERFORMANCE_MONTHS + 1))
+    history, performance = simulate(b, rng, new, aux=random.Random(f"{P.SEED}:{index}:aux"))
 
     app_label = month_label(b.app_month)
     months, statement_status = statement_months(b, rng)
@@ -79,7 +181,9 @@ def generate_one(index: int, with_transactions: bool) -> dict[str, list[dict]]:
     bank = bank_view(b, history, months, rng) if months else []
     tradelines = bureau_view(b, b.app_month, rng)
     gst = gst_view(b, history, rng)
-    vouches = vouch_view(b, rng)
+    vouches = [{"vouch_id": e.vouch_id, "relationship": e.relationship.lower(), "months_known": e.months_known,
+                "voucher_on_time_share": f"{e.voucher.reliability:.2f}"}
+               for e in received if e.active(b.app_month - 1)]
 
     app = {
         "borrower_id": b.borrower_id, "application_month": app_label, "occupation": b.segment,
@@ -98,6 +202,21 @@ def generate_one(index: int, with_transactions: bool) -> dict[str, list[dict]]:
     features = build_features(app, monthly, tradelines, gst, vouches)
     app["legacy_decision"], app["legacy_reason"] = features["legacy_decision"], features["legacy_reason"]
     outcome = _outcome(b, new)
+    application_id = f"{b.borrower_id}-A1"
+
+    snaps = bureau.snapshots(b)
+    bureau_events = bureau.events(b)
+    vouch_rows = [{"borrower_id": b.borrower_id, "snapshot_month": month_label(m), **score_at(received, m),
+                   "algorithm_version": P.VOUCH_ALGORITHM}
+                  for m in range(b.app_month - P.HISTORY_MONTHS, b.app_month)]
+    vouch_events = event_rows(b, received, given)
+    features.update(shock_vouch_features(b, snaps, vouch_rows, vouch_events, bureau_events,
+                                         random.Random(f"{P.SEED}:{index}:report")))
+    app["cohort"] = features["cohort"] = cohort
+    features["sample_weight"] = app["sample_weight"] = (
+        _sample_weight(b.shock is not None, group) if cohort == "main" else "")
+    settled = (new.tenure <= P.PERFORMANCE_MONTHS and not outcome["default_12m"]
+               and new.dues_by(b.app_month + P.PERFORMANCE_MONTHS) >= new.tenure)
 
     recent = [t.income for t in history[-P.STATEMENT_MONTHS:]]
     true_income = int(median(recent))
@@ -120,6 +239,9 @@ def generate_one(index: int, with_transactions: bool) -> dict[str, list[dict]]:
         "perf_lumpy_costs": ";".join(sorted({m.lumpy for m in performance if m.lumpy})),
         "perf_informal_support_minor": sum(m.informal_support for m in performance),
         "perf_new_digital_loans": sum(len(m.disbursals) for m in performance),
+        "perf_vouch_support_minor": sum(m.vouch_support for m in performance),
+        "support_capacity": f"{b.support_capacity:.4f}",
+        "shock_planned": b.shock.kind if b.shock else "",
         "default_driver": _default_driver(b, outcome, performance, true_dti),
     }
 
@@ -129,6 +251,12 @@ def generate_one(index: int, with_transactions: bool) -> dict[str, list[dict]]:
         "gst_filings": [{"borrower_id": b.borrower_id, **g} for g in gst],
         "vouches": [{"borrower_id": b.borrower_id, **v} for v in vouches],
         "outcomes": [outcome], "truth": [truth], "features": [features], "transactions": [],
+        "bureau_snapshots": snaps, "bureau_events": bureau_events, "vouch_events": vouch_events,
+        "vouch_scores": vouch_rows,
+        "vouch_outcomes": outcome_rows(b, received, application_id, bool(outcome["default_12m"]), settled,
+                                       outcome["default_month"], random.Random(f"{P.SEED}:{index}:dispute")),
+        "loan_performance": _loan_performance(b, new, performance, application_id),
+        "shock_events": [_shock_row(b, group, snaps, vouch_rows, bureau_events, history, performance)] if b.shock else [],
     }
     if with_transactions and bank:
         loans = {loan.loan_id: loan for loan in b.loans}
@@ -151,12 +279,18 @@ def write_csv(path: Path, rows: list[dict]) -> None:
             writer.writerow({k: ("" if v is None else v) for k, v in row.items()})
 
 
-def generate(n: int, out: Path, transaction_sample: int) -> dict:
-    """Generate `n` borrowers into `out`; line-level statements for the first `transaction_sample`."""
+def generate(n: int, out: Path, transaction_sample: int, study: int = 0) -> dict:
+    """Generate `n` main borrowers and `study` shock-study borrowers into `out`.
+
+    Line-level statements for the first `transaction_sample` main borrowers. Study ids start at
+    STUDY_OFFSET + 1 and share the endorser pool with the main population.
+    """
     out.mkdir(parents=True, exist_ok=True)
     tables: dict[str, list[dict]] = {name: [] for name in TABLES}
-    for index in range(1, n + 1):
-        for name, rows in generate_one(index, index <= transaction_sample).items():
+    pool = VoucherPool()
+    jobs = [(i, "main") for i in range(1, n + 1)] + [(P.STUDY_OFFSET + i, "shock_study") for i in range(1, study + 1)]
+    for index, cohort in jobs:
+        for name, rows in generate_one(index, index <= transaction_sample, pool, cohort).items():
             tables[name].extend(rows)
     files = {}
     for name in TABLES:
@@ -165,7 +299,8 @@ def generate(n: int, out: Path, transaction_sample: int) -> dict:
         files[f"{name}.csv"] = {"rows": len(tables[name]),
                                 "sha256": hashlib.sha256(path.read_bytes()).hexdigest()}
     manifest = {
-        "generator_version": P.GENERATOR_VERSION, "seed": P.SEED, "borrowers": n,
+        "generator_version": P.GENERATOR_VERSION, "seed": P.SEED, "borrowers": n + study,
+        "cohorts": {"main": n, "shock_study": study},
         "transaction_sample": min(n, transaction_sample), "currency": P.CURRENCY,
         "money_unit": "integer paise (minor units)", "label": "default_12m = 90+ days past due within 12 EMIs",
         "notice": "Synthetic, illustrative data. Not real people, not financial advice.",

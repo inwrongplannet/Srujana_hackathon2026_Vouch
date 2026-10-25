@@ -17,10 +17,8 @@ from statistics import median
 from . import params as P
 from .model import Borrower, Loan, month_label
 from .money import outstanding, round_to, rupees, scale
-from .people import poisson
 from .simulate import MonthTrue
 
-RELATIONSHIPS = ("neighbour", "shg_member", "employer", "supplier", "relative")
 
 
 @dataclass
@@ -190,18 +188,6 @@ def gst_view(b: Borrower, history: list[MonthTrue], rng: random.Random) -> list[
             turnover = scale(t.income, b.gst_underreport / b.margin)
             rows.append({"month": month_label(t.month), "status": "FILED", "turnover_minor": round_to(turnover, rupees(100))})
     return rows
-
-
-def vouch_view(b: Borrower, rng: random.Random) -> list[dict]:
-    """Community vouches: a weak, noisy signal about discipline, never about income."""
-    if not b.community:
-        return []
-    count = poisson(rng, 0.4 + 2.2 * b.discipline)
-    return [{
-        "vouch_id": f"{b.borrower_id}-V{n + 1}", "relationship": rng.choice(RELATIONSHIPS),
-        "months_known": rng.randint(6, 240),
-        "voucher_on_time_share": f"{min(1.0, max(0.0, rng.gauss(0.88, 0.08))):.2f}",
-    } for n in range(count)]
 
 
 def statement_months(b: Borrower, rng: random.Random) -> tuple[int, str]:

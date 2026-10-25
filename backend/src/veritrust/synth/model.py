@@ -42,6 +42,7 @@ class Loan:
     is_new: bool = False      # the loan being applied for
     paid: int = 0             # instalments paid so far (on time or caught up)
     written_off: bool = False
+    written_off_month: int | None = None
     grid: dict[int, int] = field(default_factory=dict)   # month -> days past due at month end
 
     def dues_by(self, month: int) -> int:
@@ -98,3 +99,24 @@ class Borrower:
     prior_closed_loans: int
     loans: list[Loan] = field(default_factory=list)
     bonus: bool = False
+    # Depth of the person's community: how much help their endorsers could mobilise (0..1).
+    support_capacity: float = 0.0
+    enquiries: list[int] = field(default_factory=list)   # months a lender pulled the bureau file
+    shock: "ShockPlan | None" = None
+    vouch_weight: dict[int, float] = field(default_factory=dict)   # month -> total endorsement weight W
+
+
+@dataclass
+class ShockPlan:
+    """One planned pre-application shock. Hidden truth: the lender only sees its traces."""
+
+    kind: str                 # MEDICAL, JOB_LOSS, CROP, BUSINESS_DISRUPTION, FAMILY
+    severity: int             # 1..3
+    insured: bool
+    start: int                # month index the shock begins
+    months: int               # months income is depressed (income shocks); 1 for a one-off bill
+    expense: int              # one-time cost in paise, after any insurance payout
+    income_factor: float      # income multiplier while it lasts (1.0 for expense shocks)
+
+    def active(self, month: int) -> bool:
+        return self.start <= month < self.start + self.months

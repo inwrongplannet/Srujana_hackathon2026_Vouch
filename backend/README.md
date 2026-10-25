@@ -7,7 +7,7 @@ Web-of-trust credit engine, dual-axis underwriting, and lending simulations.
 - **Lending & Slashing Complete:** In-memory lending service, repayment boosts, and atomic 4-level slashing cascade on default.
 - **Trust Lifecycle & Reputation Ledger Complete:** Immutable append-only event store (ACID SQLite + POSIX JSONL mirror), SHA-256 cryptographic hash chaining, strict idempotency enforcement, and disaster recovery via deterministic state replay.
 - **Test Suite Complete:** 43 comprehensive unit tests covering models, vouch conservation, propagation, slashing, and cryptographic ledger integrity.
-- **Credit datasets (in progress):** a simulated borrower world (`veritrust.synth`, stdlib only) and an anchored dataset of real Home Credit applicants with synthetic bank statements (`veritrust.anchor`). Schemas in `data/README.md`.
+- **Credit datasets (in progress):** a simulated borrower world (`veritrust.synth`, stdlib only) with monthly bureau-style scores, a time-stamped vouch graph and pre-application shocks; an anchored dataset of real Home Credit applicants with synthetic bank statements and a real delinquency trajectory (`veritrust.anchor`); and real Prosper loans with endorsements (`veritrust.anchor.prosper`). Schemas in `data/README.md`.
 
 ## Run
 Create and activate a virtual environment, install dependencies, and run the engine:
@@ -164,21 +164,24 @@ python main.py --demo                         # Run automated walkthrough simula
     ```
 
 ### Credit datasets
-Both write CSVs plus `manifest.json` and `validation.json`; nothing they produce is committed.
+Each writes CSVs plus `manifest.json`; nothing they produce is committed.
 
 ```bash
-# In the backend directory. Simulated world: 20,000 borrowers, stdlib only, about a minute.
-PYTHONPATH=src python -m veritrust.synth --n 20000 --out ../data/synth --transactions 300
+# In the backend directory. Simulated world: 20,000 borrowers plus a 15,000-borrower shock-study
+# cohort, stdlib only, about 20 minutes. Then the general checks and the shock-question gates.
+PYTHONPATH=src python -m veritrust.synth --n 20000 --study 15000 --out ../data/synth --transactions 300
 PYTHONPATH=src python -m veritrust.synth.validate --data ../data/synth
+PYTHONPATH=src python -m veritrust.synth.shock_validate --data ../data/synth
 
 # Anchored (real + synthetic): needs requirements-data.txt and network for the download.
 pip install -r requirements-data.txt
-PYTHONPATH=src python -m veritrust.anchor.download       # Berka + Home Credit into ../data/external
+PYTHONPATH=src python -m veritrust.anchor.download       # Berka, Home Credit and Prosper into ../data/external
 PYTHONPATH=src python -m veritrust.anchor.berka          # refresh berka_calibration.json
 PYTHONPATH=src python -m veritrust.anchor.build --n 30000
 PYTHONPATH=src python -m veritrust.anchor.validate
+PYTHONPATH=src python -m veritrust.anchor.prosper        # real endorsements: ../data/prosper + prosper_check.json
 
-# One dataset: stack both into ../data/combined (source column on every row)
+# One dataset: stack all three into ../data/combined (source column on every row)
 PYTHONPATH=src python -m veritrust.combine
 ```
 
@@ -215,9 +218,9 @@ PYTHONPATH=src python -m veritrust.combine
   - `config.py`: Dynamic configuration loaded from environment or `.env` (`K`, `ALPHA`, `BETA`, `HOP_DECAY`, `GAMMA`, etc.).
   - `scoring.py`: Credibility path enumeration, hop decay, cycle absorption, and dual-axis underwriting.
   - `lending.py`: In-memory loan lifecycle, repayments, 4-level slashing cascade, and settlement yields.
-  - `synth/`: simulated credit world: `params.py` (every assumption), `people.py`, `simulate.py` (monthly cash flow, default emerges), `observe.py` (what a lender sees, reason-coded gaps), `transactions.py` (statement lines and the extractor), `features.py` (model row from observed data only), `generate.py`, `validate.py`.
-  - `combine.py`: stacks the simulated and anchored datasets into one (`source`, `label_definition`, `recommended_use` columns).
-  - `anchor/`: hybrid dataset on real Home Credit applicants: `download.py`, `berka.py` (calibration on real Berka accounts, writes `berka_calibration.json`), `build.py`, `validate.py`.
+  - `synth/`: simulated credit world: `params.py` (every assumption), `people.py`, `simulate.py` (monthly cash flow, default emerges), `observe.py` (what a lender sees, reason-coded gaps), `transactions.py` (statement lines and the extractor), `features.py` (model row from observed data only), `shocks.py` (planned pre-application shocks), `bureau.py` (monthly bureau-style score and the events behind it), `vouch.py` (time-stamped vouch graph, Vouch Score replay, reputation updates), `generate.py`, `validate.py`, `shock_validate.py` (gates for the shock question).
+  - `combine.py`: stacks the simulated, anchored and Prosper datasets into one (`source`, `label_definition`, `recommended_use` columns).
+  - `anchor/`: hybrid dataset on real Home Credit applicants: `download.py`, `berka.py` (calibration on real Berka accounts, writes `berka_calibration.json`), `build.py`, `trajectory.py` (month-by-month delinquency from the real grids, no score), `validate.py`, `prosper.py` (real Prosper loans with endorsements and the real-data check).
 - `tests/`: Pytest unit tests for all mathematical invariants, state transitions, and ledger integrity.
 - `main.py`: End-to-end interactive CLI demonstration.
 - `requirements.txt`: Python package requirements (`pydantic`, `networkx`, `pytest`).
@@ -260,11 +263,12 @@ pytest tests/test_reputation.py  # Repayment yields, atomic 4-level slashing cas
 pytest tests/test_ledger.py      # Cryptographic hash chain, tamper detection, replay
 pytest tests/test_models.py      # Pydantic schemas, Decimal validation
 pytest tests/test_synth.py       # EMI and amortization known answers, determinism, extractor reproduces the statements
+pytest tests/test_shock_data.py  # Scorecard, Vouch Score and reputation known answers; structural shock-question gates
 ```
 
 ## Notes
 - **Out-Degree Conservation:** Outgoing edge weights must strictly sum to $\le C_u$. Sibling re-weighting is atomic.
 - **Cycle Absorption:** Visited-set during path discovery is strictly **per-path**, never global across paths.
 - **Decimal Precision:** All intermediate products, weights, and scores must use `Decimal` to avoid floating-point drift.
-- **Datasets:** the anchored build reads real anonymised Home Credit rows; keep them in `data/external/` (git-ignored) and never paste rows into prompts or commits. Check the original Kaggle competition rules before any use beyond this prototype.
+- **Datasets:** the anchored build reads real anonymised Home Credit rows and `veritrust.anchor.prosper` real Prosper loans; keep them in `data/external/` and `data/prosper/` (git-ignored) and never paste rows into prompts or commits. Check the original Kaggle competition rules and the Prosper data terms before any use beyond this prototype.
 - **Disclaimer:** All synthetic outputs are illustrative prototype recommendations, not validated financial advice.

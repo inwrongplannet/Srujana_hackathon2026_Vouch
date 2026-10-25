@@ -7,10 +7,13 @@ python -m veritrust.anchor.download [--out ../data/external]
   before any use beyond this prototype.
 - Berka / PKDD'99 Czech bank: read from CTU's public MariaDB with the guest account the CTU page
   publishes (not a secret), saved as CSV.
+- Prosper loan data (the only public file we found with credit score, endorsements and outcome
+  together): a public mirror, checked against a pinned SHA-256.
 """
 
 import argparse
 import csv
+import hashlib
 import json
 import time
 import urllib.request
@@ -25,6 +28,22 @@ HF_TABLES = ("application_train_dated", "bureau", "bureau_balance", "installment
 CTU = {"host": "relational.fel.cvut.cz", "port": 3306, "user": "guest", "password": "ctu-relational",
        "database": "financial"}
 BERKA_TABLES = ("account", "trans", "loan", "district")
+
+PROSPER_URL = "https://s3.amazonaws.com/udacity-hosted-downloads/ud651/prosperLoanData.csv"
+PROSPER_SHA256 = "71c1c1931f65bc4d2e3a8f3603d865e074e327b2271590f3a06829197b9cce0f"
+
+
+def download_prosper(out: Path) -> None:
+    dest = out / "prosper" / "prosperLoanData.csv"
+    if not dest.exists():
+        dest.parent.mkdir(parents=True, exist_ok=True)
+        tmp = dest.with_suffix(".part")
+        urllib.request.urlretrieve(PROSPER_URL, tmp)
+        tmp.rename(dest)
+    digest = hashlib.sha256(dest.read_bytes()).hexdigest()
+    if digest != PROSPER_SHA256:
+        raise ValueError(f"prosper file changed upstream: sha256 {digest}")
+    print("prosper", dest.name)
 
 
 def _hf_files(table: str) -> list[str]:
@@ -112,12 +131,14 @@ def download_berka(out: Path) -> None:
 def main() -> None:
     parser = argparse.ArgumentParser(description="Download public source datasets.")
     parser.add_argument("--out", type=Path, default=Path("../data/external"))
-    parser.add_argument("--only", choices=("home_credit", "berka"))
+    parser.add_argument("--only", choices=("home_credit", "berka", "prosper"))
     args = parser.parse_args()
     if args.only in (None, "berka"):
         download_berka(args.out)
     if args.only in (None, "home_credit"):
         download_home_credit(args.out)
+    if args.only in (None, "prosper"):
+        download_prosper(args.out)
 
 
 if __name__ == "__main__":

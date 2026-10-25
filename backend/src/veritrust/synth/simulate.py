@@ -5,6 +5,7 @@ Each month: income arrives (season, noise, personal shocks, macro events), essen
 caught up when there is room, and part of any surplus is spent. All money is integer paise.
 """
 
+import math
 import random
 from dataclasses import dataclass, field
 
@@ -47,6 +48,7 @@ class MonthTrue:
     charges: int = 0
     disbursals: list[tuple[str, int]] = field(default_factory=list)  # (loan_id, net credited)
     informal_support: int = 0
+    vouch_support: int = 0        # help mobilised by the borrower's endorsers
     shock: str = ""
     lumpy: str = ""
     savings_end: int = 0
@@ -58,6 +60,9 @@ class SimState:
     shock_left: int = 0
     harvest: dict = field(default_factory=dict)
     loan_counter: int = 0
+    # Separate stream for the shock and vouch mechanics, so the original draws stay reproducible.
+    aux: random.Random = field(default_factory=random.Random)
+    behind: int = 0               # consecutive months with a bounced EMI
 
 
 def _harvest_factor(b: Borrower, year: int, cal: int, rng: random.Random, st: SimState) -> float:
@@ -114,6 +119,10 @@ def income_for(b: Borrower, month: int, rng: random.Random, st: SimState) -> tup
             b.base_income = scale(b.base_income, 0.95)   # re-employed a little lower
     if shock:
         amount = scale(amount, b.shock_factor)
+    plan = b.shock
+    if plan and plan.active(month) and plan.income_factor < 1.0:
+        amount = scale(amount, plan.income_factor)
+        shock = shock or plan.kind.lower()
     return amount, shock
 
 
@@ -141,6 +150,34 @@ def _open_new_digital_loan(b: Borrower, month: int, shortfall: int, rng: random.
     loan.principal = principal
     loan.emi = emi(principal, loan.rate, loan.tenure)
     b.loans.append(loan)
+    if loan.reported:
+        b.enquiries.append(month)
+    return loan
+
+
+def _shock_credit(b: Borrower, month: int, shortfall: int, st: SimState) -> Loan | None:
+    """During or just after a shock, a borrower with a bureau file asks a lender for credit.
+
+    Every request is a bureau enquiry; only some are approved. Returns the new loan, if any.
+    """
+    plan = b.shock
+    if plan is None or not plan.start <= month < plan.start + plan.months + 2:
+        return None
+    if b.credit_history_start is None or b.credit_history_start > month:
+        return None
+    if st.aux.random() >= P.P_SHOCK_ENQUIRY:
+        return None
+    b.enquiries.append(month)
+    if st.aux.random() >= P.P_ENQUIRY_APPROVED:
+        return None
+    st.loan_counter += 1
+    kind = "nbfc_consumer" if st.aux.random() < 0.6 else "fintech_app"
+    loan = new_loan(st.aux, b.borrower_id, st.loan_counter, kind, b.base_income, month, declared=False)
+    principal = round_to(max(scale(shortfall, st.aux.uniform(1.0, 2.0)), rupees(3000)), rupees(500))
+    loan.principal = principal
+    loan.emi = emi(principal, loan.rate, loan.tenure)
+    loan.reported = True
+    b.loans.append(loan)
     return loan
 
 
@@ -149,7 +186,12 @@ def run_month(b: Borrower, month: int, rng: random.Random, st: SimState,
     """Simulate one month and update loans and savings in place."""
     income, shock = income_for(b, month, rng, st)
     essentials, lumpy = essentials_for(b, month, rng)
+    plan = b.shock
     savings = st.savings + income
+    if plan and month == plan.start:
+        drain = scale(st.savings, st.aux.uniform(*P.SHOCK_BUFFER_DRAIN))
+        essentials += plan.expense + drain
+        lumpy = plan.kind.lower()
 
     due = [loan for loan in b.loans if not loan.written_off and loan.is_due(month)]
     due_total = sum(loan.emi for loan in due)
@@ -165,6 +207,12 @@ def run_month(b: Borrower, month: int, rng: random.Random, st: SimState,
                        shock=shock, lumpy=lumpy)
 
     if savings < due_total:
+        shock_loan = _shock_credit(b, month, due_total - savings, st)
+        if shock_loan:
+            net = shock_loan.principal - scale(shock_loan.principal, 0.02)
+            savings += net
+            record.disbursals.append((shock_loan.loan_id, net))
+    if savings < due_total:
         shortfall = due_total - savings
         if b.stacker and rng.random() < 0.6 and \
                 sum(1 for loan in b.loans if loan.lender_type == "FINTECH" and loan.is_open(month)) < 5:
@@ -175,6 +223,15 @@ def run_month(b: Borrower, month: int, rng: random.Random, st: SimState,
         elif rng.random() < 0.15:
             record.informal_support = shortfall     # family or a moneylender; invisible to lenders
             savings += shortfall
+    # Endorsers who stake their reputation also help, but only once trouble is visible: help
+    # arrives the month after an EMI bounces, covering this month's dues and the arrears. So a
+    # shock still reaches the bureau; the network decides how fast the borrower recovers.
+    weight = b.vouch_weight.get(month, 0.0)
+    overdue = sum(loan.emi * loan.arrears(month - 1) for loan in b.loans if not loan.written_off)
+    if st.behind and weight > 0 and savings < due_total + overdue             and st.aux.random() < 1.0 - math.exp(-weight):
+        help_amount = min(due_total + overdue - savings, scale(b.base_income, P.VOUCH_SUPPORT_SHARE * weight))
+        record.vouch_support = help_amount
+        savings += help_amount
 
     if b.discipline > 0.5:
         due.sort(key=lambda loan: (-(NEW_LOAN_PRIORITY if loan.is_new else PRIORITY[loan.kind]), loan.loan_id))
@@ -214,6 +271,8 @@ def run_month(b: Borrower, month: int, rng: random.Random, st: SimState,
         current = sum(x.emi for x in b.loans if x.is_open(month) and not x.written_off)
         if b.stacker or current + loan.emi <= scale(b.base_income, 0.5):
             b.loans.append(loan)
+            if loan.reported:
+                b.enquiries.append(month)
             if b.credit_history_start is None and loan.reported:
                 b.credit_history_start = month
 
@@ -233,23 +292,27 @@ def run_month(b: Borrower, month: int, rng: random.Random, st: SimState,
         if loan.written_off or month < loan.start:
             continue
         arrears = loan.arrears(month)
-        if arrears >= P.WRITE_OFF_ARREARS:
+        if arrears >= P.WRITE_OFF_ARREARS and not loan.written_off:
             loan.written_off = True
+            loan.written_off_month = month
         if loan.is_open(month) or loan.written_off:
             loan.grid[month] = min(arrears * 30, P.DPD_CAP)
 
     st.savings = savings
+    st.behind = st.behind + 1 if record.bounces else 0
     record.savings_end = savings
     return record
 
 
-def simulate(b: Borrower, rng: random.Random, new: Loan) -> tuple[list[MonthTrue], list[MonthTrue]]:
+def simulate(b: Borrower, rng: random.Random, new: Loan,
+             aux: random.Random | None = None) -> tuple[list[MonthTrue], list[MonthTrue]]:
     """Run the 24 history months, disburse the applied-for loan, then the performance months.
 
     Returns (history, performance). Performance covers the application month and the 12 months
     in which the new loan's first 12 EMIs fall due.
     """
-    st = SimState(savings=b.savings, loan_counter=len(b.loans) + 1)
+    st = SimState(savings=b.savings, loan_counter=len(b.loans) + 1,
+                  aux=aux or random.Random(f"{P.SEED}:{b.borrower_id}:aux"))
     history = [run_month(b, m, rng, st, organic_credit=True)
                for m in range(b.app_month - P.HISTORY_MONTHS, b.app_month)]
     b.loans.append(new)

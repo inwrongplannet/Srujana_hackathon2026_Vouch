@@ -38,6 +38,8 @@ from veritrust.synth.money import round_to, rupees, scale
 from veritrust.synth.observe import BankMonth, split_income
 from veritrust.synth.transactions import to_transactions
 
+from .trajectory import trajectory_rows
+
 SEED = 42
 VERSION = "1.0.0"
 # Home Credit's income and annuity are monthly-scale (median annuity/income about 0.17).
@@ -392,6 +394,12 @@ def build(raw: Path, out: Path, n: int, transaction_sample: int) -> dict:
             for bm in bank:
                 tables["transactions"].extend(to_transactions(person, bm, loan_map, tx_rng, counter))
 
+    by_borrower: dict[str, list[dict]] = defaultdict(list)
+    for t in tables["bureau_tradelines"]:
+        by_borrower[t["borrower_id"]].append(t)
+    tables["bureau_trajectory"] = [row for app in tables["applications"] if by_borrower[app["borrower_id"]]
+                                   for row in trajectory_rows(app["borrower_id"], app["application_month"],
+                                                              by_borrower[app["borrower_id"]])]
     out.mkdir(parents=True, exist_ok=True)
     files = {}
     for name, rows in tables.items():
@@ -404,6 +412,7 @@ def build(raw: Path, out: Path, n: int, transaction_sample: int) -> dict:
         "label": "default_12m = Home Credit TARGET: payment difficulties on the loan (late beyond the lender's threshold on early instalments)",
         "money_unit": f"integer paise; Home Credit amounts x {SCALE}", "currency": P.CURRENCY,
         "real_tables": ["applications (except bank_statement_status, declared_emi_*)", "bureau_tradelines", "outcomes",
+                        "bureau_trajectory (derived month by month from the real grids; no score)",
                         "features: bureau_*, hc_*, application fields"],
         "synthetic_tables": ["monthly_cashflow", "transactions", "gst_filings", "injections",
                              "features: bank_*, gst_*, declared_to_bank_income, undeclared_emi_to_income"],

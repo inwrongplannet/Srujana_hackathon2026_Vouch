@@ -20,6 +20,8 @@ build/
 data/external/
 data/synth/
 data/anchored/
+data/prosper/
+data/*.log
 data/*_try/
 data/combined/*
 !data/combined/README.md

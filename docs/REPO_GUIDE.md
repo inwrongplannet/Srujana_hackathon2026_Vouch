@@ -61,7 +61,7 @@ A zone is a top-level folder with its own `AGENTS.md` (`backend/`, `frontend/`, 
 | `frontend/` | User-facing app, scaffolded by whoever the task is assigned to | Event day |
 | `spikes/` | Sandbox for experiments; messy is fine, findings must be written | During event |
 | `data/` | Small sample and seed files | During event |
-| `data/synth/`, `data/anchored/`, `data/combined/`, `data/external/` | Generated credit datasets and raw public sources (git-ignored; built by `veritrust.synth` and `veritrust.anchor`, see `data/README.md`) | During event |
+| `data/synth/`, `data/anchored/`, `data/prosper/`, `data/combined/`, `data/external/` | Generated credit datasets and raw public sources (git-ignored; built by `veritrust.synth` and `veritrust.anchor`, see `data/README.md`) | During event |
 | `backend/requirements-data.txt` | Data-build-only dependencies for `veritrust.anchor` | During event |
 | `scripts/` | Automation behind the Makefile and skills, including the docs and agent-file gates and the pre-push hook in `scripts/hooks/` | Before/during event |
 

@@ -167,3 +167,63 @@ def build_features(app: dict, months: list[dict], tradelines: list[dict], gst: l
                 "bureau_written_off", "bureau_emi_minor", "bureau_outstanding_to_sanctioned"):
         row[key] = bureau.get(key, "")
     return row
+
+
+def _months_back(app_month: str, k: int) -> str:
+    index = int(app_month[:4]) * 12 + int(app_month[5:]) - 1 - k
+    return f"{index // 12:04d}-{index % 12 + 1:02d}"
+
+
+def shock_vouch_features(b, snaps: list[dict], vouch_rows: list[dict], vouch_events: list[dict],
+                         bureau_events: list[dict], rng) -> dict:
+    """Bureau-score, vouch-graph and reported-shock features as of the application month.
+
+    Reads only rows dated before the application (the last snapshot is the month before), never
+    the shock plan's hidden fields beyond what the applicant reports, and never any outcome.
+    """
+    app = snaps[-1]["snapshot_month"] if snaps else ""
+    score = {r["snapshot_month"]: r["bureau_score"] for r in snaps}
+    last = snaps[-1] if snaps else {}
+    vouch = {r["snapshot_month"]: r for r in vouch_rows}
+    vlast = vouch_rows[-1] if vouch_rows else {}
+
+    def change(k: int) -> object:
+        now, before = score.get(app, ""), score.get(_months_back(app, k - 1) if app else "", "")
+        return now - before if now != "" and before != "" else ""
+
+    recent_changes = [r["score_change_3m"] for r in snaps[-6:] if r["score_change_3m"] != ""]
+    recent = {_months_back(app, k) for k in range(0, 3)} if app else set()
+    six = {_months_back(app, k) for k in range(0, 6)} if app else set()
+    before_vouch = vouch.get(_months_back(app, 5), {}) if app else {}
+    plan = b.shock
+    reported = plan is not None and rng.random() < 0.85
+    return {
+        "bureau_score_status": last.get("snapshot_status", "NO_FILE"),
+        "bureau_score": score.get(app, ""),
+        "bureau_score_band": last.get("score_band", ""),
+        "bureau_score_change_3m": change(4),
+        "bureau_score_change_6m": change(7),
+        "bureau_worst_change_3m_6m": min(recent_changes) if recent_changes else "",
+        "bureau_utilisation": last.get("utilisation", ""),
+        "bureau_enquiries_6m_at_app": last.get("enquiries_6m", ""),
+        "bureau_events_3m": sum(1 for e in bureau_events if e["event_month"] in recent),
+        "bureau_top_reason_code": (last.get("top_reason_codes") or "").split("|")[0],
+        "vouch_score": vlast.get("vouch_score", ""),
+        "vouch_score_status": vlast.get("vouch_status", "NO_RECORD"),
+        "vouch_score_change_6m": (vlast["vouch_score"] - before_vouch["vouch_score"])
+        if vlast.get("vouch_score", "") != "" and before_vouch.get("vouch_score", "") != "" else "",
+        "vouch_eligible_incoming": vlast.get("eligible_incoming", 0),
+        "vouch_total_weight": vlast.get("total_weight", ""),
+        "vouch_distinct_anchors": vlast.get("distinct_anchors", 0),
+        "vouch_max_contributor_share": vlast.get("max_contributor_share", ""),
+        "vouch_reciprocal_edges": vlast.get("reciprocal_edges", 0),
+        "vouch_cluster_concentration": vlast.get("cluster_concentration", ""),
+        "vouch_mean_reliability": vlast.get("mean_voucher_reliability", ""),
+        "vouch_withdrawn_6m": sum(1 for e in vouch_events
+                                  if e["action"] == "WITHDRAWN" and e["recipient_id"] == b.borrower_id
+                                  and e["event_month"] in six),
+        "shock_reported_status": "REPORTED" if reported else ("NOT_PROVIDED" if plan else "NOT_APPLICABLE"),
+        "shock_reported_type": plan.kind if reported else "",
+        "shock_reported_severity": plan.severity if reported else "",
+        "shock_reported_insured": int(plan.insured) if reported else "",
+    }
