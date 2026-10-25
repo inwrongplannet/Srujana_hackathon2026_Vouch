@@ -19,6 +19,8 @@ flowchart LR
     D --> E["Stage 5<br/>Credibility Propagation<br/>(Hop Decay, Min-Path & LCB)"]
     E --> F["Stage 6<br/>Decisioning & Optimization<br/>(OR-Tools CP-SAT & Monte Carlo)"]
     F --> G["Stage 7<br/>Platform Treasury & Ledger<br/>(HMAC/SHA-256 Replay)"]
+    G --> H["Stage 8<br/>Explainable ML Suite<br/>(EBM, XGBoost GPU, PyTorch GPU, LightGBM)"]
+    H --> I["Stage 9<br/>Conformal Uncertainty & Ablation<br/>(Split/Mondrian Sets, Invisible Primes)"]
 ```
 
 ---
@@ -263,6 +265,50 @@ Deterministic graph traversal and dual-axis underwriting:
 
 ---
 
+### Stage 8: Explainable Machine Learning Suite & GPU Acceleration (`backend/ml/`)
+
+1. **Realistic Synthetic Noise Injection (`noise.py`):**
+   - Controlled generator reflecting real-world micro-finance imperfections:
+     - Continuous measurement jitter ($\epsilon \sim \mathcal{N}(0, \sigma^2)$ preserving physical non-negativity).
+     - Financial reporting rounding (15% probability of rounding to nearest 1,000, 5,000, or 10,000 paise).
+     - Informative missingness (MAR/MNAR) on bureau and GST fields with explicit `_was_missing` indicator flags.
+     - Fat-tailed emergency expense shocks ($2.5\times$ to $4\times$ multiplier).
+     - Macroeconomic population drift simulating inflation and seasonal liquidity shifts.
+     - Stochastic label noise (2.5% random label flips simulating renegotiated loans and administrative cures).
+
+2. **Parallel GPU Model Training Suite (`models.py`, `train.py`):**
+   - Five explainable model paradigms trained concurrently across GPU CUDA streams and CPU threads:
+     - **Explainable Boosting Machine (EBM):** Glassbox Generalized Additive Model with spline shape curves decomposing risk additively into exact log-odds without black-box opacity.
+     - **XGBoost GPU:** Histogram-based gradient boosting executed on `device='cuda'` with exact TreeSHAP local attributions.
+     - **PyTorch GPU Tabular Neural Network:** Residual network with Monte Carlo Dropout estimating epistemic model disagreement $\sigma_{\text{epistemic}}$.
+     - **LightGBM:** Depth-regularized boosting with early stopping on held-out validation slices.
+     - **Calibrated Logistic Scorecard:** Monotonic $L_2$-regularized linear scorecard with standard scaling.
+
+3. **Generalized Meta-Ensemble (`GeneralizedCreditModel`):**
+   - Inverse-Brier weighted model mixture blending the five diverse architectures.
+   - Outperformed individual models on the hackathon shock dataset, achieving **0.8892 AUC** and **0.9191 PR-AUC** on Full VeriTrust (Model D).
+
+---
+
+### Stage 9: Conformal Uncertainty & Empirical Ablation Engine (`conformal.py`, `ablation.py`)
+
+1. **Split & Mondrian Conformal Prediction Sets:**
+   - Finite-sample coverage guarantees ($\ge 90\%$ and $\ge 95\%$) across data completeness tiers (thin-file, bank-only, full-documentation).
+   - Tri-state decision outputs: `ELIGIBLE` (high-confidence timely repayment), `REVIEW` (honest uncertainty / human underwriting review), `DECLINE_CANDIDATE` (high-confidence default).
+
+2. **Empirical Ablation Study Findings (4,502 Borrowers):**
+   - **Topology is NOT Trust:** Adding simple in-degree centrality to conventional financials yields zero significant improvement ($\Delta\text{AUC} = +0.0001$, 95% CI: $[-0.0109, +0.0101]$).
+   - **Endorser Quality Drives Signal:** Incorporating voucher reliability and pre-application liquidity transfers boosts AUC to **0.8881**.
+   - **Full VeriTrust Superiority:** Rank attenuation ($\alpha_{uv}$) and provenance consolidation reach top discrimination (**0.8892 AUC**, **0.9191 PR-AUC**, Brier loss **0.1190**).
+   - **Invisible Primes Rescued:** Unlocked **26 borrowers** (4.18% of conventional rejections) whose actual default rate was **38.46%** compared to the 64.71% population default rate (a **26.25 percentage-point lower default risk**).
+   - **Cold-Start Graph-Only Viability:** When all bureau features are completely dropped, VeriTrust social collateral achieves an AUC of **0.8678** and PR-AUC of **0.9002**.
+
+3. **Prosper Empirical Validation (55,305 Real-World Loans):**
+   - Cheap-talk non-monetary endorsements increase default risk (32.81% vs 30.79% baseline).
+   - Endorsements backed by actual monetary capital significantly reduce default risk (23.71%, a $-7.08$ pp improvement).
+
+---
+
 ## 3. Implemented Code Organization in `backend/`
 
 ```text
@@ -273,7 +319,18 @@ backend/
 │   ├── VOUCH_DEVELOPER_MASTER_V2.md             # Developer master specification v2
 │   ├── VERITRUST_SYSTEM_FLOW.md                 # End-to-end system flow & walkthrough
 │   ├── FORMULAS_AND_NUMBERS.md                  # Comprehensive formulas, process & numbers spec
+│   ├── TEMPORAL_UNCERTAINTY_AND_FRESHNESS.md    # Multi-horizon evidence decay & epistemic inflation
+│   ├── PROSPER_AND_LITERATURE_LESSONS.md        # Prosper 55k loan analysis & cheap-talk failure modes
 │   └── VOUCH_SHOCK_DATA_SPEC.md                 # Market-shock dataset design specification
+├── ml/                                          # Explainable ML pipeline & ablation harness
+│   ├── __init__.py
+│   ├── models.py                                # EBM, XGBoost GPU, PyTorch GPU (MC Dropout), Scorecard, GeneralizedCreditModel
+│   ├── conformal.py                             # Split & Mondrian conformal prediction sets
+│   ├── noise.py                                 # Realistic synthetic noise injection (jitter, rounding, MAR, shocks)
+│   ├── data.py                                  # Dataset loaders (Option A, Simulated Underwriting, Real-Anchored)
+│   ├── explain.py                               # Additive reason codes & counterfactual recourse
+│   ├── train.py                                 # Multi-threaded parallel GPU training harness
+│   └── ablation.py                              # 9-paper literature hypothesis ablation runner
 ├── src/
 │   └── veritrust/
 │       ├── __init__.py
@@ -294,14 +351,16 @@ backend/
 │       ├── ledger.py                            # SQLite + JSONL cryptographic hash-chained ledger
 │       ├── store.py                             # JSON persistence & deterministic state serialization
 │       ├── simulator.py                         # Web-of-Trust benchmark topology calibration engine
+│       ├── temporal.py                          # Multi-horizon evidence freshness decay
+│       ├── prediction.py                        # Predictive credit risk inference & conformal decisions
 │       ├── cli.py                               # Interactive CLI shell & command handlers
 │       └── api/                                 # FastAPI REST API package
 │           ├── __init__.py
-│           ├── routes.py                        # Applications, assessments, treasury, transactions
+│           ├── routes.py                        # Applications, assessments, treasury, transactions, predictions
 │           ├── protocol_routes.py               # Vouch requests, decisions, defaults
 │           ├── community_routes.py              # Community platform endpoints
 │           └── registry.py                      # Shared in-memory router registries
-├── tests/                                       # 134 passing unit tests covering all components
+├── tests/                                       # 152 passing unit tests covering all components
 │   ├── test_models.py                           # Domain models & Decimal validations
 │   ├── test_vouch.py                            # Vouching, unvouching, out-degree conservation
 │   ├── test_trust.py                            # Out-degree conservation, hop decay, multi-anchor sum
@@ -316,10 +375,15 @@ backend/
 │   ├── test_ledger.py                           # Cryptographic hash chains, tamper detection, replay
 │   ├── test_platform_fee.py                     # Platform transaction fees, treasury cuts, replay
 │   ├── test_mathematical_framework.py           # Master 2026 mathematical framework & rank decay
+│   ├── test_temporal_uncertainty.py             # Temporal evidence decay & epistemic inflation
+│   ├── test_prediction_api.py                   # Predictive risk inference & conformal API
+│   ├── test_adversarial_and_edge_cases.py       # Sybil cliques, collusion rings, stress limits
+│   ├── test_vouch_score_v2.py                   # Vouch scoring invariants & anchor paths
+│   ├── test_ml_pipeline.py                      # Parallel GPU training, noise generator, conformal coverage
 │   ├── test_api_routes.py                       # REST API route integration tests
 │   └── test_protocol_routes.py                  # Protocol router integration tests
 ├── main.py                                      # Interactive CLI & FastAPI server runner
-└── requirements.txt                             # Pydantic v2, NetworkX, OR-Tools, FastAPI, pytest
+└── requirements.txt                             # Pydantic v2, NetworkX, OR-Tools, FastAPI, PyTorch, XGBoost, LightGBM, pytest
 ```
 
 ---
@@ -328,9 +392,12 @@ backend/
 
 All acceptance criteria across all stages are demonstrably met and verified:
 
-- **134 passing unit tests:** `pytest backend/tests` (100% green).
+- **152 passing unit tests:** `pytest backend/tests` (100% green).
 - **Cryptographic ledger audit:** `python main.py audit` verifies unbroken SHA-256 hash chains from Genesis to Head.
 - **Disaster recovery replay:** `python main.py replay --restore` reconstructs complete graph, loan, and platform treasury state deterministically from raw events.
 - **OR-Tools optimization:** CP-SAT solver verified on both `MIN_COST` and `MAX_PRINCIPAL` objectives with binding constraint identification.
 - **Monte Carlo stress testing:** 5,000 seeded stochastic simulation runs verify shortfall frequencies and shock tolerance thresholds.
 - **Platform transaction fee cut:** 1.0% fee cut on borrows and repayments verified with exact `Decimal` math and treasury tracking.
+- **Explainable ML & GPU parallel training:** Multi-paradigm models (EBM, XGBoost GPU, PyTorch GPU, LightGBM, Scorecard) trained concurrently on CUDA.
+- **Conformal prediction guarantees:** Finite-sample $\ge 90\%$ and $\ge 95\%$ coverage mathematically verified across data completeness tiers.
+- **Ablation & literature validation:** Demonstrated $+0.0049$ AUC lift from VeriTrust over raw degree centrality, rescuing 26 Invisible Primes with $26.25$ pp lower default risk.

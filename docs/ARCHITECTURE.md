@@ -4,12 +4,13 @@
 
 ## System overview
 
-Vouch (VeriTrust) is a decentralized, explainable credit-underwriting and risk-assessment platform designed to solve the thin-file trap. It combines four orthogonal layers:
+Vouch (VeriTrust) is a decentralized, explainable credit-underwriting and risk-assessment platform designed to solve the thin-file trap. It combines six orthogonal layers:
 1. **Rule-based affordability engine:** Evaluates verified cash inflows, essential expenses, protected buffers, and debt caps ($D = I - E - B$).
 2. **Google OR-Tools CP-SAT optimizer:** Restructures infeasible requests into mathematically optimal alternative plans.
 3. **Web-of-Trust graph engine:** Transitive trust propagation with out-degree conservation, hop decay, and per-path cycle absorption.
 4. **Monte Carlo stochastic stress tester:** Simulates 5,000 forward-looking economic scenarios (income volatility, payment delays, emergency shocks).
 5. **Explainability & forensic audit engine:** Traces rule evaluations, evidence links, graph paths, and cryptographic event hashes.
+6. **Explainable ML & conformal prediction engine:** Glassbox Explainable Boosting Machines (EBM), GPU-accelerated gradient boosting, and finite-sample conformal prediction sets ($\ge 90\%$ coverage) for calibrated default probabilities, scorecard ratings, and tri-state decisions (`ELIGIBLE`, `REVIEW`, `DECLINE_CANDIDATE`).
 
 ```mermaid
 flowchart TD
@@ -25,10 +26,11 @@ flowchart TD
         C --> G["Web-of-Trust Graph Engine<br/>(Transitive Propagation & Cycle Absorption)"]
         F & G --> H["Dual-Axis Scoring & Limit Determination<br/>(LCB Score & Max Credit Ceiling)"]
         H --> I["Monte Carlo Stress Tester<br/>(5,000 Seeded Stochastic Scenarios)"]
+        H & I --> P["Explainable ML & Conformal Predictor<br/>(EBM + GPU Meta-Ensemble, Sets >= 90%)"]
     end
 
     subgraph SETTLEMENT["Audit, Recourse & Settlement"]
-        I --> J["Multi-Dimensional Explainer<br/>(Capacity, Evidence, Reputation, Resilience)"]
+        I & P --> J["Multi-Dimensional Explainer<br/>(Capacity, Evidence, Reputation, Resilience)"]
         J --> K["Forensic Decision Audit Explorer"]
         J --> L["Borrower Recourse & Dispute Protocol"]
         K & L --> M["SHA-256 Cryptographic Event Ledger"]
@@ -103,6 +105,14 @@ flowchart TD
   - Surcharge collected into a centralized `PlatformTreasury` ledger balance, verifiable via `GET /api/v1/platform/treasury` and CLI `python main.py treasury`.
   - Audited in `LOAN_DISBURSED` and `LOAN_REPAID` ledger event payloads with deterministic disaster recovery replay.
 
+### 9. Explainable ML and conformal uncertainty layer
+- **Role:** Delivers predictive credit risk inference, Basel scorecard rating (300-900), and finite-sample uncertainty coverage alongside deterministic rule scoring.
+- **Components:**
+  - `PredictiveInferenceEngine` (`POST /api/v1/predict`): Evaluates applicant profiles using calibrated ensembles.
+  - Model Palette: Glassbox Explainable Boosting Machines (EBM), XGBoost GPU with TreeSHAP, PyTorch GPU Tabular Net with Monte Carlo Dropout, LightGBM, and $L_2$ Logistic Scorecard.
+  - Conformal Prediction Sets: Split and Mondrian conformal methods guaranteeing $\ge 90\%$ coverage with tri-state decisions (`ELIGIBLE`, `REVIEW`, `DECLINE_CANDIDATE`).
+  - Additive Local Reasons: Inspectable log-odds contributions and observed values per risk factor.
+
 ---
 
 ## State machine and lifecycle
@@ -147,5 +157,5 @@ ReputationLedger
 
 1. **Deterministic core:** Pure functions with `Decimal` arithmetic prevent floating-point drift in financial scoring.
 2. **Cryptographic tamper evidence:** Every state mutation produces a cryptographically linked event hash (`prev_hash` chaining).
-3. **No black-box ML:** Underwriting decisions derive from transparent, inspectable mathematical formulas and discrete constraint solvers.
+3. **Glassbox explainability and conformal bounds:** No opaque black-box models; predictive risk relies on Glassbox Explainable Boosting Machines (EBM), Scorecards, and finite-sample Conformal Prediction sets guaranteeing $\ge 90\%$ coverage across completeness tiers.
 4. **Regulatory readiness:** Aligns with RBI Digital Lending Directions (2025) and Fair Credit Reporting standards.

@@ -43,6 +43,8 @@ The table below maps the original 6-hour hackathon concept to the implemented pr
 | *(Production addition)* | Cryptographic audit trail & disaster recovery. | `ledger.py` | Append-only HMAC/SHA-256 event ledger with deterministic state replay. |
 | *(Production addition)* | Protocol platform treasury. | `lending.py`, `models.py`, `api/routes.py` | 1.0% transaction fee cut tracking on borrow and repayment via `PlatformTreasury`. |
 | *(Production addition)* | Interactive REST API. | `api/` package | FastAPI REST service with OpenAPI documentation and Swagger UI. |
+| *(Production addition)* | Explainable ML suite & GPU acceleration. | `backend/ml/` (`models.py`, `train.py`, `noise.py`) | EBM, XGBoost GPU, PyTorch GPU with MC Dropout, LightGBM, Calibrated Scorecard. |
+| *(Production addition)* | Conformal prediction & predictive risk API. | `backend/ml/conformal.py`, `src/veritrust/prediction.py` | Split & Mondrian conformal sets ($\ge 90\%$ coverage), reason codes, and remedies. |
 
 ---
 
@@ -56,10 +58,12 @@ The table below maps the original 6-hour hackathon concept to the implemented pr
 | Numerical calculations | NumPy | Python standard library `Decimal` & `math` (zero floating-point drift) |
 | Constraint Optimization | None | Google OR-Tools CP-SAT constraint programming solver |
 | Stochastic Simulation | Prototype scripts | Seeded Monte Carlo simulation engine (5,000 runs) |
+| Machine Learning | None | Explainable Boosting Machines (EBM), XGBoost GPU (CUDA), PyTorch GPU, LightGBM |
+| Uncertainty & Coverage | Prototype LCB | Split & Mondrian Conformal Prediction Sets ($\ge 90\%$ finite-sample guarantee) |
 | Input data | JSON / CSV | Deterministic JSON (`data/store.json`) + SQLite + JSONL |
 | Cryptographic Audit | None | SHA-256 chained event ledger with replay recovery |
 | Interface | CLI initially; FastAPI if time permits | Interactive CLI shell (23 commands) + FastAPI REST API |
-| Testing | pytest | pytest test suite (134 tests passing) |
+| Testing | pytest | pytest test suite (152 tests passing) |
 
 ---
 

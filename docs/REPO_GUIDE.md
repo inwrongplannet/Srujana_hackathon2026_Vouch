@@ -59,6 +59,8 @@ A zone is a top-level folder with its own `AGENTS.md` (`backend/`, `frontend/`, 
 | `docs/frontend-features/` | One manifest per feature; feeds README table and `/status` | As features start |
 | `docs/templates/` | Fixed formats for tasks, spike write-ups, feature manifests | Before event |
 | `backend/` | API and finance logic, scaffolded by whoever the task is assigned to | Event day |
+| `backend/ml/` | Explainable ML models (EBM, XGBoost GPU, PyTorch GPU), conformal prediction sets, noise generator and ablation engine | Done |
+| `backend/localdocs/Implementation_Doc.md` | Master implementation roadmap, stages 1-9, code organization and production verification | Done |
 | `backend/localdocs/VOUCH_DEVELOPER_MASTER_V2.md` | Master developer specification v2: architecture, graph math, scenarios, and acceptance criteria | Done |
 | `backend/localdocs/FORMULAS_AND_NUMBERS.md` | Master mathematical specification: formulas, processes, constants, and calibration numbers | Done |
 | `backend/localdocs/TEMPORAL_UNCERTAINTY_AND_FRESHNESS.md` | Temporal uncertainty decay model: confidence half-lives, epistemic inflation, and LCB limit derivation | Done |

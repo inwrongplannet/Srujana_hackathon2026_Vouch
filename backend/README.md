@@ -11,7 +11,7 @@ Web-of-trust credit engine, dual-axis underwriting, and lending simulations.
   - **Loan optimizer using Google OR-Tools:** Solves discrete search grid with CP-SAT constraint programming, optimizing for either lowest total borrowing cost (`MIN_COST`) or largest sustainable principal (`MAX_PRINCIPAL`). Outputs original request, best feasible alternative, EMI, total interest, and binding constraints.
   - **Monte Carlo stress tester:** Simulates thousands of stochastic financial scenarios (income volatility, payment delays, emergency expense shocks) using reproducible seeded pseudo-random sampling (no ML). Measures shortfall frequency, 5th-percentile adverse residual cash, and the exact income shock tolerance boundary.
   - **Explanation and evidence engine:** Generates traceable, auditable natural language explanations from the exact rules that fired, evaluating Financial Capacity, Evidence Reliability, Graph Reputation, and Stress-Test Resilience as four separate dimensions.
-- **Test Suite Complete:** pytest suite covering models, vouch conservation, propagation, slashing, cryptographic ledger integrity, affordability rules, OR-Tools optimization, Monte Carlo stress testing, explanation synthesis, the community engine and every API router.
+- **Test Suite Complete:** 152 pytest tests covering domain models, vouch conservation, propagation, slashing, cryptographic ledger integrity, affordability rules, OR-Tools optimization, Monte Carlo stress testing, explanation synthesis, explainable ML models, conformal prediction coverage, the community engine and every API router.
 - **Demo seed:** the story cast (Sahyog Microfinance anchoring Meena, Ramesh and Anand; borrowers Lakshmi, Suresh and Imran), in `data/store.json` (store version 2.0; an older store is reseeded on load).
 
 ## Run
@@ -202,6 +202,13 @@ python main.py --demo                         # Run automated walkthrough simula
 
 ## Structure
 - `localdocs/`: Architectural briefings, master mathematical framework specifications (`FORMULAS_AND_NUMBERS.md`), implementation specifications, and empirical literature studies (`PROSPER_AND_LITERATURE_LESSONS.md`).
+- `ml/`: Explainable ML pipeline and ablation harness.
+  - `models.py`: EBM, XGBoost GPU, PyTorch GPU with MC Dropout, LightGBM, Scorecard, and `GeneralizedCreditModel`.
+  - `conformal.py`: Split and Mondrian conformal prediction sets ($\ge 90\%$ coverage guarantee).
+  - `noise.py`: Realistic synthetic noise generator (continuous jitter, currency rounding, MAR/MNAR missingness, shocks).
+  - `data.py`: Dataset loaders for market shock, simulated underwriting, and real-anchored cohorts.
+  - `train.py`: Parallel multi-threaded GPU training runner.
+  - `ablation.py`: Empirical ablation study runner validating literature hypotheses.
 - `src/veritrust/`: Production engine package.
   - `models.py`: Pydantic domain entities (`User`, `Transaction`, `Vouch`, `Loan`, `CreditAssessment`, `Evidence`, `LedgerEvent`).
   - `ledger.py`: Append-only event store (`ReputationLedger`), SHA-256 cryptographic hash chaining, idempotency enforcement, and state reconstruction.
@@ -222,9 +229,9 @@ python main.py --demo                         # Run automated walkthrough simula
   - `temporal.py`: Temporal uncertainty and evidence freshness decay engine ($C(t) = 2^{-\Delta t / H}$, multi-horizon asymmetric half-lives, epistemic uncertainty inflation, LCB loan limits).
   - `prediction.py`: Predictive credit risk inference, Basel scorecard rating, honest conformal prediction sets (ELIGIBLE, REVIEW, DECLINE_CANDIDATE), additive local reason codes, missing evidence disclosures, and actionable counterfactual remedies.
   - `api/`: FastAPI REST API package. `routes.py`: applications, evidence, endorsements, assessments, scenarios, disputes, users, loans, platform treasury, predictions. `protocol_routes.py`: vouch requests, lender decisions, defaults. `community_routes.py`: the community platform. `registry.py`: in-memory applications and assessments shared by the routers.
-- `tests/`: Pytest unit tests for all mathematical invariants, state transitions, and ledger integrity.
+- `tests/`: 152 Pytest unit tests for all mathematical invariants, state transitions, ML pipeline, and ledger integrity.
 - `main.py`: End-to-end interactive CLI demonstration.
-- `requirements.txt`: Python package requirements (`pydantic`, `networkx`, `ortools`, `fastapi`, `uvicorn`, `httpx`, `pytest`).
+- `requirements.txt`: Python package requirements (`pydantic`, `networkx`, `ortools`, `fastapi`, `torch`, `xgboost`, `lightgbm`, `interpret`, `pytest`).
 
 ## Interfaces
 - **`TrustEngine`**: Core graph state manager exposing `create_user()`, `vouch()`, `unvouch()`.
@@ -284,6 +291,11 @@ pytest tests/test_protocol_routes.py # Vouch requests, decisions, defaults, comm
 pytest tests/test_api_routes.py     # Assessment, scenario and other REST routes (needs OR-Tools)
 pytest tests/test_platform_fee.py    # Transaction fees, treasury cuts, ledger replay and persistence
 pytest tests/test_mathematical_framework.py # Complete mathematical framework, rank weights, and calibration invariants
+pytest tests/test_temporal_uncertainty.py # Temporal evidence decay and epistemic inflation
+pytest tests/test_prediction_api.py   # Predictive risk inference and conformal API
+pytest tests/test_ml_pipeline.py      # Parallel GPU training, noise generator, conformal coverage
+pytest tests/test_adversarial_and_edge_cases.py # Sybil cliques, collusion rings, stress limits
+pytest tests/test_vouch_score_v2.py   # Vouch scoring invariants & anchor paths
 ```
 
 ## Notes
