@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 set -e
 
 echo "=========================================================="
@@ -39,4 +39,4 @@ echo "   - Backend API Docs:   http://localhost:8000/docs"
 echo "   - Health Check:       http://localhost:8000/health"
 echo "=========================================================="
 
-wait -n $BACKEND_PID $FRONTEND_PID
+wait $BACKEND_PID $FRONTEND_PID
