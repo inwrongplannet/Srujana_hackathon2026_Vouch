@@ -523,7 +523,11 @@ def dispute_endorsement(endorsement_id: str, req: DisputeRequest):
     """File a formal dispute against an endorsement or transaction."""
     engine, scorer, _, _ = get_services()
     workflow = BorrowerRecourseWorkflow(engine, scorer)
-    borrower_id = req.borrower_id or "BOB"
+    # The disputing borrower is the one named, else the recipient of the disputed endorsement.
+    endorsed = next((v.target for v in engine.vouches.values() if v.vouch_id == endorsement_id), None)
+    borrower_id = req.borrower_id or endorsed
+    if not borrower_id:
+        raise HTTPException(status_code=400, detail="Name the borrower_id: the endorsement is not on file.")
 
     evidence = Evidence(
         evidence_id=f"EVID_DISP_{uuid.uuid4().hex[:8].upper()}",

@@ -18,6 +18,10 @@ from veritrust.models import FinancialFeatures, Loan, Transaction, User, Vouch
 from veritrust.scoring import CreditScorer
 
 
+# Bump when the seed cast or the file layout changes: older stores are reseeded on load.
+STORE_VERSION = "2.0"
+
+
 class DecimalEncoder(json.JSONEncoder):
     """JSON encoder supporting Decimal and datetime objects."""
 
@@ -64,7 +68,7 @@ class StateStore:
         txs_data = [tx.model_dump(mode="json") for tx in lending.list_transactions()]
 
         payload = {
-            "version": "1.0",
+            "version": STORE_VERSION,
             "updated_at": datetime.now(timezone.utc).isoformat(),
             "users": users_data,
             "vouches": vouches_data,
@@ -85,6 +89,11 @@ class StateStore:
 
         try:
             raw = json.loads(self.store_file.read_text(encoding="utf-8"))
+            if raw.get("version") != STORE_VERSION:
+                # A store from an older seed (e.g. ALICE and BOB) is replaced, not mixed in.
+                self.seed_defaults(engine, lending)
+                self.save(engine, lending)
+                return False
 
             # Load users
             for u_data in raw.get("users", []):
@@ -205,37 +214,58 @@ class StateStore:
             return False
 
     def seed_defaults(self, engine: TrustEngine, lending: LendingService) -> None:
-        """Seed initial demo graph network."""
-        anchor = engine.create_user(
-            user_id="ANCHOR_BANK",
-            name="Microfinance Institutional Anchor",
+        """Seed the demo cast the frontend's story uses (all fictional, amounts INR a month).
+
+        Lakshmi's figures match `frontend/src/mocks/story.ts`: 24 statement months averaging
+        38,000 (income CV 0.0992), essentials 20,500 (so NOI 17,500) and a 2,000 chit fund. Suresh
+        matches the landing page's shock case; Imran has not shared living costs. Meena vouching for
+        Lakshmi is left for the demo to do live.
+        """
+        engine.create_user(
+            user_id="SAHYOG",
+            name="Sahyog Microfinance",
             initial_reputation=Decimal("20.0"),
             is_anchor=True,
         )
-        alice = engine.create_user(
-            user_id="ALICE",
-            name="Alice (Community Leader)",
-            initial_reputation=Decimal("10.0"),
-        )
-        bob = engine.create_user(
-            user_id="BOB",
-            name="Bob (Micro-Business Owner)",
+        engine.create_user("MEENA", "Meena Patil (Kirana store, Old Hubballi)", initial_reputation=Decimal("10.0"))
+        engine.create_user("RAMESH", "Ramesh Hegde (Cloth wholesaler)", initial_reputation=Decimal("8.0"))
+        engine.create_user("ANAND", "Anand Kulkarni (Retired bank officer)", initial_reputation=Decimal("6.0"))
+        engine.create_user(
+            user_id="LAKSHMI",
+            name="Lakshmi Naik (Tailoring unit, Hubballi)",
             initial_reputation=Decimal("0.0"),
             financial_features=FinancialFeatures(
-                monthly_income=Decimal("35000.00"),
-                monthly_debt=Decimal("6000.00"),
-                net_operating_income=Decimal("22000.00"),
-                debt_service=Decimal("5000.00"),
-                income_volatility=Decimal("0.10"),
-                cashflow_volatility=Decimal("0.12"),
+                monthly_income=Decimal("38000.00"),
+                monthly_debt=Decimal("2000.00"),
+                net_operating_income=Decimal("17500.00"),
+                debt_service=Decimal("2000.00"),
+                income_volatility=Decimal("0.0992"),
                 completeness=Decimal("0.90"),
             ),
         )
-        charlie = engine.create_user(
-            user_id="CHARLIE",
-            name="Charlie (New Farmer)",
+        engine.create_user(
+            user_id="SURESH",
+            name="Suresh Kulkarni (Auto-rickshaw driver)",
             initial_reputation=Decimal("0.0"),
+            financial_features=FinancialFeatures(
+                monthly_income=Decimal("32000.00"),
+                monthly_debt=Decimal("9500.00"),
+                net_operating_income=Decimal("16000.00"),
+                debt_service=Decimal("9500.00"),
+                completeness=Decimal("0.90"),
+            ),
+        )
+        engine.create_user(
+            user_id="IMRAN",
+            name="Imran Mulla (Mobile repair stall)",
+            initial_reputation=Decimal("0.0"),
+            # 9 of 12 statement months shared; living costs not shared (NOI left at 0).
+            financial_features=FinancialFeatures(monthly_income=Decimal("22000.00"), completeness=Decimal("0.75")),
         )
 
-        engine.vouch("ANCHOR_BANK", "ALICE")
-        engine.vouch("ALICE", "BOB")
+        engine.vouch("SAHYOG", "MEENA")
+        engine.vouch("SAHYOG", "RAMESH")
+        engine.vouch("SAHYOG", "ANAND")
+        engine.vouch("RAMESH", "LAKSHMI")
+        engine.vouch("ANAND", "LAKSHMI")
+        engine.vouch("MEENA", "SURESH")
