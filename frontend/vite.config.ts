@@ -6,7 +6,7 @@ import { fileURLToPath, URL } from 'node:url';
 
 export default defineConfig(({ mode }) => {
   // VITE_API_BASE_URL picks the backend the dev proxy forwards to (a teammate's machine, say).
-  const api = loadEnv(mode, '..', 'VITE_').VITE_API_BASE_URL || 'http://localhost:8000';
+  const api = process.env.VITE_API_BASE_URL || loadEnv(mode, '..', 'VITE_').VITE_API_BASE_URL || 'http://localhost:8000';
   return {
     plugins: [react(), tailwindcss()],
     // The repo-root .env.example is the single place env keys are documented.
