@@ -235,10 +235,13 @@ def cmd_borrow(args: argparse.Namespace) -> None:
     try:
         loan = lending.borrow(borrower_id, amount, tenure_months=tenure)
         store.save(engine, lending)
+        last_tx = lending.transactions[-1] if lending.transactions else None
+        fee_str = f"INR {last_tx.fee:,.2f}" if last_tx else "INR 0.00"
         print(f"Loan Approved & Disbursed!")
         print(f"  + Loan ID:             {loan.loan_id}")
         print(f"  + Borrower:            {loan.borrower_id}")
         print(f"  + Principal Amount:    INR {loan.principal:,.2f}")
+        print(f"  + Platform Fee (Cut):  {fee_str}")
         print(f"  + Outstanding Balance: INR {loan.outstanding_balance:,.2f}")
         print(f"  + Status:              {loan.status}")
     except ValueError as e:
@@ -262,9 +265,12 @@ def cmd_repay(args: argparse.Namespace) -> None:
         actual_payment = prev_balance - loan.outstanding_balance
         refund = max(Decimal("0.00"), amount - actual_payment)
         store.save(engine, lending)
+        last_tx = lending.transactions[-1] if lending.transactions else None
+        fee_str = f"INR {last_tx.fee:,.2f}" if last_tx else "INR 0.00"
 
         print(f"Repayment Processed for Loan '{loan_id}'!")
         print(f"  + Payment Applied:     INR {actual_payment:,.2f}")
+        print(f"  + Platform Fee (Cut):  {fee_str}")
         if refund > Decimal("0.00"):
             print(f"  + Excess Refunded:     INR {refund:,.2f} (Payment exceeded total debt balance)")
         print(f"  + Outstanding Balance: INR {loan.outstanding_balance:,.2f}")
@@ -431,6 +437,19 @@ def cmd_loans(args: argparse.Namespace) -> None:
     print("-----------------------------------------------------------------------------------------")
     for l in loans:
         print(f"{l.loan_id:<12} {l.borrower_id:<15} {l.principal:<18} {l.outstanding_balance:<18} {l.status}")
+    print("=========================================================================================")
+
+
+def cmd_treasury(args: argparse.Namespace) -> None:
+    _, _, lending, _, _ = _init_context()
+    treasury = lending.get_treasury_summary()
+    print("=========================================================================================")
+    print(f"VeriTrust Platform Treasury: {treasury.treasury_id}")
+    print("-----------------------------------------------------------------------------------------")
+    print(f"  + Total Fees Collected:       INR {treasury.total_fees_collected:,.2f}")
+    print(f"  + Platform Fee Cut Rate:      {treasury.fee_rate * Decimal('100.0'):,.2f}%")
+    print(f"  + Total Transactions Handled: {treasury.transaction_count}")
+    print(f"  + Operating Currency:         {treasury.currency}")
     print("=========================================================================================")
 
 
@@ -1031,6 +1050,42 @@ def cmd_recourse(args: argparse.Namespace) -> None:
         print("=======================================================================")
 
 
+def cmd_temporal(args: argparse.Namespace) -> None:
+    """Simulate temporal uncertainty, evidence freshness decay, and rejuvenation."""
+    engine, scorer, _, _, current_user = _init_context()
+    target_id = args.user_id or current_user
+    if not target_id:
+        print("Error: Target user ID must be provided or session logged in.")
+        return
+
+    from veritrust.temporal import simulate_temporal_trajectory, simulate_rejuvenation_scenarios
+
+    print("================================================================================================================")
+    print(f" VeriTrust Temporal Uncertainty & Evidence Freshness Trajectory for: {target_id}")
+    print("================================================================================================================")
+    print(" Month | C_vouch | C_cashflow | C_repay | Effective mu | sigma2 (Uncertainty) | Score (LCB) | Limit (INR) | VouchScore")
+    print("----------------------------------------------------------------------------------------------------------------")
+    snapshots = simulate_temporal_trajectory(scorer, target_id)
+    for s in snapshots:
+        print(
+            f" {s.month:5d} | {s.vouch_confidence:7.4f} | {s.cashflow_confidence:10.4f} | {s.repayment_confidence:7.4f} | "
+            f"{s.mu_effective:12.4f} | {s.sigma2_temporal:20.4f} | {s.score_final:11.4f} | {s.max_loan_limit:11.2f} | {s.vouch_score:10d} ({s.confidence_rating})"
+        )
+    print("================================================================================================================")
+
+    rejuv = simulate_rejuvenation_scenarios(scorer, target_id, stale_months=36)
+    print("\n--- Evidence Rejuvenation & Recovery Scenarios at Month 36 (3 Years Inactive) ---")
+    stale = rejuv["stale_baseline"]
+    bank = rejuv["bank_statement_refreshed"]
+    vouch = rejuv["vouch_reaffirmed"]
+    both = rejuv["fully_rejuvenated"]
+    print(f"  1. 36-Month Inactive Baseline:  Limit = INR {stale.max_loan_limit:9.2f} | sigma2 = {stale.sigma2_temporal:.4f} | LCB = {stale.score_final:.4f}")
+    print(f"  2. Bank Statement Refreshed:    Limit = INR {bank.max_loan_limit:9.2f} | sigma2 = {bank.sigma2_temporal:.4f} | LCB = {bank.score_final:.4f}")
+    print(f"  3. Peer Vouch Re-affirmed:      Limit = INR {vouch.max_loan_limit:9.2f} | sigma2 = {vouch.sigma2_temporal:.4f} | LCB = {vouch.score_final:.4f}")
+    print(f"  4. Both Refreshed (Full Reset): Limit = INR {both.max_loan_limit:9.2f} | sigma2 = {both.sigma2_temporal:.4f} | LCB = {both.score_final:.4f}")
+    print("================================================================================================================")
+
+
 # -----------------------------------------------------------------------------
 # Interactive REPL Shell
 # -----------------------------------------------------------------------------
@@ -1186,6 +1241,10 @@ def build_parser() -> argparse.ArgumentParser:
     p_loans.add_argument("--mine", "-m", action="store_true", help="Filter for current logged-in user")
     p_loans.set_defaults(func=cmd_loans)
 
+    # treasury
+    p_treasury = subparsers.add_parser("treasury", help="Display platform revenue and treasury status")
+    p_treasury.set_defaults(func=cmd_treasury)
+
     # graph
     p_graph = subparsers.add_parser("graph", help="Visualize trust network topology and weights")
     p_graph.set_defaults(func=cmd_graph)
@@ -1262,6 +1321,11 @@ def build_parser() -> argparse.ArgumentParser:
     p_rec.add_argument("--income", type=str, help="Corrected monthly income")
     p_rec.add_argument("--debt", type=str, help="Corrected monthly debt")
     p_rec.set_defaults(func=cmd_recourse)
+
+    # temporal (evidence freshness decay & rejuvenation)
+    p_temp = subparsers.add_parser("temporal", help="Simulate temporal evidence freshness decay, epistemic uncertainty, and recovery")
+    p_temp.add_argument("user_id", nargs="?", help="Borrower user ID to simulate (defaults to logged-in user)")
+    p_temp.set_defaults(func=cmd_temporal)
 
     # serve
     p_serve = subparsers.add_parser("serve", help="Start FastAPI REST API server")

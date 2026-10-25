@@ -4,12 +4,13 @@
 
 ## System overview
 
-Vouch (VeriTrust) is a decentralized, explainable credit-underwriting and risk-assessment platform designed to solve the thin-file trap. It combines four orthogonal layers:
+Vouch (VeriTrust) is a decentralized, explainable credit-underwriting and risk-assessment platform designed to solve the thin-file trap. It combines six orthogonal layers:
 1. **Rule-based affordability engine:** Evaluates verified cash inflows, essential expenses, protected buffers, and debt caps ($D = I - E - B$).
 2. **Google OR-Tools CP-SAT optimizer:** Restructures infeasible requests into mathematically optimal alternative plans.
 3. **Web-of-Trust graph engine:** Transitive trust propagation with out-degree conservation, hop decay, and per-path cycle absorption.
 4. **Monte Carlo stochastic stress tester:** Simulates 5,000 forward-looking economic scenarios (income volatility, payment delays, emergency shocks).
 5. **Explainability & forensic audit engine:** Traces rule evaluations, evidence links, graph paths, and cryptographic event hashes.
+6. **Explainable ML & conformal prediction engine:** Glassbox Explainable Boosting Machines (EBM), GPU-accelerated gradient boosting, and finite-sample conformal prediction sets ($\ge 90\%$ coverage) for calibrated default probabilities, scorecard ratings, and tri-state decisions (`ELIGIBLE`, `REVIEW`, `DECLINE_CANDIDATE`).
 
 ```mermaid
 flowchart TD
@@ -25,10 +26,11 @@ flowchart TD
         C --> G["Web-of-Trust Graph Engine<br/>(Transitive Propagation & Cycle Absorption)"]
         F & G --> H["Dual-Axis Scoring & Limit Determination<br/>(LCB Score & Max Credit Ceiling)"]
         H --> I["Monte Carlo Stress Tester<br/>(5,000 Seeded Stochastic Scenarios)"]
+        H & I --> P["Explainable ML & Conformal Predictor<br/>(EBM + GPU Meta-Ensemble, Sets >= 90%)"]
     end
 
     subgraph SETTLEMENT["Audit, Recourse & Settlement"]
-        I --> J["Multi-Dimensional Explainer<br/>(Capacity, Evidence, Reputation, Resilience)"]
+        I & P --> J["Multi-Dimensional Explainer<br/>(Capacity, Evidence, Reputation, Resilience)"]
         J --> K["Forensic Decision Audit Explorer"]
         J --> L["Borrower Recourse & Dispute Protocol"]
         K & L --> M["SHA-256 Cryptographic Event Ledger"]
@@ -63,9 +65,17 @@ flowchart TD
 - **Mathematical invariants:**
   1. *Out-degree capacity conservation:*
      $$\sum_{v \in \text{Out}(u)} W_{uv} \le C_u \quad \text{where } C_u = \max(0, R_u)$$
-  2. *Hop attenuation:* Lambda decay $\lambda^h = 0.5^h$ penalizes indirect endorsements geometrically.
-  3. *Per-path cycle absorption:* Graph traversal tracks visited nodes per path branch, terminating circular loops without artificial gain.
-  4. *Anchor grounding:* Trust propagates strictly from authorized institutional roots (`is_anchor=True`).
+  2. *Chronological rank diminishing returns:* Incoming endorsements are weighted by immutable chronological arrival order:
+     $$\alpha_{uv} = \frac{1}{2^{r_{uv} - 1}}$$
+     The 1st voucher receives weight 1.0, 2nd receives 0.5, 3rd receives 0.25, rendering Sybil burst swarms mathematically ineffective.
+  3. *Multi-hop path transmission:* Trust on path $P = (v_0, v_1, \dots, v_h)$ decays by node out-degrees, edge ranks, and hop attenuation:
+     $$T(P) = R_{v_0} \cdot \prod_{i=0}^{h-1} \frac{1}{d_{v_i}} \cdot \prod_{i=0}^{h-1} \alpha_{v_i v_{i+1}} \cdot \delta^{h-1}$$
+  4. *Same-source min-path consolidation & distinct aggregation:*
+     $$p_u(s) = \min_{P \in \mathcal{P}(s, u)} T(P), \quad G(u) = \sum_{s \ne u} p_u(s), \quad G_{\text{score}}(u) = \min(G(u), G_{\text{max}})$$
+  5. *Repeat transaction reputation minting:* Diminishing returns prevent transaction farming:
+     $$M_k = M_0 \exp(-\lambda(k - 1)) \quad \text{with } \lambda = \ln(2) \approx 0.6931$$
+  6. *Per-path cycle absorption:* Graph traversal tracks visited nodes per path branch, terminating circular loops without artificial gain.
+  7. *Anchor grounding:* Trust propagates strictly from authorized institutional roots (`is_anchor=True`).
 
 ### 5. Monte Carlo stress tester
 - **Role:** Tests repayment viability across 5,000 seeded stochastic economic futures over the proposed loan horizon.
@@ -86,6 +96,22 @@ flowchart TD
 - **Role:** Allows borrowers to contest erroneous transactions or submit updated documentation without conflating data errors with economic repayment capacity.
 - **Classification:** Categorizes records as `VERIFIED`, `MISSING`, `STALE`, `DUPLICATED`, or `DISPUTED`.
 - **Ledger integration:** Logs all dispute filings and resolutions as immutable SHA-256 events.
+
+### 8. Platform treasury and transaction fee cut
+- **Role:** Ensures economic sustainability for protocol operators through an automated, auditable transaction fee cut.
+- **Mechanism:**
+  - Configurable fee rate cut (default: $1.0\%$ / 100 bps surcharge via `PLATFORM_FEE_RATE`).
+  - Recorded on every `Transaction` (`amount`, `fee`, `net_amount`) across loan disbursements and repayments.
+  - Surcharge collected into a centralized `PlatformTreasury` ledger balance, verifiable via `GET /api/v1/platform/treasury` and CLI `python main.py treasury`.
+  - Audited in `LOAN_DISBURSED` and `LOAN_REPAID` ledger event payloads with deterministic disaster recovery replay.
+
+### 9. Explainable ML and conformal uncertainty layer
+- **Role:** Delivers predictive credit risk inference, Basel scorecard rating (300-900), and finite-sample uncertainty coverage alongside deterministic rule scoring.
+- **Components:**
+  - `PredictiveInferenceEngine` (`POST /api/v1/predict`): Evaluates applicant profiles using calibrated ensembles.
+  - Model Palette: Glassbox Explainable Boosting Machines (EBM), XGBoost GPU with TreeSHAP, PyTorch GPU Tabular Net with Monte Carlo Dropout, LightGBM, and $L_2$ Logistic Scorecard.
+  - Conformal Prediction Sets: Split and Mondrian conformal methods guaranteeing $\ge 90\%$ coverage with tri-state decisions (`ELIGIBLE`, `REVIEW`, `DECLINE_CANDIDATE`).
+  - Additive Local Reasons: Inspectable log-odds contributions and observed values per risk factor.
 
 ---
 
@@ -131,5 +157,5 @@ ReputationLedger
 
 1. **Deterministic core:** Pure functions with `Decimal` arithmetic prevent floating-point drift in financial scoring.
 2. **Cryptographic tamper evidence:** Every state mutation produces a cryptographically linked event hash (`prev_hash` chaining).
-3. **No black-box ML:** Underwriting decisions derive from transparent, inspectable mathematical formulas and discrete constraint solvers.
+3. **Glassbox explainability and conformal bounds:** No opaque black-box models; predictive risk relies on Glassbox Explainable Boosting Machines (EBM), Scorecards, and finite-sample Conformal Prediction sets guaranteeing $\ge 90\%$ coverage across completeness tiers.
 4. **Regulatory readiness:** Aligns with RBI Digital Lending Directions (2025) and Fair Credit Reporting standards.

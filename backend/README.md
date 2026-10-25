@@ -11,7 +11,13 @@ Web-of-trust credit engine, dual-axis underwriting, and lending simulations.
   - **Loan optimizer using Google OR-Tools:** Solves discrete search grid with CP-SAT constraint programming, optimizing for either lowest total borrowing cost (`MIN_COST`) or largest sustainable principal (`MAX_PRINCIPAL`). Outputs original request, best feasible alternative, EMI, total interest, and binding constraints.
   - **Monte Carlo stress tester:** Simulates thousands of stochastic financial scenarios (income volatility, payment delays, emergency expense shocks) using reproducible seeded pseudo-random sampling (no ML). Measures shortfall frequency, 5th-percentile adverse residual cash, and the exact income shock tolerance boundary.
   - **Explanation and evidence engine:** Generates traceable, auditable natural language explanations from the exact rules that fired, evaluating Financial Capacity, Evidence Reliability, Graph Reputation, and Stress-Test Resilience as four separate dimensions.
-- **Test Suite Complete:** pytest suite covering models, vouch conservation, propagation, slashing, cryptographic ledger integrity, affordability rules, OR-Tools optimization, Monte Carlo stress testing, explanation synthesis, the community engine and every API router.
+- **Test Suite Complete:** 152 pytest tests covering domain models, vouch conservation, propagation, slashing, cryptographic ledger integrity, affordability rules, OR-Tools optimization, Monte Carlo stress testing, explanation synthesis, explainable ML models, conformal prediction coverage, the community engine and every API router.
+- **Empirical Benchmarks & Metrics Complete:** (Full specification in `localdocs/BENCHMARKS_AND_METRICS.md`):
+  - Option A Shock Cohort (Model D): **0.8892 AUC**, **0.9191 PR-AUC**, Brier loss **0.1190**, KS **0.6655**, **91.01%** conformal coverage.
+  - Simulated Micro-Borrower Cohort: **0.9087 AUC**, **0.7141 PR-AUC**, Brier loss **0.0717**, KS **0.6697**, **90.56%** conformal coverage.
+  - Graph-Only Cold Start (Zero Bureau History): **0.8678 AUC**, **0.9002 PR-AUC**, Brier loss **0.1306**, KS **0.6098**.
+  - Invisible Primes Rescued: **26 borrowers** (4.18% of conventional rejections) approved with a **38.46%** default rate ($-26.25$ pp vs population).
+  - Real-World Prosper Evidence (55,305 loans): Capital-backed endorsements reduce defaults to **23.71%** (vs **32.81%** for unbacked cheap talk).
 - **Demo seed:** the story cast (Sahyog Microfinance anchoring Meena, Ramesh and Anand; borrowers Lakshmi, Suresh and Imran), in `data/store.json` (store version 2.0; an older store is reseeded on load).
 
 ## Run
@@ -73,6 +79,7 @@ python main.py audit                          # Cryptographically audit SHA-256 
 python main.py replay --restore               # Deterministically reconstruct state from raw events
 python main.py denounce IMRAN               # Denounce bad actor and trigger slashing
 python main.py graph                          # Inspect Web-of-Trust graph topology
+python main.py treasury                       # Inspect platform treasury fees and cut rate
 python main.py --demo                         # Run automated walkthrough simulation
 ```
 
@@ -200,7 +207,14 @@ python main.py --demo                         # Run automated walkthrough simula
 | `reset` | Reset state to clean demo seed data |
 
 ## Structure
-- `localdocs/`: Architectural briefings and implementation specifications.
+- `localdocs/`: Architectural briefings, master mathematical framework specifications (`FORMULAS_AND_NUMBERS.md`), implementation specifications, empirical literature studies (`PROSPER_AND_LITERATURE_LESSONS.md`), and benchmark reference (`BENCHMARKS_AND_METRICS.md`).
+- `ml/`: Explainable ML pipeline and ablation harness.
+  - `models.py`: EBM, XGBoost GPU, PyTorch GPU with MC Dropout, LightGBM, Scorecard, and `GeneralizedCreditModel`.
+  - `conformal.py`: Split and Mondrian conformal prediction sets ($\ge 90\%$ coverage guarantee).
+  - `noise.py`: Realistic synthetic noise generator (continuous jitter, currency rounding, MAR/MNAR missingness, shocks).
+  - `data.py`: Dataset loaders for market shock, simulated underwriting, and real-anchored cohorts.
+  - `train.py`: Parallel multi-threaded GPU training runner.
+  - `ablation.py`: Empirical ablation study runner validating literature hypotheses.
 - `src/veritrust/`: Production engine package.
   - `models.py`: Pydantic domain entities (`User`, `Transaction`, `Vouch`, `Loan`, `CreditAssessment`, `Evidence`, `LedgerEvent`).
   - `ledger.py`: Append-only event store (`ReputationLedger`), SHA-256 cryptographic hash chaining, idempotency enforcement, and state reconstruction.
@@ -218,10 +232,12 @@ python main.py --demo                         # Run automated walkthrough simula
   - `recourse.py`: Borrower recourse protocol, evidence-quality tracking (`MISSING`, `STALE`, `DUPLICATED`, `DISPUTED`), and recalculation audit.
   - `community.py`: Community vouching engine (KNOWN and EVIDENCE vouches, capped evidence weight, reward preview) and its in-memory seeded store.
   - `simulator.py`: Simulation and parameter calibration engine across canonical Web-of-Trust benchmark topologies.
-  - `api/`: FastAPI REST API package. `routes.py`: applications, evidence, endorsements, assessments, scenarios, disputes, users, loans, graph (uses the OR-Tools optimizer). `protocol_routes.py`: vouch requests, lender decisions, defaults. `community_routes.py`: the community platform. `registry.py`: in-memory applications and assessments shared by the routers.
-- `tests/`: Pytest unit tests for all mathematical invariants, state transitions, and ledger integrity.
+  - `temporal.py`: Temporal uncertainty and evidence freshness decay engine ($C(t) = 2^{-\Delta t / H}$, multi-horizon asymmetric half-lives, epistemic uncertainty inflation, LCB loan limits).
+  - `prediction.py`: Predictive credit risk inference, Basel scorecard rating, honest conformal prediction sets (ELIGIBLE, REVIEW, DECLINE_CANDIDATE), additive local reason codes, missing evidence disclosures, and actionable counterfactual remedies.
+  - `api/`: FastAPI REST API package. `routes.py`: applications, evidence, endorsements, assessments, scenarios, disputes, users, loans, platform treasury, predictions. `protocol_routes.py`: vouch requests, lender decisions, defaults. `community_routes.py`: the community platform. `registry.py`: in-memory applications and assessments shared by the routers.
+- `tests/`: 152 Pytest unit tests for all mathematical invariants, state transitions, ML pipeline, and ledger integrity.
 - `main.py`: End-to-end interactive CLI demonstration.
-- `requirements.txt`: Python package requirements (`pydantic`, `networkx`, `ortools`, `fastapi`, `uvicorn`, `httpx`, `pytest`).
+- `requirements.txt`: Python package requirements (`pydantic`, `networkx`, `ortools`, `fastapi`, `torch`, `xgboost`, `lightgbm`, `interpret`, `pytest`).
 
 ## Interfaces
 - **`TrustEngine`**: Core graph state manager exposing `create_user()`, `vouch()`, `unvouch()`.
@@ -235,6 +251,8 @@ python main.py --demo                         # Run automated walkthrough simula
 - **`TrustGraphAttackSimulator`**: Evaluates Sybil cliques, collusion rings, sponsor dilution, and temporal burst anomalies.
 - **`DecisionAuditExplorer`**: Forensic inspection of rule thresholds, graph paths, evidence, and input sensitivity.
 - **`BorrowerRecourseWorkflow`**: Dispute filing, evidence corrections, recalculation tracking, and quality auditing.
+- **`PredictiveInferenceEngine`**: Predictive credit risk and explainability service (`POST /api/v1/predict`) combining calibrated default probability, conformal prediction sets (`ELIGIBLE`, `REVIEW`, `DECLINE_CANDIDATE`), additive feature reasons, missing evidence disclosures, and actionable counterfactual remedies.
+- **`TemporalUncertaintyEngine`**: Multi-horizon evidence decay ($C(t) = 2^{-\Delta t / H}$), epistemic uncertainty inflation, and staleness detection.
 - **`FastAPI REST API`**: Interactive OpenAPI docs available at `http://localhost:8000/docs`; shapes in `docs/API_CONTRACT.md`. Every endpoint declares a response model, so `make types` generates `frontend/src/types/api.d.ts`.
 - **`CommunityStore`**: Community asks, vouches, setbacks and consent, exposed under `/api/v1/community`.
 - **CLI**: Executed via `python main.py`.
@@ -251,6 +269,8 @@ All algorithmic parameters can be configured via environment variables or a `.en
 - `BORROWER_REWARD`: Settlement reputation reward for borrower (default: `2.0`).
 - `SPONSOR_REWARD`: Settlement reputation reward for sponsor (default: `1.0`).
 - `CIRCUIT_BREAKER_THRESHOLD`: Cluster default rate pause threshold $\theta$ (default: `0.30`).
+- `PLATFORM_FEE_RATE`: Platform transaction fee cut rate as decimal fraction (default: `0.01` / 1.0%).
+- `PLATFORM_TREASURY_ID`: Designated identifier for the platform treasury account (default: `PLATFORM_TREASURY`).
 - `POSEIDON_PROTOCOL_SALT`: Simulated identity anchor protocol salt (`# ZK_STUB`).
 - `DEMO_MODE`: Boolean flag for deterministic demo paths (default: `true`).
 
@@ -275,7 +295,13 @@ pytest tests/test_explainer.py      # 4-dimension explanation engine, traceable 
 pytest tests/test_community.py      # Community vouching known answers (same as the frontend's)
 pytest tests/test_protocol_routes.py # Vouch requests, decisions, defaults, community API (no OR-Tools needed)
 pytest tests/test_api_routes.py     # Assessment, scenario and other REST routes (needs OR-Tools)
+pytest tests/test_platform_fee.py    # Transaction fees, treasury cuts, ledger replay and persistence
 pytest tests/test_mathematical_framework.py # Complete mathematical framework, rank weights, and calibration invariants
+pytest tests/test_temporal_uncertainty.py # Temporal evidence decay and epistemic inflation
+pytest tests/test_prediction_api.py   # Predictive risk inference and conformal API
+pytest tests/test_ml_pipeline.py      # Parallel GPU training, noise generator, conformal coverage
+pytest tests/test_adversarial_and_edge_cases.py # Sybil cliques, collusion rings, stress limits
+pytest tests/test_vouch_score_v2.py   # Vouch scoring invariants & anchor paths
 ```
 
 ## Notes

@@ -291,6 +291,8 @@ class ReputationLedger:
                 loan_id = evt.payload["loan_id"]
                 principal = Decimal(str(evt.payload["principal"]))
                 tenure = int(evt.payload.get("tenure_months", 6))
+                fee = Decimal(str(evt.payload.get("fee", "0.00")))
+                net_amount = Decimal(str(evt.payload.get("net_amount", principal)))
                 loan = Loan(
                     loan_id=loan_id,
                     borrower_id=evt.subject_id,
@@ -301,28 +303,36 @@ class ReputationLedger:
                     status="ACTIVE",
                 )
                 replayed_lending.loans[loan_id] = loan
+                replayed_lending.total_platform_fees += fee
                 replayed_lending.transactions.append(
                     Transaction(
                         tx_id=f"TX_DISB_{loan_id}",
                         user_id=evt.subject_id,
                         amount=principal,
+                        fee=fee,
+                        net_amount=net_amount,
                         tx_type="DISBURSEMENT",
                     )
                 )
             elif evt.event_type == "LOAN_REPAID":
                 loan_id = evt.payload["loan_id"]
                 payment = Decimal(str(evt.payload["payment_amount"]))
+                fee = Decimal(str(evt.payload.get("fee", "0.00")))
+                net_amount = Decimal(str(evt.payload.get("net_amount", payment)))
                 if loan_id in replayed_lending.loans:
                     loan = replayed_lending.loans[loan_id]
                     loan.outstanding_balance -= payment
                     if loan.outstanding_balance <= Decimal("0.0"):
                         loan.outstanding_balance = Decimal("0.0")
                         loan.status = "REPAID"
+                    replayed_lending.total_platform_fees += fee
                     replayed_lending.transactions.append(
                         Transaction(
                             tx_id=f"TX_RP_{loan_id}_{evt.sequence}",
                             user_id=evt.subject_id,
                             amount=payment,
+                            fee=fee,
+                            net_amount=net_amount,
                             tx_type="REPAYMENT",
                         )
                     )

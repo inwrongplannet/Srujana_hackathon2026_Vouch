@@ -1,6 +1,7 @@
 {
   "version": "2.0",
-  "updated_at": "2026-10-25T06:33:18.954226+00:00",
+  "updated_at": "2026-10-25T14:57:57.470217+00:00",
+  "total_platform_fees": "0.00",
   "users": [
     {
       "user_id": "SAHYOG",
@@ -11,7 +12,7 @@
       "is_anchor": true,
       "financial_features": null,
       "n_settled_loans": 0,
-      "created_at": "2026-10-25T06:33:18.953550Z"
+      "created_at": "2026-10-25T14:57:57.469824Z"
     },
     {
       "user_id": "MEENA",
@@ -22,7 +23,7 @@
       "is_anchor": false,
       "financial_features": null,
       "n_settled_loans": 0,
-      "created_at": "2026-10-25T06:33:18.953611Z"
+      "created_at": "2026-10-25T14:57:57.469863Z"
     },
     {
       "user_id": "RAMESH",
@@ -33,7 +34,7 @@
       "is_anchor": false,
       "financial_features": null,
       "n_settled_loans": 0,
-      "created_at": "2026-10-25T06:33:18.953633Z"
+      "created_at": "2026-10-25T14:57:57.469873Z"
     },
     {
       "user_id": "ANAND",
@@ -44,7 +45,7 @@
       "is_anchor": false,
       "financial_features": null,
       "n_settled_loans": 0,
-      "created_at": "2026-10-25T06:33:18.953646Z"
+      "created_at": "2026-10-25T14:57:57.469881Z"
     },
     {
       "user_id": "LAKSHMI",
@@ -63,7 +64,7 @@
         "completeness": "0.90"
       },
       "n_settled_loans": 0,
-      "created_at": "2026-10-25T06:33:18.953719Z"
+      "created_at": "2026-10-25T14:57:57.469921Z"
     },
     {
       "user_id": "SURESH",
@@ -82,7 +83,7 @@
         "completeness": "0.90"
       },
       "n_settled_loans": 0,
-      "created_at": "2026-10-25T06:33:18.953748Z"
+      "created_at": "2026-10-25T14:57:57.469937Z"
     },
     {
       "user_id": "IMRAN",
@@ -101,7 +102,7 @@
         "completeness": "0.75"
       },
       "n_settled_loans": 0,
-      "created_at": "2026-10-25T06:33:18.953773Z"
+      "created_at": "2026-10-25T14:57:57.469951Z"
     }
   ],
   "vouches": [
@@ -110,48 +111,66 @@
       "source": "SAHYOG",
       "target": "MEENA",
       "weight": "6.666666666666666666666666667",
+      "rank": 1,
+      "alpha": "1.0",
       "active": true,
-      "created_at": "2026-10-25T06:33:18.953837Z"
+      "created_at": "2026-10-25T14:57:57.470004Z",
+      "last_reaffirmed_at": null
     },
     {
       "vouch_id": "V_SAHYOG_RAMESH",
       "source": "SAHYOG",
       "target": "RAMESH",
       "weight": "6.666666666666666666666666667",
+      "rank": 1,
+      "alpha": "1.0",
       "active": true,
-      "created_at": "2026-10-25T06:33:18.953915Z"
+      "created_at": "2026-10-25T14:57:57.470041Z",
+      "last_reaffirmed_at": null
     },
     {
       "vouch_id": "V_SAHYOG_ANAND",
       "source": "SAHYOG",
       "target": "ANAND",
       "weight": "6.666666666666666666666666667",
+      "rank": 1,
+      "alpha": "1.0",
       "active": true,
-      "created_at": "2026-10-25T06:33:18.953958Z"
+      "created_at": "2026-10-25T14:57:57.470065Z",
+      "last_reaffirmed_at": null
     },
     {
       "vouch_id": "V_RAMESH_LAKSHMI",
       "source": "RAMESH",
       "target": "LAKSHMI",
       "weight": "8.0",
+      "rank": 1,
+      "alpha": "1.0",
       "active": true,
-      "created_at": "2026-10-25T06:33:18.953996Z"
+      "created_at": "2026-10-25T14:57:57.470090Z",
+      "last_reaffirmed_at": null
     },
     {
       "vouch_id": "V_ANAND_LAKSHMI",
       "source": "ANAND",
       "target": "LAKSHMI",
       "weight": "6.0",
+      "rank": 2,
+      "alpha": "0.5",
       "active": true,
-      "created_at": "2026-10-25T06:33:18.954026Z"
+      "created_at": "2026-10-25T14:57:57.470108Z",
+      "last_reaffirmed_at": null
     },
     {
       "vouch_id": "V_MEENA_SURESH",
       "source": "MEENA",
       "target": "SURESH",
       "weight": "10.0",
+      "rank": 1,
+      "alpha": "1.0",
       "active": true,
-      "created_at": "2026-10-25T06:33:18.954056Z"
+      "created_at": "2026-10-25T14:57:57.470127Z",
+      "last_reaffirmed_at": null
     }
   ],
   "loans": [],

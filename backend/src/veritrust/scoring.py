@@ -23,6 +23,7 @@ from veritrust.models import (
     FinancialFeatures,
     LoanApplication,
     PropagatedCredibilityReport,
+    TemporalCreditAssessment,
     User,
     VouchScoreReport,
 )
@@ -401,6 +402,30 @@ class CreditScorer:
             score_final=score_final.quantize(Decimal("0.0001")),
             max_loan_limit=max_loan,
             contributing_paths=contributing_paths,
+        )
+
+    def assess_credit_temporal(
+        self,
+        user_id: str,
+        delta_months: Decimal = Decimal("0.0"),
+        vouch_age: Optional[Decimal] = None,
+        cashflow_age: Optional[Decimal] = None,
+        repay_age: Optional[Decimal] = None,
+    ) -> TemporalCreditAssessment:
+        """Produce a temporal freshness-adjusted dual-axis credit assessment.
+
+        Accounts for evidence aging across peer endorsements, cash flows, and
+        settled loan track record without deleting historical reputation.
+        """
+        from veritrust.temporal import assess_credit_temporal as _assess_temporal
+
+        return _assess_temporal(
+            self,
+            user_id=user_id,
+            delta_months=delta_months,
+            vouch_age=vouch_age,
+            cashflow_age=cashflow_age,
+            repay_age=repay_age,
         )
 
     @staticmethod

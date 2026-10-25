@@ -3,8 +3,8 @@
 **Why this file exists:** comprehensive master technical specification, architecture, mathematical formulation, and expanded scenario analysis for the Vouch fair and explainable creditworthiness assessment platform (F-04).
 
 ## Status and disclaimer
-- **Document status:** Developer-focused design blueprint and reference specification for proof-of-concept implementation.
-- **Scope note:** Stack, schemas, endpoints, weights, and mathematical formulations below represent the target reference design. All features built in code must be verified against the test harness.
+- **Document status:** Production reference specification and verified architecture design.
+- **Scope note:** Stack, schemas, endpoints, weights, and mathematical formulations below represent the production reference design. All features built in code are verified against the 134-test harness.
 
 ---
 
@@ -77,7 +77,17 @@ FastAPI Modular Monolith (Backend)
 backend/
 ├── main.py                                      # Application entry point / CLI / server
 ├── src/veritrust/
-│   ├── api/                                     # HTTP endpoints (auth, users, applications, assessments)
+│   ├── api/                                     # HTTP endpoints (routes, protocol_routes, community_routes)
+│   │   ├── routes.py                            # Applications, assessments, platform treasury, transactions
+│   │   ├── protocol_routes.py                   # Vouch requests, loan decisions, default triggers
+│   │   ├── community_routes.py                  # Community platform endpoints
+│   │   └── registry.py                          # In-memory storage registries
+│   ├── config.py                                # Algorithmic parameters & platform fee configuration
+│   ├── store.py                                 # JSON persistence & deterministic state serialization
+│   ├── models.py                                # Pydantic domain schemas with Decimal validation
+│   ├── engine.py                                # NetworkX graph builder, capacity conservation, rank weighting
+│   ├── lending.py                               # Lending lifecycle, repayments, 1.0% fee cut, & 4-level slashing
+│   ├── scoring.py                               # Dual-axis LCB scoring & graph trust propagation
 │   ├── affordability.py                         # Rule-based affordability & cash buffer engine
 │   ├── optimizer.py                             # Google OR-Tools CP-SAT restructuring solver
 │   ├── stress_tester.py                         # Monte Carlo stochastic scenario simulation
@@ -85,12 +95,10 @@ backend/
 │   ├── attack_simulator.py                      # Adversarial graph vulnerability harness
 │   ├── audit_explorer.py                        # Forensic decision explanation & rule trace
 │   ├── recourse.py                              # Borrower dispute & evidence-quality tracking
-│   ├── engine.py                                # NetworkX graph builder & capacity allocation
-│   ├── scoring.py                               # Dual-axis LCB scoring & graph trust
-│   ├── ledger.py                                # SHA-256 tamper-evident reputation event ledger
-│   ├── lending.py                               # Lending lifecycle, repayments, & 4-level slashing
-│   └── models.py                                # Pydantic domain schemas with Decimal validation
-└── tests/                                       # Comprehensive test suites
+│   ├── community.py                             # Community platform store & peer endorsement engine
+│   ├── simulator.py                             # Web-of-Trust benchmark topology calibration engine
+│   └── ledger.py                                # SHA-256 tamper-evident reputation event ledger
+└── tests/                                       # 134 passing test suites
 ```
 
 ---
@@ -99,54 +107,67 @@ backend/
 
 | Entity | Core schema fields | Purpose |
 |---|---|---|
-| `User` | `id` (UUID/str), `display_name`, `verification_status`, `is_anchor`, `reputation`, `created_at` | Participant identity and reputation anchor. |
+| `User` | `id` (UUID/str), `display_name`, `verification_status`, `is_anchor`, `reputation`, `capacity`, `vouch_capacity`, `created_at` | Participant identity and reputation anchor. |
 | `ConsentRecord` | `user_id`, `purpose`, `scope`, `granted_at`, `revoked_at`, `policy_version` | Regulatory consent tracking per RBI guidelines. |
 | `FinancialProfile` | `user_id`, `monthly_net_income`, `income_stability`, `essential_expenses`, `existing_debt`, `updated_at` | Baseline financial capacity inputs. |
 | `LoanApplication` | `id`, `borrower_id`, `principal`, `annual_rate`, `term_months`, `purpose_category`, `status` | Credit request specification. |
 | `EvidenceItem` | `id`, `owner_id`, `type`, `source`, `observed_at`, `verified_at`, `confidence`, `uri_or_hash` | Supporting factual documentation. |
-| `Endorsement` | `id`, `endorser_id`, `recipient_id`, `application_id`, `statement`, `status`, `created_at`, `expiry` | Directed Web-of-Trust vouch relation. |
+| `Endorsement` / `Vouch` | `id`, `source`, `target`, `weight`, `rank`, `alpha`, `active`, `created_at` | Directed Web-of-Trust vouch relation with chronological rank weighting. |
+| `Transaction` | `tx_id`, `user_id`, `amount`, `fee`, `net_amount`, `tx_type`, `timestamp` | Financial ledger transaction with platform fee cut tracking. |
+| `PlatformTreasury` | `total_fees_collected`, `fee_rate`, `treasury_id`, `last_updated` | Tracks platform surcharge revenue accumulated across protocol transactions. |
 | `RepaymentOutcome` | `application_id`, `period`, `due_amount`, `paid_amount`, `paid_date`, `dispute_status` | Repayment lifecycle verification. |
 | `Assessment` | `application_id`, `bureau_status`, `bureau_score`, `vouch_score`, `affordability_status`, `lcb_score`, `reasons` | Multi-dimensional credit assessment snapshot. |
-| `AuditEvent` | `event_id`, `prev_hash`, `actor_id`, `event_type`, `timestamp`, `payload_hash` | SHA-256 cryptographically chained audit record. |
+| `AuditEvent` | `event_id`, `prev_hash`, `actor_id`, `event_type`, `timestamp`, `payload_hash` | SHA-256 cryptographically chained audit record (`PLATFORM_FEE_COLLECTED`, etc.). |
 
 ---
 
 ## 6. Vouch network and graph mathematics
 
-### 6.1 Endorsement edge weighting
-For a directed edge from endorser $x$ to recipient $y$, the effective weight $w_{xy}$ is calculated as:
+### 6.1 Endorsement edge weighting and rank decay
+For a directed edge from endorser $u$ to recipient $v$, the effective weight $W_{uv}$ is derived from the chronological rank $r_{uv} \in \{1, 2, \dots\}$:
 
-$$w_{xy} = \text{clamp}(r_x \cdot q_x \cdot e_{xy} \cdot d_{xy} \cdot (1 - p_{xy}), 0, 1)$$
+$$\alpha_{uv} = \frac{1}{2^{r_{uv}-1}}$$
+
+Weights are conserved and normalized across all active outgoing edges from $u$:
+
+$$W_{uv} = \alpha_{uv} \times \frac{C_u}{\sum_{w \in \text{Out}(u)} \alpha_{uw}} \quad \text{such that} \quad \sum_{v \in \text{Out}(u)} W_{uv} \le C_u$$
 
 Where:
-- $r_x \in [0, 1]$: Endorser reputation standing.
-- $q_x \in [0, 1]$: Verification and data-quality factor of the endorser.
-- $e_{xy} \in [0, 1]$: Edge eligibility and institutional policy adherence.
-- $d_{xy} \in [0, 1]$: Relevance of the endorsement relationship.
-- $p_{xy} \in [0, 1]$: Abuse and collusion penalty factor.
+- $C_u = \max(0, R_u)$: Distributable vouch capacity of endorser $u$.
+- $r_{uv}$: The 1-based chronological order in which the vouch was created.
+- Sibling re-weighting is executed atomically whenever an edge is added or removed.
 
-### 6.2 Proposed Vouch Score
-The composite Vouch Score aggregates incoming eligible endorsements with diminishing returns:
+### 6.2 Path trust and anchor propagation
+When trust propagates across multi-hop path $P = (v_0, v_1, \dots, v_k)$ of length $h = k$ hops originating from an institutional anchor node $s$:
 
-$$W = \sum_{x \in \text{In}(y)} w_{xy}$$
+$$\text{PathTrust}(P) = \min_{e \in P} w(e) \times \delta^{h-1} \quad (\text{geometric hop decay } \delta = 0.5)$$
 
-$$\text{support} = 1 - \exp\left(-\frac{W}{\tau}\right) \quad (\tau > 0 \text{ saturation parameter})$$
+Paths are consolidated per anchor $s$ to target $u$:
 
-$$\text{quality} = \text{clamp}(C, 0, 1) \quad (C = \text{smoothed share of successful historical outcomes})$$
+$$p_u(s) = \max_{P \in \text{Paths}(s \to u)} \text{PathTrust}(P)$$
 
-$$\text{VouchScore} = \text{round}\left(100 \cdot \text{support} \cdot (0.35 + 0.65 \cdot \text{quality})\right)$$
+The composite Web-of-Trust credibility score aggregates anchor contributions:
+
+$$G(u) = \sum_{s \in S} p_u(s)$$
 
 ### 6.3 Dynamic reputation update rule
-Reputation updates follow an outcome-conditioned learning rate:
+Reputation updates follow outcome-conditioned, bounded rules:
 
-$$\Delta = \eta \cdot w_{xy} \cdot (y - p) \cdot \rho_{\text{evidence}}$$
+1. **Successful settlement (repeat transaction minting):**
+   $$M_k = M_0 \cdot e^{-\lambda (k-1)} \quad (M_0 = 2.0, \lambda = 0.15)$$
+   Borrower reputation increases by $M_k$ on their $k$-th settled loan. Direct sponsors receive sponsor yield ($+1.0$).
 
-$$R_{\text{new}} = \text{clamp}(R_{\text{old}} + \Delta, 0, R_{\max})$$
+2. **Atomic snapshot default penalty:**
+   $$S_D = \max\left(S_{\min}, \min\left(S_{\max}, \frac{\text{outstanding\_balance}}{1000}\right)\right)$$
 
-Where $y \in \{0, 1\}$ is the verified repayment outcome, $p$ is the expected outcome rate, $\eta$ is the learning rate, and $\rho_{\text{evidence}}$ is the verified evidence reliability score.
+3. **4-Level Damped Slashing Cascade:**
+   - **$k=0$ (Defaulter):** Penalty $\delta_0 = S_D$. Reputation $R \leftarrow R - \delta_0$, status $\rightarrow \text{DEFAULTED}$, capacity frozen ($C = 0$).
+   - **$k=1$ (Direct Sponsors):** Penalty $\delta_1 = \gamma \cdot W_{uv} \cdot S_D$ ($\gamma = 0.5$).
+   - **$k=2$ (Transitive Ancestors):** Penalty $\delta_2 = \gamma^2 \cdot S_D = 0.25 \cdot S_D$.
+   - **$k \ge 3$:** Cutoff ($\delta = 0$). Hard isolation stops systemic contagion.
 
 ### 6.4 Abuse safeguards
-1. **Diminishing returns:** The 100th endorsement contributes negligibly compared to the first 3 endorsements.
+1. **Diminishing returns & chronological rank damping:** Later endorsements receive exponentially smaller weight ($\alpha_{uv} = 1/2^{r-1}$).
 2. **Out-degree capacity conservation:** Total outgoing edge weights from a node are bounded by node capacity: $\sum_v W_{uv} \le C_u$.
 3. **Per-path cycle absorption:** Traversal tracks visited nodes per path branch, terminating circular self-endorsement loops.
 4. **Anchor grounding:** Unanchored components receive zero credibility regardless of internal endorsement density.
@@ -168,6 +189,21 @@ $$\text{Monthly Surplus} = D - \text{Debt}_{\text{existing}} - \text{EMI}$$
 $$\text{FOIR / ITI} = \frac{\text{EMI}}{I_{\text{net}}} \le 40\% \quad \Big| \quad \text{DTI} = \frac{\text{Debt}_{\text{existing}} + \text{EMI}}{I_{\text{net}}} \le 50\%$$
 
 ### 7.2 What-if scenario exploration
+The system supports non-destructive scenario simulation:
+- **Base scenario:** Verified income, documented obligations, requested loan terms.
+- **Income shock scenario:** Configurable percentage drop in recurring revenue ($I \cdot (1 - \delta_I)$).
+- **Emergency expense scenario:** One-off unexpected expense shock ($S_{\text{emergency}}$).
+- **Restructuring scenario:** Parameter sweep over feasible $(P, T)$ pairs to restore positive surplus.
+
+### 7.3 Platform treasury and transaction fee cut
+To sustain decentralized protocol operations, every borrowing and repayment transaction incurs a transparent platform transaction fee cut:
+- **Fee cut rate:** Configured by `PLATFORM_FEE_RATE` (default `Decimal("0.01")` / 1.0%).
+- **Calculation:**
+  $$\text{fee} = \text{round}(\text{amount} \times \text{PLATFORM\_FEE\_RATE}, 2)$$
+  $$\text{net\_amount} = \text{amount} - \text{fee}$$
+- **Disbursement:** The borrower receives `net_amount` while `fee` is routed to `PLATFORM_TREASURY`.
+- **Repayment:** The gross repayment is split: `net_repay` reduces principal debt while `fee` is collected by `PLATFORM_TREASURY`.
+- **Audit & Replay:** Every fee collection generates a `PLATFORM_FEE_COLLECTED` ledger event. Replaying the cryptographic ledger deterministically reconstructs treasury balances.
 The system supports non-destructive scenario simulation:
 - **Base scenario:** Verified income, documented obligations, requested loan terms.
 - **Income shock scenario:** Configurable percentage drop in recurring revenue ($I \cdot (1 - \delta_I)$).
@@ -241,6 +277,13 @@ The assessment separates orthogonal signals into an unblended, auditable structu
 | `GET` | `/api/v1/assessments/{id}` | Retrieve multi-dimensional assessment, rule trace, and reason codes. |
 | `POST` | `/api/v1/assessments/{id}/scenarios` | Run counterfactual simulation without mutating base assessment. |
 | `POST` | `/api/v1/endorsements/{id}/dispute` | File formal borrower contestation or evidence dispute. |
+| `GET` | `/api/v1/platform/treasury` | Return platform treasury fee collection statistics and cut rate. |
+| `GET` | `/api/v1/transactions` | Query chronological transaction records with gross amount, fee, and net amount. |
+| `POST` | `/api/v1/vouch-requests` | Create structured vouch request. |
+| `POST` | `/api/v1/vouch-requests/{id}/respond` | Accept or reject pending vouch request. |
+| `POST` | `/api/v1/applications/{id}/decision` | Record underwriter decision on loan application. |
+| `POST` | `/api/v1/loans/{id}/default` | Trigger loan default and atomic 4-level slashing cascade. |
+| `GET` | `/api/v1/loans` | List all active and historical loans. |
 | `GET` | `/health` | Health check endpoint exposing no secrets or internal configuration. |
 
 ---
@@ -297,11 +340,13 @@ Explainability is a first-class architectural component, providing:
 
 | Scenario | Core modules | Test coverage |
 |---|---|---|
-| **No credit history** | `affordability.py`, `scoring.py`, `engine.py` | `test_affordability.py`, `test_scoring.py` |
+| **No credit history** | `affordability.py`, `scoring.py`, `engine.py` | `test_affordability.py`, `test_credit.py` |
 | **Temporary shock** | `counterfactual.py`, `stress_tester.py`, `explainer.py` | `test_counterfactual.py`, `test_stress_tester.py` |
 | **Peer vouching** | `engine.py`, `lending.py`, `ledger.py` | `test_trust.py`, `test_vouch.py`, `test_lending.py` |
 | **Dilution & ring attacks** | `attack_simulator.py`, `engine.py` | `test_attack_simulator.py`, `test_cycles.py` |
 | **Explainability & recourse** | `audit_explorer.py`, `recourse.py`, `explainer.py` | `test_audit_explorer.py`, `test_recourse.py` |
+| **Mathematical calibration** | `engine.py`, `scoring.py`, `models.py` | `test_mathematical_framework.py` |
+| **Platform treasury & fee cut** | `lending.py`, `models.py`, `store.py` | `test_platform_fee.py` |
 
 ---
 

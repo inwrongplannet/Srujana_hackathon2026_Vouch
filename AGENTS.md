@@ -131,3 +131,4 @@ Add a line when a human corrects you or you hit a repo-specific gotcha. Prune li
 2026-10-24: Cycle absorption visited-set is per-path, not global — a global set causes valid multi-path trust to be incorrectly zeroed (graph-trust-engine skill).
 2026-10-24: `.claude/skills/` is excluded from `check_docs_style.py` (SKIP_PREFIXES) — skill files are agent instructions authored by tooling with their own conventions, not project documentation.
 2026-10-25: Never auto-merge PRs or commit directly to main; Abhishek alone reviews and merges; agents only create branches, push, and open PRs (session protocol).
+2026-10-25: Platform transaction fee cut is tracked on Transaction (fee, net_amount) and accumulated in PlatformTreasury with PLATFORM_FEE_RATE.

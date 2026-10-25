@@ -268,6 +268,86 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/transactions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Transactions
+         * @description List all transactions including platform fee cuts and net amounts.
+         */
+        get: operations["list_transactions_api_v1_transactions_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/platform/treasury": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Platform Treasury
+         * @description Retrieve cumulative platform fee cut and treasury status.
+         */
+        get: operations["get_platform_treasury_api_v1_platform_treasury_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/predict": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Predict Credit Risk
+         * @description Predict credit default probability, conformal decision set, and multi-dimensional explanation.
+         */
+        post: operations["predict_credit_risk_api_v1_predict_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/predict/sample": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Predict Sample
+         * @description Retrieve sample payload demonstrating loan prediction and explanation inputs.
+         */
+        get: operations["get_predict_sample_api_v1_predict_sample_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/vouch-requests": {
         parameters: {
             query?: never;
@@ -687,9 +767,7 @@ export interface components {
              * Affordability
              * @description Cash-flow affordability and EMI capacity metrics
              */
-            affordability: {
-                [key: string]: unknown;
-            };
+            affordability: Record<string, never>;
             /**
              * Data Quality
              * @description Data completeness and verification grade
@@ -701,16 +779,12 @@ export interface components {
              * Positive Factors
              * @description Evidence-backed positive reason codes
              */
-            positive_factors?: {
-                [key: string]: unknown;
-            }[];
+            positive_factors?: Record<string, never>[];
             /**
              * Risk Factors
              * @description Evidence-backed risk reason codes
              */
-            risk_factors?: {
-                [key: string]: unknown;
-            }[];
+            risk_factors?: Record<string, never>[];
             /**
              * Missing Information
              * @description Missing or unverified fields
@@ -732,6 +806,26 @@ export interface components {
              * Format: date-time
              */
             timestamp?: string;
+        };
+        /** CounterfactualRemedy */
+        CounterfactualRemedy: {
+            /**
+             * Target Decision
+             * @default ELIGIBLE
+             */
+            target_decision: string;
+            /** Is Already Eligible */
+            is_already_eligible: boolean;
+            /** Max Recommended Principal */
+            max_recommended_principal: string;
+            /** Recommended Tenure Months */
+            recommended_tenure_months: number;
+            /** Sustainable Emi */
+            sustainable_emi: string;
+            /** Required Additional Monthly Income */
+            required_additional_monthly_income?: string | null;
+            /** Actionable Recommendations */
+            actionable_recommendations: string[];
         };
         /** CreateApplicationRequest */
         CreateApplicationRequest: {
@@ -914,6 +1008,17 @@ export interface components {
             /** Verified At */
             verified_at: string;
         };
+        /** ExplanationDetails */
+        ExplanationDetails: {
+            /** Summary */
+            summary: string;
+            /** Positive Factors */
+            positive_factors: components["schemas"]["PredictFactorItem"][];
+            /** Risk Factors */
+            risk_factors: components["schemas"]["PredictFactorItem"][];
+            /** Missing Information */
+            missing_information: components["schemas"]["MissingEvidenceItem"][];
+        };
         /** GraphEdge */
         GraphEdge: {
             /** Source */
@@ -1018,6 +1123,26 @@ export interface components {
             /** Track Record */
             track_record: string;
         };
+        /** MissingEvidenceItem */
+        MissingEvidenceItem: {
+            /** Code */
+            code: string;
+            /** Text */
+            text: string;
+            /** Status */
+            status: string;
+        };
+        /** MultidimensionalScoreBreakdown */
+        MultidimensionalScoreBreakdown: {
+            /** Financial Capacity Score */
+            financial_capacity_score: number;
+            /** Evidence Reliability Score */
+            evidence_reliability_score: number;
+            /** Graph Reputation Score */
+            graph_reputation_score: number;
+            /** Stress Resilience Score */
+            stress_resilience_score: number;
+        };
         /** Penalty */
         Penalty: {
             /** User Id */
@@ -1041,6 +1166,163 @@ export interface components {
             monthly_emi: string;
             /** Total Interest */
             total_interest: string;
+        };
+        /** PlatformTreasurySummary */
+        PlatformTreasurySummary: {
+            /** Treasury Id */
+            treasury_id: string;
+            /** Total Fees Collected */
+            total_fees_collected: string;
+            /** Fee Rate */
+            fee_rate: string;
+            /** Transaction Count */
+            transaction_count: number;
+            /** Currency */
+            currency: string;
+        };
+        /** PredictFactorItem */
+        PredictFactorItem: {
+            /** Code */
+            code: string;
+            /** Text */
+            text: string;
+            /** Feature */
+            feature: string;
+            /** Observed */
+            observed?: string | null;
+            /** Log Odds */
+            log_odds: number;
+            /** Direction */
+            direction: string;
+        };
+        /** PredictRequest */
+        PredictRequest: {
+            /** Borrower Id */
+            borrower_id?: string | null;
+            /** Monthly Income */
+            monthly_income?: string | null;
+            /** Monthly Debt */
+            monthly_debt?: string | null;
+            /** Net Operating Income */
+            net_operating_income?: string | null;
+            /**
+             * Requested Amount
+             * @default 100000.00
+             */
+            requested_amount: string | null;
+            /**
+             * Requested Tenure Months
+             * @default 12
+             */
+            requested_tenure_months: number | null;
+            /**
+             * Annual Interest Rate
+             * @default 0.18
+             */
+            annual_interest_rate: number | null;
+            /** Bureau Score */
+            bureau_score?: number | null;
+            /**
+             * Bureau Status
+             * @default NO_FILE
+             */
+            bureau_status: string | null;
+            /**
+             * Bureau Max Dpd 24M
+             * @default 0
+             */
+            bureau_max_dpd_24m: number | null;
+            /**
+             * Bureau Months 30Plus 24M
+             * @default 0
+             */
+            bureau_months_30plus_24m: number | null;
+            /**
+             * Bureau Written Off
+             * @default 0
+             */
+            bureau_written_off: number | null;
+            /**
+             * Bureau Utilisation
+             * @default 0
+             */
+            bureau_utilisation: number | null;
+            /**
+             * Vouch Count
+             * @default 0
+             */
+            vouch_count: number | null;
+            /** Vouch Score */
+            vouch_score?: string | null;
+            /**
+             * Bank Bounces 3M
+             * @default 0
+             */
+            bank_bounces_3m: number | null;
+            /**
+             * Bank Income Cv
+             * @default 0.1
+             */
+            bank_income_cv: number | null;
+            /** Bank Surplus Median */
+            bank_surplus_median?: string | null;
+            /**
+             * Bank Statement Status
+             * @default VERIFIED
+             */
+            bank_statement_status: string | null;
+            /**
+             * Gst Status
+             * @default NOT_APPLICABLE
+             */
+            gst_status: string | null;
+            /**
+             * Declared Income Status
+             * @default VERIFIED
+             */
+            declared_income_status: string | null;
+            /**
+             * Occupation Tenure Months
+             * @default 24
+             */
+            occupation_tenure_months: number | null;
+            /**
+             * Evidence Age Months
+             * @default 0
+             */
+            evidence_age_months: number | null;
+        };
+        /** PredictResponse */
+        PredictResponse: {
+            /** Borrower Id */
+            borrower_id?: string | null;
+            prediction: components["schemas"]["PredictionDetails"];
+            explanation: components["schemas"]["ExplanationDetails"];
+            temporal_freshness: components["schemas"]["TemporalFreshnessReport"];
+            multidimensional_scores: components["schemas"]["MultidimensionalScoreBreakdown"];
+            counterfactual_remedy: components["schemas"]["CounterfactualRemedy"];
+        };
+        /** PredictionDetails */
+        PredictionDetails: {
+            /** Default Probability */
+            default_probability: number;
+            /** Repayment Probability */
+            repayment_probability: number;
+            /** Credit Score */
+            credit_score: number;
+            /** Risk Tier */
+            risk_tier: string;
+            /** Decision */
+            decision: string;
+            /** Conformal Set */
+            conformal_set: string[];
+            /**
+             * Confidence Level
+             * @default 0.9
+             */
+            confidence_level: number;
+            /** Epistemic Uncertainty */
+            epistemic_uncertainty: number;
         };
         /** PreviewView */
         PreviewView: {
@@ -1106,6 +1388,11 @@ export interface components {
             status: string;
             /** Outstanding Balance */
             outstanding_balance: string;
+            /**
+             * Fee Paid
+             * @default 0.00
+             */
+            fee_paid: string | null;
         };
         /** RespondBody */
         RespondBody: {
@@ -1223,6 +1510,42 @@ export interface components {
             adverse_5th_percentile_cash: string;
             /** Income Shock Tolerance Percent */
             income_shock_tolerance_percent: number;
+        };
+        /** TemporalFreshnessReport */
+        TemporalFreshnessReport: {
+            /** Evidence Age Months */
+            evidence_age_months: number;
+            /** Vouch Confidence */
+            vouch_confidence: number;
+            /** Cashflow Confidence */
+            cashflow_confidence: number;
+            /** Repayment Confidence */
+            repayment_confidence: number;
+            /** Composite Confidence */
+            composite_confidence: number;
+            /** Is Stale */
+            is_stale: boolean;
+            /** Staleness Warning */
+            staleness_warning?: string | null;
+        };
+        /** TransactionSummary */
+        TransactionSummary: {
+            /** Tx Id */
+            tx_id: string;
+            /** User Id */
+            user_id: string;
+            /** Amount */
+            amount: string;
+            /** Fee */
+            fee: string;
+            /** Net Amount */
+            net_amount: string;
+            /** Currency */
+            currency: string;
+            /** Tx Type */
+            tx_type: string;
+            /** Timestamp */
+            timestamp: string;
         };
         /** UserSummary */
         UserSummary: {
@@ -1819,6 +2142,99 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["GraphResponse"];
+                };
+            };
+        };
+    };
+    list_transactions_api_v1_transactions_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TransactionSummary"][];
+                };
+            };
+        };
+    };
+    get_platform_treasury_api_v1_platform_treasury_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PlatformTreasurySummary"];
+                };
+            };
+        };
+    };
+    predict_credit_risk_api_v1_predict_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PredictRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PredictResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_predict_sample_api_v1_predict_sample_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PredictRequest"];
                 };
             };
         };

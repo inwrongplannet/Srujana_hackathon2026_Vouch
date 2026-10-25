@@ -1,0 +1,2313 @@
+{
+  "hardware": {
+    "cuda_available": true,
+    "device": "NVIDIA GeForce RTX 4050 Laptop GPU"
+  },
+  "dataset": {
+    "rows": 65000,
+    "by_source": {
+      "simulated": 35000,
+      "real_anchored": 30000
+    },
+    "features_used": [
+      "occupation",
+      "urban",
+      "age_band",
+      "dependents",
+      "product",
+      "requested_amount_minor",
+      "tenure_months",
+      "new_emi_minor",
+      "declared_income_minor",
+      "declared_income_status",
+      "declared_emi_minor",
+      "occupation_tenure_months",
+      "occupation_tenure_status",
+      "bank_statement_status",
+      "bank_statement_months",
+      "bureau_status",
+      "gst_status",
+      "income_basis",
+      "income_est_minor",
+      "existing_emi_est_minor",
+      "dti_est",
+      "amount_to_income",
+      "declared_to_bank_income",
+      "undeclared_emi_to_income",
+      "gst_turnover_median_minor",
+      "gst_missed_filings",
+      "gst_to_bank_credits",
+      "completeness_tier",
+      "bank_income_median_minor",
+      "bank_income_cv",
+      "bank_zero_income_months",
+      "bank_worst3_to_median",
+      "bank_emi_recent_minor",
+      "bank_bounces",
+      "bank_bounces_3m",
+      "bank_low_balance_months",
+      "bank_loan_disbursals_6m",
+      "bank_last_month_spike",
+      "bank_unreconciled_months",
+      "bank_surplus_median_minor",
+      "bureau_tradelines",
+      "bureau_active",
+      "bureau_history_months",
+      "bureau_max_dpd_24m",
+      "bureau_months_30plus_24m",
+      "bureau_reporting_gaps",
+      "bureau_new_6m",
+      "bureau_written_off",
+      "bureau_emi_minor",
+      "bureau_outstanding_to_sanctioned"
+    ],
+    "n_features": 50,
+    "label_rate": {
+      "real": 0.0819,
+      "simulated": 0.0698
+    }
+  },
+  "real_anchored": {
+    "source": "real_anchored",
+    "noise_level": "realistic",
+    "n_features": 50,
+    "features": [
+      "occupation",
+      "urban",
+      "age_band",
+      "dependents",
+      "product",
+      "requested_amount_minor",
+      "tenure_months",
+      "new_emi_minor",
+      "declared_income_minor",
+      "declared_income_status",
+      "declared_emi_minor",
+      "occupation_tenure_months",
+      "occupation_tenure_status",
+      "bank_statement_status",
+      "bank_statement_months",
+      "bureau_status",
+      "gst_status",
+      "income_basis",
+      "income_est_minor",
+      "existing_emi_est_minor",
+      "dti_est",
+      "amount_to_income",
+      "declared_to_bank_income",
+      "undeclared_emi_to_income",
+      "gst_turnover_median_minor",
+      "gst_missed_filings",
+      "gst_to_bank_credits",
+      "completeness_tier",
+      "bank_income_median_minor",
+      "bank_income_cv",
+      "bank_zero_income_months",
+      "bank_worst3_to_median",
+      "bank_emi_recent_minor",
+      "bank_bounces",
+      "bank_bounces_3m",
+      "bank_low_balance_months",
+      "bank_loan_disbursals_6m",
+      "bank_last_month_spike",
+      "bank_unreconciled_months",
+      "bank_surplus_median_minor",
+      "bureau_tradelines",
+      "bureau_active",
+      "bureau_history_months",
+      "bureau_max_dpd_24m",
+      "bureau_months_30plus_24m",
+      "bureau_reporting_gaps",
+      "bureau_new_6m",
+      "bureau_written_off",
+      "bureau_emi_minor",
+      "bureau_outstanding_to_sanctioned"
+    ],
+    "models": {
+      "logistic": {
+        "calibration": {
+          "n": 5999,
+          "positives": 491,
+          "auc": 0.6482,
+          "pr_auc": 0.148,
+          "brier": 0.2283,
+          "log_loss": 0.6492,
+          "ks": 0.2224,
+          "accuracy_at_threshold": 0.7905,
+          "balanced_accuracy": 0.5919,
+          "f1": 0.2168,
+          "precision": 0.1562,
+          "recall": 0.3544,
+          "approval_rate": 0.8143,
+          "threshold": 0.56
+        },
+        "test": {
+          "n": 5999,
+          "positives": 491,
+          "auc": 0.6524,
+          "pr_auc": 0.1474,
+          "brier": 0.2327,
+          "log_loss": 0.6584,
+          "ks": 0.2468,
+          "accuracy_at_threshold": 0.7725,
+          "balanced_accuracy": 0.5969,
+          "f1": 0.2178,
+          "precision": 0.1515,
+          "recall": 0.387,
+          "approval_rate": 0.791,
+          "threshold": 0.56
+        }
+      },
+      "xgboost_gpu": {
+        "calibration": {
+          "n": 5999,
+          "positives": 491,
+          "auc": 0.6575,
+          "pr_auc": 0.1688,
+          "brier": 0.0734,
+          "log_loss": 0.2725,
+          "ks": 0.2502,
+          "accuracy_at_threshold": 0.7643,
+          "balanced_accuracy": 0.6082,
+          "f1": 0.2265,
+          "precision": 0.1548,
+          "recall": 0.4216,
+          "approval_rate": 0.7771,
+          "threshold": 0.13
+        },
+        "test": {
+          "n": 5999,
+          "positives": 491,
+          "auc": 0.6482,
+          "pr_auc": 0.1463,
+          "brier": 0.0745,
+          "log_loss": 0.2761,
+          "ks": 0.2352,
+          "accuracy_at_threshold": 0.7571,
+          "balanced_accuracy": 0.6062,
+          "f1": 0.2229,
+          "precision": 0.151,
+          "recall": 0.4257,
+          "approval_rate": 0.7693,
+          "threshold": 0.13
+        }
+      },
+      "ebm": {
+        "calibration": {
+          "n": 5999,
+          "positives": 491,
+          "auc": 0.6677,
+          "pr_auc": 0.1597,
+          "brier": 0.0733,
+          "log_loss": 0.2734,
+          "ks": 0.2446,
+          "accuracy_at_threshold": 0.8083,
+          "balanced_accuracy": 0.6025,
+          "f1": 0.2333,
+          "precision": 0.1734,
+          "recall": 0.3564,
+          "approval_rate": 0.8318,
+          "threshold": 0.135
+        },
+        "test": {
+          "n": 5999,
+          "positives": 491,
+          "auc": 0.6573,
+          "pr_auc": 0.1486,
+          "brier": 0.0737,
+          "log_loss": 0.2746,
+          "ks": 0.2267,
+          "accuracy_at_threshold": 0.7961,
+          "balanced_accuracy": 0.5968,
+          "f1": 0.2235,
+          "precision": 0.1624,
+          "recall": 0.3585,
+          "approval_rate": 0.8193,
+          "threshold": 0.135
+        }
+      },
+      "lightgbm": {
+        "calibration": {
+          "n": 5999,
+          "positives": 491,
+          "auc": 0.6659,
+          "pr_auc": 0.1659,
+          "brier": 0.074,
+          "log_loss": 0.2776,
+          "ks": 0.2349,
+          "accuracy_at_threshold": 0.8703,
+          "balanced_accuracy": 0.5815,
+          "f1": 0.2297,
+          "precision": 0.2235,
+          "recall": 0.2363,
+          "approval_rate": 0.9135,
+          "threshold": 0.13
+        },
+        "test": {
+          "n": 5999,
+          "positives": 491,
+          "auc": 0.6585,
+          "pr_auc": 0.149,
+          "brier": 0.0742,
+          "log_loss": 0.2785,
+          "ks": 0.2195,
+          "accuracy_at_threshold": 0.8586,
+          "balanced_accuracy": 0.5752,
+          "f1": 0.2148,
+          "precision": 0.1969,
+          "recall": 0.2363,
+          "approval_rate": 0.9018,
+          "threshold": 0.13
+        }
+      },
+      "pytorch_gpu": {
+        "calibration": {
+          "n": 5999,
+          "positives": 491,
+          "auc": 0.5919,
+          "pr_auc": 0.1194,
+          "brier": 0.0826,
+          "log_loss": 0.3186,
+          "ks": 0.1451,
+          "accuracy_at_threshold": 0.745,
+          "balanced_accuracy": 0.5689,
+          "f1": 0.187,
+          "precision": 0.1265,
+          "recall": 0.3585,
+          "approval_rate": 0.7681,
+          "threshold": 0.125
+        },
+        "test": {
+          "n": 5999,
+          "positives": 491,
+          "auc": 0.605,
+          "pr_auc": 0.1183,
+          "brier": 0.0829,
+          "log_loss": 0.3158,
+          "ks": 0.163,
+          "accuracy_at_threshold": 0.7373,
+          "balanced_accuracy": 0.5648,
+          "f1": 0.1826,
+          "precision": 0.1225,
+          "recall": 0.3585,
+          "approval_rate": 0.7605,
+          "threshold": 0.125
+        }
+      },
+      "generalized_ensemble": {
+        "calibration": {
+          "n": 5999,
+          "positives": 491,
+          "auc": 0.6572,
+          "pr_auc": 0.1577,
+          "brier": 0.075,
+          "log_loss": 0.2818,
+          "ks": 0.2254,
+          "accuracy_at_threshold": 0.8636,
+          "balanced_accuracy": 0.577,
+          "f1": 0.2195,
+          "precision": 0.2065,
+          "recall": 0.2342,
+          "approval_rate": 0.9072,
+          "threshold": 0.195
+        },
+        "test": {
+          "n": 5999,
+          "positives": 491,
+          "auc": 0.6582,
+          "pr_auc": 0.1466,
+          "brier": 0.0755,
+          "log_loss": 0.2833,
+          "ks": 0.2461,
+          "accuracy_at_threshold": 0.853,
+          "balanced_accuracy": 0.5675,
+          "f1": 0.2011,
+          "precision": 0.1811,
+          "recall": 0.2261,
+          "approval_rate": 0.8978,
+          "threshold": 0.195
+        }
+      }
+    },
+    "conformal": {
+      "generalized_ensemble": {
+        "lac_90": {
+          "threshold": 0.2621,
+          "test": {
+            "n": 5999,
+            "coverage": 0.8986497749624938,
+            "avg_set_size": 0.9753292215369228,
+            "singleton_rate": 0.9753292215369228,
+            "empty_rate": 0.024670778463077178,
+            "full_rate": 0.0,
+            "both_label_rate": 0.0
+          }
+        },
+        "aps_90": {
+          "threshold": 0.4693,
+          "test": {
+            "n": 5999,
+            "coverage": 0.9174862477079513,
+            "avg_set_size": 1.0,
+            "singleton_rate": 1.0,
+            "empty_rate": 0.0,
+            "full_rate": 0.0,
+            "both_label_rate": 0.0
+          }
+        },
+        "mondrian_lac_90": {
+          "thresholds": {
+            "0": 0.4984,
+            "1": 0.3059,
+            "2": 0.2418,
+            "3": 0.2723
+          },
+          "test": {
+            "n": 5999,
+            "coverage": 0.8988164694115686,
+            "avg_set_size": 0.9756626104350725,
+            "singleton_rate": 0.9756626104350725,
+            "empty_rate": 0.024337389564927488,
+            "full_rate": 0.0,
+            "both_label_rate": 0.0
+          },
+          "per_completeness_tier": {
+            "0": {
+              "n": 349,
+              "coverage": 0.8939828080229226,
+              "avg_set_size": 1.0,
+              "singleton_rate": 1.0,
+              "empty_rate": 0.0,
+              "full_rate": 0.0,
+              "both_label_rate": 0.0
+            },
+            "1": {
+              "n": 2405,
+              "coverage": 0.9097713097713098,
+              "avg_set_size": 0.9925155925155925,
+              "singleton_rate": 0.9925155925155925,
+              "empty_rate": 0.007484407484407485,
+              "full_rate": 0.0,
+              "both_label_rate": 0.0
+            },
+            "2": {
+              "n": 2989,
+              "coverage": 0.8909334225493476,
+              "avg_set_size": 0.9598527935764469,
+              "singleton_rate": 0.9598527935764469,
+              "empty_rate": 0.04014720642355303,
+              "full_rate": 0.0,
+              "both_label_rate": 0.0
+            },
+            "3": {
+              "n": 256,
+              "coverage": 0.89453125,
+              "avg_set_size": 0.96875,
+              "singleton_rate": 0.96875,
+              "empty_rate": 0.03125,
+              "full_rate": 0.0,
+              "both_label_rate": 0.0
+            }
+          }
+        },
+        "lac_95": {
+          "threshold": 0.8457,
+          "test": {
+            "n": 5999,
+            "coverage": 0.9503250541756959,
+            "avg_set_size": 1.2308718119686615,
+            "singleton_rate": 0.7691281880313385,
+            "empty_rate": 0.0,
+            "full_rate": 0.23087181196866144,
+            "both_label_rate": 0.23087181196866144
+          }
+        },
+        "aps_95": {
+          "threshold": 0.9229,
+          "test": {
+            "n": 5999,
+            "coverage": 0.9968328054675779,
+            "avg_set_size": 1.8996499416569428,
+            "singleton_rate": 0.10035005834305717,
+            "empty_rate": 0.0,
+            "full_rate": 0.8996499416569428,
+            "both_label_rate": 0.8996499416569428
+          }
+        },
+        "mondrian_lac_95": {
+          "thresholds": {
+            "0": 0.8539,
+            "1": 0.8524,
+            "2": 0.8252,
+            "3": 0.8789
+          },
+          "test": {
+            "n": 5999,
+            "coverage": 0.9503250541756959,
+            "avg_set_size": 1.2190365060843473,
+            "singleton_rate": 0.7809634939156526,
+            "empty_rate": 0.0,
+            "full_rate": 0.21903650608434738,
+            "both_label_rate": 0.21903650608434738
+          },
+          "per_completeness_tier": {
+            "0": {
+              "n": 349,
+              "coverage": 0.9570200573065902,
+              "avg_set_size": 1.3896848137535818,
+              "singleton_rate": 0.6103151862464183,
+              "empty_rate": 0.0,
+              "full_rate": 0.38968481375358166,
+              "both_label_rate": 0.38968481375358166
+            },
+            "1": {
+              "n": 2405,
+              "coverage": 0.9563409563409564,
+              "avg_set_size": 1.2877338877338877,
+              "singleton_rate": 0.7122661122661123,
+              "empty_rate": 0.0,
+              "full_rate": 0.28773388773388775,
+              "both_label_rate": 0.28773388773388775
+            },
+            "2": {
+              "n": 2989,
+              "coverage": 0.9441284710605554,
+              "avg_set_size": 1.135831381733021,
+              "singleton_rate": 0.8641686182669789,
+              "empty_rate": 0.0,
+              "full_rate": 0.1358313817330211,
+              "both_label_rate": 0.1358313817330211
+            },
+            "3": {
+              "n": 256,
+              "coverage": 0.95703125,
+              "avg_set_size": 1.3125,
+              "singleton_rate": 0.6875,
+              "empty_rate": 0.0,
+              "full_rate": 0.3125,
+              "both_label_rate": 0.3125
+            }
+          }
+        }
+      },
+      "lightgbm": {
+        "lac_90": {
+          "threshold": 0.1544,
+          "test": {
+            "n": 5999,
+            "coverage": 0.8944824137356227,
+            "avg_set_size": 0.9699949991665278,
+            "singleton_rate": 0.9699949991665278,
+            "empty_rate": 0.030005000833472247,
+            "full_rate": 0.0,
+            "both_label_rate": 0.0
+          }
+        },
+        "aps_90": {
+          "threshold": 0.4601,
+          "test": {
+            "n": 5999,
+            "coverage": 0.9181530255042507,
+            "avg_set_size": 1.0,
+            "singleton_rate": 1.0,
+            "empty_rate": 0.0,
+            "full_rate": 0.0,
+            "both_label_rate": 0.0
+          }
+        },
+        "mondrian_lac_90": {
+          "thresholds": {
+            "0": 0.2216,
+            "1": 0.172,
+            "2": 0.1491,
+            "3": 0.1533
+          },
+          "test": {
+            "n": 5999,
+            "coverage": 0.895149191531922,
+            "avg_set_size": 0.9701616936156026,
+            "singleton_rate": 0.9701616936156026,
+            "empty_rate": 0.0298383063843974,
+            "full_rate": 0.0,
+            "both_label_rate": 0.0
+          },
+          "per_completeness_tier": {
+            "0": {
+              "n": 349,
+              "coverage": 0.8939828080229226,
+              "avg_set_size": 1.0,
+              "singleton_rate": 1.0,
+              "empty_rate": 0.0,
+              "full_rate": 0.0,
+              "both_label_rate": 0.0
+            },
+            "1": {
+              "n": 2405,
+              "coverage": 0.906029106029106,
+              "avg_set_size": 0.9887733887733888,
+              "singleton_rate": 0.9887733887733888,
+              "empty_rate": 0.011226611226611227,
+              "full_rate": 0.0,
+              "both_label_rate": 0.0
+            },
+            "2": {
+              "n": 2989,
+              "coverage": 0.8875878220140515,
+              "avg_set_size": 0.9531615925058547,
+              "singleton_rate": 0.9531615925058547,
+              "empty_rate": 0.0468384074941452,
+              "full_rate": 0.0,
+              "both_label_rate": 0.0
+            },
+            "3": {
+              "n": 256,
+              "coverage": 0.8828125,
+              "avg_set_size": 0.953125,
+              "singleton_rate": 0.953125,
+              "empty_rate": 0.046875,
+              "full_rate": 0.0,
+              "both_label_rate": 0.0
+            }
+          }
+        },
+        "lac_95": {
+          "threshold": 0.8873,
+          "test": {
+            "n": 5999,
+            "coverage": 0.9498249708284714,
+            "avg_set_size": 1.211868644774129,
+            "singleton_rate": 0.788131355225871,
+            "empty_rate": 0.0,
+            "full_rate": 0.21186864477412903,
+            "both_label_rate": 0.21186864477412903
+          }
+        },
+        "aps_95": {
+          "threshold": 0.9436,
+          "test": {
+            "n": 5999,
+            "coverage": 1.0,
+            "avg_set_size": 2.0,
+            "singleton_rate": 0.0,
+            "empty_rate": 0.0,
+            "full_rate": 1.0,
+            "both_label_rate": 1.0
+          }
+        },
+        "mondrian_lac_95": {
+          "thresholds": {
+            "0": 0.8906,
+            "1": 0.8943,
+            "2": 0.8772,
+            "3": 0.8974
+          },
+          "test": {
+            "n": 5999,
+            "coverage": 0.9518253042173695,
+            "avg_set_size": 1.2202033672278714,
+            "singleton_rate": 0.7797966327721287,
+            "empty_rate": 0.0,
+            "full_rate": 0.22020336722787132,
+            "both_label_rate": 0.22020336722787132
+          },
+          "per_completeness_tier": {
+            "0": {
+              "n": 349,
+              "coverage": 0.9598853868194842,
+              "avg_set_size": 1.3581661891117478,
+              "singleton_rate": 0.6418338108882522,
+              "empty_rate": 0.0,
+              "full_rate": 0.35816618911174786,
+              "both_label_rate": 0.35816618911174786
+            },
+            "1": {
+              "n": 2405,
+              "coverage": 0.9584199584199584,
+              "avg_set_size": 1.2898128898128898,
+              "singleton_rate": 0.7101871101871102,
+              "empty_rate": 0.0,
+              "full_rate": 0.28981288981288983,
+              "both_label_rate": 0.28981288981288983
+            },
+            "2": {
+              "n": 2989,
+              "coverage": 0.9451321512211442,
+              "avg_set_size": 1.137504182000669,
+              "singleton_rate": 0.8624958179993308,
+              "empty_rate": 0.0,
+              "full_rate": 0.1375041820006691,
+              "both_label_rate": 0.1375041820006691
+            },
+            "3": {
+              "n": 256,
+              "coverage": 0.95703125,
+              "avg_set_size": 1.34375,
+              "singleton_rate": 0.65625,
+              "empty_rate": 0.0,
+              "full_rate": 0.34375,
+              "both_label_rate": 0.34375
+            }
+          }
+        }
+      },
+      "ebm": {
+        "lac_90": {
+          "threshold": 0.1951,
+          "test": {
+            "n": 5999,
+            "coverage": 0.8968161360226704,
+            "avg_set_size": 0.9726621103517253,
+            "singleton_rate": 0.9726621103517253,
+            "empty_rate": 0.027337889648274712,
+            "full_rate": 0.0,
+            "both_label_rate": 0.0
+          }
+        },
+        "aps_90": {
+          "threshold": 0.4755,
+          "test": {
+            "n": 5999,
+            "coverage": 0.9179863310551759,
+            "avg_set_size": 1.0,
+            "singleton_rate": 1.0,
+            "empty_rate": 0.0,
+            "full_rate": 0.0,
+            "both_label_rate": 0.0
+          }
+        },
+        "mondrian_lac_90": {
+          "thresholds": {
+            "0": 0.3196,
+            "1": 0.2205,
+            "2": 0.1805,
+            "3": 0.1842
+          },
+          "test": {
+            "n": 5999,
+            "coverage": 0.8956492748791465,
+            "avg_set_size": 0.971828638106351,
+            "singleton_rate": 0.971828638106351,
+            "empty_rate": 0.028171361893648942,
+            "full_rate": 0.0,
+            "both_label_rate": 0.0
+          },
+          "per_completeness_tier": {
+            "0": {
+              "n": 349,
+              "coverage": 0.8939828080229226,
+              "avg_set_size": 1.0,
+              "singleton_rate": 1.0,
+              "empty_rate": 0.0,
+              "full_rate": 0.0,
+              "both_label_rate": 0.0
+            },
+            "1": {
+              "n": 2405,
+              "coverage": 0.906029106029106,
+              "avg_set_size": 0.9875259875259875,
+              "singleton_rate": 0.9875259875259875,
+              "empty_rate": 0.012474012474012475,
+              "full_rate": 0.0,
+              "both_label_rate": 0.0
+            },
+            "2": {
+              "n": 2989,
+              "coverage": 0.8872532619605219,
+              "avg_set_size": 0.9558380729340916,
+              "singleton_rate": 0.9558380729340916,
+              "empty_rate": 0.04416192706590833,
+              "full_rate": 0.0,
+              "both_label_rate": 0.0
+            },
+            "3": {
+              "n": 256,
+              "coverage": 0.8984375,
+              "avg_set_size": 0.97265625,
+              "singleton_rate": 0.97265625,
+              "empty_rate": 0.02734375,
+              "full_rate": 0.0,
+              "both_label_rate": 0.0
+            }
+          }
+        },
+        "lac_95": {
+          "threshold": 0.8712,
+          "test": {
+            "n": 5999,
+            "coverage": 0.951325220870145,
+            "avg_set_size": 1.2157026171028504,
+            "singleton_rate": 0.7842973828971496,
+            "empty_rate": 0.0,
+            "full_rate": 0.21570261710285046,
+            "both_label_rate": 0.21570261710285046
+          }
+        },
+        "aps_95": {
+          "threshold": 0.9356,
+          "test": {
+            "n": 5999,
+            "coverage": 0.9966661110185031,
+            "avg_set_size": 1.8644774129021504,
+            "singleton_rate": 0.13552258709784964,
+            "empty_rate": 0.0,
+            "full_rate": 0.8644774129021504,
+            "both_label_rate": 0.8644774129021504
+          }
+        },
+        "mondrian_lac_95": {
+          "thresholds": {
+            "0": 0.8818,
+            "1": 0.8809,
+            "2": 0.8537,
+            "3": 0.8822
+          },
+          "test": {
+            "n": 5999,
+            "coverage": 0.9514919153192198,
+            "avg_set_size": 1.2163693948991499,
+            "singleton_rate": 0.7836306051008501,
+            "empty_rate": 0.0,
+            "full_rate": 0.21636939489914986,
+            "both_label_rate": 0.21636939489914986
+          },
+          "per_completeness_tier": {
+            "0": {
+              "n": 349,
+              "coverage": 0.9570200573065902,
+              "avg_set_size": 1.3954154727793697,
+              "singleton_rate": 0.6045845272206304,
+              "empty_rate": 0.0,
+              "full_rate": 0.3954154727793696,
+              "both_label_rate": 0.3954154727793696
+            },
+            "1": {
+              "n": 2405,
+              "coverage": 0.9592515592515592,
+              "avg_set_size": 1.3185031185031184,
+              "singleton_rate": 0.6814968814968815,
+              "empty_rate": 0.0,
+              "full_rate": 0.3185031185031185,
+              "both_label_rate": 0.3185031185031185
+            },
+            "2": {
+              "n": 2989,
+              "coverage": 0.9447975911676146,
+              "avg_set_size": 1.114419538307126,
+              "singleton_rate": 0.8855804616928739,
+              "empty_rate": 0.0,
+              "full_rate": 0.11441953830712613,
+              "both_label_rate": 0.11441953830712613
+            },
+            "3": {
+              "n": 256,
+              "coverage": 0.94921875,
+              "avg_set_size": 1.203125,
+              "singleton_rate": 0.796875,
+              "empty_rate": 0.0,
+              "full_rate": 0.203125,
+              "both_label_rate": 0.203125
+            }
+          }
+        }
+      }
+    },
+    "ensemble_weights": {
+      "logistic": 0.07648734942478232,
+      "xgboost_gpu": 0.23800209421581126,
+      "ebm": 0.23811022608319168,
+      "lightgbm": 0.23601634527766766,
+      "pytorch_gpu": 0.2113839849985471
+    },
+    "ebm_global_importance": [
+      {
+        "feature": "occupation_tenure_months",
+        "importance": 0.1074
+      },
+      {
+        "feature": "bureau_history_months",
+        "importance": 0.1005
+      },
+      {
+        "feature": "bureau_outstanding_to_sanctioned",
+        "importance": 0.0813
+      },
+      {
+        "feature": "age_band",
+        "importance": 0.0728
+      },
+      {
+        "feature": "bureau_active",
+        "importance": 0.0683
+      },
+      {
+        "feature": "tenure_months",
+        "importance": 0.0654
+      },
+      {
+        "feature": "completeness_tier",
+        "importance": 0.0486
+      },
+      {
+        "feature": "new_emi_minor",
+        "importance": 0.046
+      },
+      {
+        "feature": "occupation_tenure_status",
+        "importance": 0.0424
+      },
+      {
+        "feature": "bureau_new_6m",
+        "importance": 0.0419
+      },
+      {
+        "feature": "occupation",
+        "importance": 0.035
+      },
+      {
+        "feature": "bank_surplus_median_minor",
+        "importance": 0.0344
+      },
+      {
+        "feature": "urban",
+        "importance": 0.0341
+      },
+      {
+        "feature": "requested_amount_minor",
+        "importance": 0.0336
+      },
+      {
+        "feature": "declared_income_minor",
+        "importance": 0.0332
+      },
+      {
+        "feature": "product",
+        "importance": 0.0313
+      },
+      {
+        "feature": "income_est_minor",
+        "importance": 0.031
+      },
+      {
+        "feature": "bureau_reporting_gaps",
+        "importance": 0.03
+      },
+      {
+        "feature": "amount_to_income",
+        "importance": 0.0292
+      },
+      {
+        "feature": "bank_low_balance_months",
+        "importance": 0.0281
+      }
+    ]
+  },
+  "simulated": {
+    "source": "simulated",
+    "noise_level": "realistic",
+    "n_features": 80,
+    "features": [
+      "occupation",
+      "urban",
+      "age_band",
+      "dependents",
+      "product",
+      "requested_amount_minor",
+      "tenure_months",
+      "new_emi_minor",
+      "declared_income_minor",
+      "declared_income_status",
+      "declared_emi_minor",
+      "occupation_tenure_months",
+      "occupation_tenure_status",
+      "bank_statement_status",
+      "bank_statement_months",
+      "bureau_status",
+      "gst_status",
+      "income_basis",
+      "income_est_minor",
+      "existing_emi_est_minor",
+      "dti_est",
+      "amount_to_income",
+      "declared_to_bank_income",
+      "undeclared_emi_to_income",
+      "gst_turnover_median_minor",
+      "gst_missed_filings",
+      "gst_to_bank_credits",
+      "completeness_tier",
+      "bank_income_median_minor",
+      "bank_income_cv",
+      "bank_zero_income_months",
+      "bank_worst3_to_median",
+      "bank_emi_recent_minor",
+      "bank_bounces",
+      "bank_bounces_3m",
+      "bank_low_balance_months",
+      "bank_loan_disbursals_6m",
+      "bank_last_month_spike",
+      "bank_unreconciled_months",
+      "bank_surplus_median_minor",
+      "bureau_tradelines",
+      "bureau_active",
+      "bureau_history_months",
+      "bureau_max_dpd_24m",
+      "bureau_months_30plus_24m",
+      "bureau_reporting_gaps",
+      "bureau_new_6m",
+      "bureau_written_off",
+      "bureau_emi_minor",
+      "bureau_outstanding_to_sanctioned",
+      "bureau_score_status",
+      "bureau_score",
+      "bureau_score_band",
+      "bureau_score_change_3m",
+      "bureau_score_change_6m",
+      "bureau_worst_change_3m_6m",
+      "bureau_utilisation",
+      "bureau_enquiries_6m_at_app",
+      "bureau_events_3m",
+      "bureau_top_reason_code",
+      "vouch_score",
+      "vouch_score_status",
+      "vouch_score_change_6m",
+      "vouch_eligible_incoming",
+      "vouch_total_weight",
+      "vouch_distinct_anchors",
+      "vouch_max_contributor_share",
+      "vouch_reciprocal_edges",
+      "vouch_cluster_concentration",
+      "vouch_mean_reliability",
+      "vouch_withdrawn_6m",
+      "shock_reported_status",
+      "shock_reported_type",
+      "shock_reported_severity",
+      "shock_reported_insured",
+      "cohort",
+      "regional_events_6m",
+      "pandemic_months_at_app",
+      "sample_weight",
+      "world_weight"
+    ],
+    "models": {
+      "logistic": {
+        "calibration": {
+          "n": 6999,
+          "positives": 1015,
+          "auc": 0.8806,
+          "pr_auc": 0.601,
+          "brier": 0.153,
+          "log_loss": 0.4892,
+          "ks": 0.6118,
+          "accuracy_at_threshold": 0.8706,
+          "balanced_accuracy": 0.7828,
+          "f1": 0.5963,
+          "precision": 0.5443,
+          "recall": 0.6591,
+          "approval_rate": 0.8244,
+          "threshold": 0.62
+        },
+        "test": {
+          "n": 6999,
+          "positives": 1015,
+          "auc": 0.8734,
+          "pr_auc": 0.5872,
+          "brier": 0.1553,
+          "log_loss": 0.4985,
+          "ks": 0.6076,
+          "accuracy_at_threshold": 0.866,
+          "balanced_accuracy": 0.7821,
+          "f1": 0.5897,
+          "precision": 0.5303,
+          "recall": 0.664,
+          "approval_rate": 0.8184,
+          "threshold": 0.62
+        }
+      },
+      "xgboost_gpu": {
+        "calibration": {
+          "n": 6999,
+          "positives": 1015,
+          "auc": 0.9149,
+          "pr_auc": 0.727,
+          "brier": 0.0682,
+          "log_loss": 0.2342,
+          "ks": 0.6793,
+          "accuracy_at_threshold": 0.8988,
+          "balanced_accuracy": 0.8136,
+          "f1": 0.6654,
+          "precision": 0.6394,
+          "recall": 0.6936,
+          "approval_rate": 0.8427,
+          "threshold": 0.285
+        },
+        "test": {
+          "n": 6999,
+          "positives": 1015,
+          "auc": 0.9124,
+          "pr_auc": 0.7265,
+          "brier": 0.0682,
+          "log_loss": 0.2351,
+          "ks": 0.6784,
+          "accuracy_at_threshold": 0.8967,
+          "balanced_accuracy": 0.8152,
+          "f1": 0.6629,
+          "precision": 0.6292,
+          "recall": 0.7005,
+          "approval_rate": 0.8385,
+          "threshold": 0.285
+        }
+      },
+      "ebm": {
+        "calibration": {
+          "n": 6999,
+          "positives": 1015,
+          "auc": 0.9023,
+          "pr_auc": 0.6717,
+          "brier": 0.0764,
+          "log_loss": 0.2597,
+          "ks": 0.651,
+          "accuracy_at_threshold": 0.8744,
+          "balanced_accuracy": 0.8034,
+          "f1": 0.619,
+          "precision": 0.5526,
+          "recall": 0.7034,
+          "approval_rate": 0.8154,
+          "threshold": 0.265
+        },
+        "test": {
+          "n": 6999,
+          "positives": 1015,
+          "auc": 0.8964,
+          "pr_auc": 0.6617,
+          "brier": 0.0763,
+          "log_loss": 0.262,
+          "ks": 0.6365,
+          "accuracy_at_threshold": 0.8766,
+          "balanced_accuracy": 0.8096,
+          "f1": 0.6269,
+          "precision": 0.558,
+          "recall": 0.7153,
+          "approval_rate": 0.8141,
+          "threshold": 0.265
+        }
+      },
+      "lightgbm": {
+        "calibration": {
+          "n": 6999,
+          "positives": 1015,
+          "auc": 0.9142,
+          "pr_auc": 0.7229,
+          "brier": 0.0692,
+          "log_loss": 0.2383,
+          "ks": 0.6899,
+          "accuracy_at_threshold": 0.9034,
+          "balanced_accuracy": 0.7979,
+          "f1": 0.661,
+          "precision": 0.6731,
+          "recall": 0.6493,
+          "approval_rate": 0.8601,
+          "threshold": 0.335
+        },
+        "test": {
+          "n": 6999,
+          "positives": 1015,
+          "auc": 0.9121,
+          "pr_auc": 0.7261,
+          "brier": 0.0686,
+          "log_loss": 0.238,
+          "ks": 0.6767,
+          "accuracy_at_threshold": 0.9028,
+          "balanced_accuracy": 0.8,
+          "f1": 0.6617,
+          "precision": 0.6683,
+          "recall": 0.6552,
+          "approval_rate": 0.8578,
+          "threshold": 0.335
+        }
+      },
+      "pytorch_gpu": {
+        "calibration": {
+          "n": 6999,
+          "positives": 1015,
+          "auc": 0.8567,
+          "pr_auc": 0.6153,
+          "brier": 0.0893,
+          "log_loss": 0.3234,
+          "ks": 0.5921,
+          "accuracy_at_threshold": 0.8821,
+          "balanced_accuracy": 0.7736,
+          "f1": 0.6043,
+          "precision": 0.5888,
+          "recall": 0.6207,
+          "approval_rate": 0.8471,
+          "threshold": 0.435
+        },
+        "test": {
+          "n": 6999,
+          "positives": 1015,
+          "auc": 0.8619,
+          "pr_auc": 0.6116,
+          "brier": 0.0889,
+          "log_loss": 0.3165,
+          "ks": 0.5964,
+          "accuracy_at_threshold": 0.8817,
+          "balanced_accuracy": 0.7688,
+          "f1": 0.5992,
+          "precision": 0.589,
+          "recall": 0.6099,
+          "approval_rate": 0.8498,
+          "threshold": 0.435
+        }
+      },
+      "generalized_ensemble": {
+        "calibration": {
+          "n": 6999,
+          "positives": 1015,
+          "auc": 0.9129,
+          "pr_auc": 0.7216,
+          "brier": 0.0713,
+          "log_loss": 0.2525,
+          "ks": 0.678,
+          "accuracy_at_threshold": 0.8933,
+          "balanced_accuracy": 0.8149,
+          "f1": 0.6569,
+          "precision": 0.6153,
+          "recall": 0.7044,
+          "approval_rate": 0.834,
+          "threshold": 0.335
+        },
+        "test": {
+          "n": 6999,
+          "positives": 1015,
+          "auc": 0.9087,
+          "pr_auc": 0.7141,
+          "brier": 0.0717,
+          "log_loss": 0.2541,
+          "ks": 0.6697,
+          "accuracy_at_threshold": 0.8937,
+          "balanced_accuracy": 0.8143,
+          "f1": 0.6571,
+          "precision": 0.6173,
+          "recall": 0.7025,
+          "approval_rate": 0.835,
+          "threshold": 0.335
+        }
+      }
+    },
+    "conformal": {
+      "generalized_ensemble": {
+        "lac_90": {
+          "threshold": 0.4684,
+          "test": {
+            "n": 6999,
+            "coverage": 0.897699671381626,
+            "avg_set_size": 0.983426203743392,
+            "singleton_rate": 0.983426203743392,
+            "empty_rate": 0.016573796256608087,
+            "full_rate": 0.0,
+            "both_label_rate": 0.0
+          }
+        },
+        "aps_90": {
+          "threshold": 0.4915,
+          "test": {
+            "n": 6999,
+            "coverage": 0.906986712387484,
+            "avg_set_size": 1.0,
+            "singleton_rate": 1.0,
+            "empty_rate": 0.0,
+            "full_rate": 0.0,
+            "both_label_rate": 0.0
+          }
+        },
+        "mondrian_lac_90": {
+          "thresholds": {
+            "0": 0.4549,
+            "1": 0.4982,
+            "2": 0.4614,
+            "3": 0.4168
+          },
+          "test": {
+            "n": 6999,
+            "coverage": 0.9001285897985426,
+            "avg_set_size": 0.9875696528075439,
+            "singleton_rate": 0.9875696528075439,
+            "empty_rate": 0.012430347192456065,
+            "full_rate": 0.0,
+            "both_label_rate": 0.0
+          },
+          "per_completeness_tier": {
+            "0": {
+              "n": 563,
+              "coverage": 0.8934280639431617,
+              "avg_set_size": 0.9840142095914742,
+              "singleton_rate": 0.9840142095914742,
+              "empty_rate": 0.015985790408525755,
+              "full_rate": 0.0,
+              "both_label_rate": 0.0
+            },
+            "1": {
+              "n": 2741,
+              "coverage": 0.9025902955125866,
+              "avg_set_size": 1.0,
+              "singleton_rate": 1.0,
+              "empty_rate": 0.0,
+              "full_rate": 0.0,
+              "both_label_rate": 0.0
+            },
+            "2": {
+              "n": 3476,
+              "coverage": 0.8981588032220944,
+              "avg_set_size": 0.9792865362485615,
+              "singleton_rate": 0.9792865362485615,
+              "empty_rate": 0.020713463751438434,
+              "full_rate": 0.0,
+              "both_label_rate": 0.0
+            },
+            "3": {
+              "n": 219,
+              "coverage": 0.9178082191780822,
+              "avg_set_size": 0.9726027397260274,
+              "singleton_rate": 0.9726027397260274,
+              "empty_rate": 0.0273972602739726,
+              "full_rate": 0.0,
+              "both_label_rate": 0.0
+            }
+          }
+        },
+        "lac_95": {
+          "threshold": 0.702,
+          "test": {
+            "n": 6999,
+            "coverage": 0.9524217745392198,
+            "avg_set_size": 1.1174453493356193,
+            "singleton_rate": 0.8825546506643807,
+            "empty_rate": 0.0,
+            "full_rate": 0.11744534933561937,
+            "both_label_rate": 0.11744534933561937
+          }
+        },
+        "aps_95": {
+          "threshold": 0.851,
+          "test": {
+            "n": 6999,
+            "coverage": 0.9778539791398771,
+            "avg_set_size": 1.291327332476068,
+            "singleton_rate": 0.708672667523932,
+            "empty_rate": 0.0,
+            "full_rate": 0.291327332476068,
+            "both_label_rate": 0.291327332476068
+          }
+        },
+        "mondrian_lac_95": {
+          "thresholds": {
+            "0": 0.683,
+            "1": 0.7164,
+            "2": 0.6907,
+            "3": 0.6555
+          },
+          "test": {
+            "n": 6999,
+            "coverage": 0.9515645092156022,
+            "avg_set_size": 1.1143020431490214,
+            "singleton_rate": 0.8856979568509787,
+            "empty_rate": 0.0,
+            "full_rate": 0.11430204314902129,
+            "both_label_rate": 0.11430204314902129
+          },
+          "per_completeness_tier": {
+            "0": {
+              "n": 563,
+              "coverage": 0.9307282415630551,
+              "avg_set_size": 1.058614564831261,
+              "singleton_rate": 0.9413854351687388,
+              "empty_rate": 0.0,
+              "full_rate": 0.0586145648312611,
+              "both_label_rate": 0.0586145648312611
+            },
+            "1": {
+              "n": 2741,
+              "coverage": 0.9547610361182051,
+              "avg_set_size": 1.1287851149215615,
+              "singleton_rate": 0.8712148850784385,
+              "empty_rate": 0.0,
+              "full_rate": 0.12878511492156147,
+              "both_label_rate": 0.12878511492156147
+            },
+            "2": {
+              "n": 3476,
+              "coverage": 0.9525316455696202,
+              "avg_set_size": 1.1165132336018413,
+              "singleton_rate": 0.8834867663981588,
+              "empty_rate": 0.0,
+              "full_rate": 0.1165132336018412,
+              "both_label_rate": 0.1165132336018412
+            },
+            "3": {
+              "n": 219,
+              "coverage": 0.9497716894977168,
+              "avg_set_size": 1.0410958904109588,
+              "singleton_rate": 0.958904109589041,
+              "empty_rate": 0.0,
+              "full_rate": 0.0410958904109589,
+              "both_label_rate": 0.0410958904109589
+            }
+          }
+        }
+      },
+      "lightgbm": {
+        "lac_90": {
+          "threshold": 0.4744,
+          "test": {
+            "n": 6999,
+            "coverage": 0.9055579368481211,
+            "avg_set_size": 0.9895699385626519,
+            "singleton_rate": 0.9895699385626519,
+            "empty_rate": 0.010430061437348193,
+            "full_rate": 0.0,
+            "both_label_rate": 0.0
+          }
+        },
+        "aps_90": {
+          "threshold": 0.4926,
+          "test": {
+            "n": 6999,
+            "coverage": 0.9105586512358909,
+            "avg_set_size": 1.0,
+            "singleton_rate": 1.0,
+            "empty_rate": 0.0,
+            "full_rate": 0.0,
+            "both_label_rate": 0.0
+          }
+        },
+        "mondrian_lac_90": {
+          "thresholds": {
+            "0": 0.4348,
+            "1": 0.5087,
+            "2": 0.4608,
+            "3": 0.3313
+          },
+          "test": {
+            "n": 6999,
+            "coverage": 0.9037005286469496,
+            "avg_set_size": 0.9874267752536077,
+            "singleton_rate": 0.9851407343906272,
+            "empty_rate": 0.013716245177882554,
+            "full_rate": 0.001143020431490213,
+            "both_label_rate": 0.001143020431490213
+          },
+          "per_completeness_tier": {
+            "0": {
+              "n": 563,
+              "coverage": 0.8916518650088809,
+              "avg_set_size": 0.9733570159857904,
+              "singleton_rate": 0.9733570159857904,
+              "empty_rate": 0.02664298401420959,
+              "full_rate": 0.0,
+              "both_label_rate": 0.0
+            },
+            "1": {
+              "n": 2741,
+              "coverage": 0.9080627508208683,
+              "avg_set_size": 1.0029186428310835,
+              "singleton_rate": 0.9970813571689164,
+              "empty_rate": 0.0,
+              "full_rate": 0.002918642831083546,
+              "both_label_rate": 0.002918642831083546
+            },
+            "2": {
+              "n": 3476,
+              "coverage": 0.9024741081703107,
+              "avg_set_size": 0.979861910241657,
+              "singleton_rate": 0.979861910241657,
+              "empty_rate": 0.020138089758342925,
+              "full_rate": 0.0,
+              "both_label_rate": 0.0
+            },
+            "3": {
+              "n": 219,
+              "coverage": 0.8995433789954338,
+              "avg_set_size": 0.9497716894977168,
+              "singleton_rate": 0.9497716894977168,
+              "empty_rate": 0.0502283105022831,
+              "full_rate": 0.0,
+              "both_label_rate": 0.0
+            }
+          }
+        },
+        "lac_95": {
+          "threshold": 0.7313,
+          "test": {
+            "n": 6999,
+            "coverage": 0.9494213459065581,
+            "avg_set_size": 1.107015287898271,
+            "singleton_rate": 0.8929847121017288,
+            "empty_rate": 0.0,
+            "full_rate": 0.10701528789827118,
+            "both_label_rate": 0.10701528789827118
+          }
+        },
+        "aps_95": {
+          "threshold": 0.8657,
+          "test": {
+            "n": 6999,
+            "coverage": 0.975710815830833,
+            "avg_set_size": 1.243749107015288,
+            "singleton_rate": 0.7562508929847122,
+            "empty_rate": 0.0,
+            "full_rate": 0.2437491070152879,
+            "both_label_rate": 0.2437491070152879
+          }
+        },
+        "mondrian_lac_95": {
+          "thresholds": {
+            "0": 0.7328,
+            "1": 0.7616,
+            "2": 0.7093,
+            "3": 0.7495
+          },
+          "test": {
+            "n": 6999,
+            "coverage": 0.9497071010144307,
+            "avg_set_size": 1.1097299614230605,
+            "singleton_rate": 0.8902700385769395,
+            "empty_rate": 0.0,
+            "full_rate": 0.10972996142306043,
+            "both_label_rate": 0.10972996142306043
+          },
+          "per_completeness_tier": {
+            "0": {
+              "n": 563,
+              "coverage": 0.9325044404973357,
+              "avg_set_size": 1.0710479573712255,
+              "singleton_rate": 0.9289520426287744,
+              "empty_rate": 0.0,
+              "full_rate": 0.07104795737122557,
+              "both_label_rate": 0.07104795737122557
+            },
+            "1": {
+              "n": 2741,
+              "coverage": 0.9540313754104341,
+              "avg_set_size": 1.132433418460416,
+              "singleton_rate": 0.8675665815395841,
+              "empty_rate": 0.0,
+              "full_rate": 0.1324334184604159,
+              "both_label_rate": 0.1324334184604159
+            },
+            "2": {
+              "n": 3476,
+              "coverage": 0.9487917146144994,
+              "avg_set_size": 1.1006904487917146,
+              "singleton_rate": 0.8993095512082854,
+              "empty_rate": 0.0,
+              "full_rate": 0.10069044879171461,
+              "both_label_rate": 0.10069044879171461
+            },
+            "3": {
+              "n": 219,
+              "coverage": 0.954337899543379,
+              "avg_set_size": 1.0684931506849316,
+              "singleton_rate": 0.9315068493150684,
+              "empty_rate": 0.0,
+              "full_rate": 0.0684931506849315,
+              "both_label_rate": 0.0684931506849315
+            }
+          }
+        }
+      },
+      "ebm": {
+        "lac_90": {
+          "threshold": 0.5124,
+          "test": {
+            "n": 6999,
+            "coverage": 0.9011287326760966,
+            "avg_set_size": 1.0065723674810687,
+            "singleton_rate": 0.9934276325189313,
+            "empty_rate": 0.0,
+            "full_rate": 0.006572367481068724,
+            "both_label_rate": 0.006572367481068724
+          }
+        },
+        "aps_90": {
+          "threshold": 0.7562,
+          "test": {
+            "n": 6999,
+            "coverage": 0.9534219174167738,
+            "avg_set_size": 1.151878839834262,
+            "singleton_rate": 0.8481211601657379,
+            "empty_rate": 0.0,
+            "full_rate": 0.15187883983426204,
+            "both_label_rate": 0.15187883983426204
+          }
+        },
+        "mondrian_lac_90": {
+          "thresholds": {
+            "0": 0.4099,
+            "1": 0.5225,
+            "2": 0.514,
+            "3": 0.4485
+          },
+          "test": {
+            "n": 6999,
+            "coverage": 0.9011287326760966,
+            "avg_set_size": 1.0070010001428775,
+            "singleton_rate": 0.9898556936705244,
+            "empty_rate": 0.0015716530932990426,
+            "full_rate": 0.008572653236176597,
+            "both_label_rate": 0.008572653236176597
+          },
+          "per_completeness_tier": {
+            "0": {
+              "n": 563,
+              "coverage": 0.8934280639431617,
+              "avg_set_size": 0.9875666074600356,
+              "singleton_rate": 0.9875666074600356,
+              "empty_rate": 0.012433392539964476,
+              "full_rate": 0.0,
+              "both_label_rate": 0.0
+            },
+            "1": {
+              "n": 2741,
+              "coverage": 0.9018606348048157,
+              "avg_set_size": 1.0109449106165633,
+              "singleton_rate": 0.9890550893834367,
+              "empty_rate": 0.0,
+              "full_rate": 0.010944910616563297,
+              "both_label_rate": 0.010944910616563297
+            },
+            "2": {
+              "n": 3476,
+              "coverage": 0.9004602991944765,
+              "avg_set_size": 1.0086306098964326,
+              "singleton_rate": 0.9913693901035673,
+              "empty_rate": 0.0,
+              "full_rate": 0.00863060989643268,
+              "both_label_rate": 0.00863060989643268
+            },
+            "3": {
+              "n": 219,
+              "coverage": 0.9223744292237442,
+              "avg_set_size": 0.9817351598173516,
+              "singleton_rate": 0.9817351598173516,
+              "empty_rate": 0.0182648401826484,
+              "full_rate": 0.0,
+              "both_label_rate": 0.0
+            }
+          }
+        },
+        "lac_95": {
+          "threshold": 0.7401,
+          "test": {
+            "n": 6999,
+            "coverage": 0.950421488784112,
+            "avg_set_size": 1.1371624517788255,
+            "singleton_rate": 0.8628375482211744,
+            "empty_rate": 0.0,
+            "full_rate": 0.13716245177882555,
+            "both_label_rate": 0.13716245177882555
+          }
+        },
+        "aps_95": {
+          "threshold": 0.87,
+          "test": {
+            "n": 6999,
+            "coverage": 0.9774253464780683,
+            "avg_set_size": 1.310901557365338,
+            "singleton_rate": 0.6890984426346621,
+            "empty_rate": 0.0,
+            "full_rate": 0.3109015573653379,
+            "both_label_rate": 0.3109015573653379
+          }
+        },
+        "mondrian_lac_95": {
+          "thresholds": {
+            "0": 0.807,
+            "1": 0.7439,
+            "2": 0.7316,
+            "3": 0.7638
+          },
+          "test": {
+            "n": 6999,
+            "coverage": 0.9511358765537934,
+            "avg_set_size": 1.14044863551936,
+            "singleton_rate": 0.8595513644806401,
+            "empty_rate": 0.0,
+            "full_rate": 0.1404486355193599,
+            "both_label_rate": 0.1404486355193599
+          },
+          "per_completeness_tier": {
+            "0": {
+              "n": 563,
+              "coverage": 0.9413854351687388,
+              "avg_set_size": 1.119005328596803,
+              "singleton_rate": 0.8809946714031972,
+              "empty_rate": 0.0,
+              "full_rate": 0.11900532859680284,
+              "both_label_rate": 0.11900532859680284
+            },
+            "1": {
+              "n": 2741,
+              "coverage": 0.9518423932871215,
+              "avg_set_size": 1.1386355344764685,
+              "singleton_rate": 0.8613644655235315,
+              "empty_rate": 0.0,
+              "full_rate": 0.13863553447646845,
+              "both_label_rate": 0.13863553447646845
+            },
+            "2": {
+              "n": 3476,
+              "coverage": 0.9516685845799769,
+              "avg_set_size": 1.1493095512082854,
+              "singleton_rate": 0.8506904487917146,
+              "empty_rate": 0.0,
+              "full_rate": 0.14930955120828537,
+              "both_label_rate": 0.14930955120828537
+            },
+            "3": {
+              "n": 219,
+              "coverage": 0.958904109589041,
+              "avg_set_size": 1.0776255707762556,
+              "singleton_rate": 0.9223744292237442,
+              "empty_rate": 0.0,
+              "full_rate": 0.0776255707762557,
+              "both_label_rate": 0.0776255707762557
+            }
+          }
+        }
+      }
+    },
+    "ensemble_weights": {
+      "logistic": 0.10905842514731905,
+      "xgboost_gpu": 0.24469052668467886,
+      "ebm": 0.21844681038786912,
+      "lightgbm": 0.24099074851473196,
+      "pytorch_gpu": 0.18681348926540095
+    },
+    "ebm_global_importance": [
+      {
+        "feature": "bank_last_month_spike",
+        "importance": 0.2889
+      },
+      {
+        "feature": "sample_weight",
+        "importance": 0.2242
+      },
+      {
+        "feature": "dti_est",
+        "importance": 0.2
+      },
+      {
+        "feature": "shock_reported_severity",
+        "importance": 0.1992
+      },
+      {
+        "feature": "product",
+        "importance": 0.1961
+      },
+      {
+        "feature": "bureau_outstanding_to_sanctioned",
+        "importance": 0.1646
+      },
+      {
+        "feature": "bank_worst3_to_median",
+        "importance": 0.1493
+      },
+      {
+        "feature": "occupation",
+        "importance": 0.1451
+      },
+      {
+        "feature": "new_emi_minor",
+        "importance": 0.1222
+      },
+      {
+        "feature": "income_est_minor",
+        "importance": 0.1194
+      },
+      {
+        "feature": "requested_amount_minor",
+        "importance": 0.119
+      },
+      {
+        "feature": "amount_to_income",
+        "importance": 0.1155
+      },
+      {
+        "feature": "bank_low_balance_months",
+        "importance": 0.1054
+      },
+      {
+        "feature": "dependents",
+        "importance": 0.0875
+      },
+      {
+        "feature": "vouch_total_weight",
+        "importance": 0.0817
+      },
+      {
+        "feature": "declared_income_minor",
+        "importance": 0.0737
+      },
+      {
+        "feature": "bureau_utilisation",
+        "importance": 0.0653
+      },
+      {
+        "feature": "bank_surplus_median_minor",
+        "importance": 0.0651
+      },
+      {
+        "feature": "bank_income_cv",
+        "importance": 0.0638
+      },
+      {
+        "feature": "bank_income_median_minor",
+        "importance": 0.0629
+      }
+    ]
+  },
+  "vouch_shock": {
+    "n_samples": 4502,
+    "n_features": 26,
+    "features": [
+      "pre_bureau_score",
+      "post_bureau_score",
+      "bureau_drop_points",
+      "bureau_shock",
+      "pre_vouch_score",
+      "post_vouch_score",
+      "vouch_held",
+      "eligible_incoming",
+      "total_weight",
+      "distinct_anchors",
+      "max_contributor_share",
+      "reciprocal_edges",
+      "cluster_concentration",
+      "mean_voucher_reliability",
+      "shock_type",
+      "severity",
+      "insured",
+      "support_before_application_minor",
+      "pre_bureau_score_was_missing",
+      "post_bureau_score_was_missing",
+      "bureau_drop_points_was_missing",
+      "pre_vouch_score_was_missing",
+      "post_vouch_score_was_missing",
+      "max_contributor_share_was_missing",
+      "cluster_concentration_was_missing",
+      "mean_voucher_reliability_was_missing"
+    ],
+    "models": {
+      "ebm": {
+        "n": 900,
+        "positives": 583,
+        "auc": 0.7692,
+        "pr_auc": 0.851,
+        "brier": 0.1843,
+        "log_loss": 0.5485,
+        "ks": 0.4476,
+        "accuracy_at_threshold": 0.7167,
+        "balanced_accuracy": 0.6676,
+        "f1": 0.7922,
+        "precision": 0.7547,
+        "recall": 0.8336,
+        "approval_rate": 0.2844,
+        "threshold": 0.5
+      },
+      "xgboost_gpu": {
+        "n": 900,
+        "positives": 583,
+        "auc": 0.7599,
+        "pr_auc": 0.8417,
+        "brier": 0.189,
+        "log_loss": 0.5619,
+        "ks": 0.4461,
+        "accuracy_at_threshold": 0.6967,
+        "balanced_accuracy": 0.6313,
+        "f1": 0.7845,
+        "precision": 0.7266,
+        "recall": 0.8525,
+        "approval_rate": 0.24,
+        "threshold": 0.5
+      },
+      "pytorch_gpu": {
+        "n": 900,
+        "positives": 583,
+        "auc": 0.7621,
+        "pr_auc": 0.8527,
+        "brier": 0.1857,
+        "log_loss": 0.5508,
+        "ks": 0.4363,
+        "accuracy_at_threshold": 0.7156,
+        "balanced_accuracy": 0.6977,
+        "f1": 0.7754,
+        "precision": 0.7935,
+        "recall": 0.7581,
+        "approval_rate": 0.3811,
+        "threshold": 0.5
+      },
+      "lightgbm": {
+        "n": 900,
+        "positives": 583,
+        "auc": 0.7511,
+        "pr_auc": 0.8366,
+        "brier": 0.1947,
+        "log_loss": 0.5875,
+        "ks": 0.3968,
+        "accuracy_at_threshold": 0.7056,
+        "balanced_accuracy": 0.641,
+        "f1": 0.7908,
+        "precision": 0.7325,
+        "recall": 0.8593,
+        "approval_rate": 0.24,
+        "threshold": 0.5
+      },
+      "logistic": {
+        "n": 900,
+        "positives": 583,
+        "auc": 0.75,
+        "pr_auc": 0.8392,
+        "brier": 0.2072,
+        "log_loss": 0.6025,
+        "ks": 0.4132,
+        "accuracy_at_threshold": 0.7022,
+        "balanced_accuracy": 0.6996,
+        "f1": 0.755,
+        "precision": 0.8082,
+        "recall": 0.7084,
+        "approval_rate": 0.4322,
+        "threshold": 0.5
+      },
+      "generalized_ensemble": {
+        "n": 900,
+        "positives": 583,
+        "auc": 0.7778,
+        "pr_auc": 0.8634,
+        "brier": 0.1798,
+        "log_loss": 0.536,
+        "ks": 0.4577,
+        "accuracy_at_threshold": 0.7311,
+        "balanced_accuracy": 0.6845,
+        "f1": 0.8023,
+        "precision": 0.766,
+        "recall": 0.8422,
+        "approval_rate": 0.2878,
+        "threshold": 0.5
+      }
+    },
+    "ensemble_weights": {
+      "ebm": 0.21107459139899476,
+      "xgboost_gpu": 0.2023297326211735,
+      "pytorch_gpu": 0.2047117790691474,
+      "lightgbm": 0.19507398223903408,
+      "logistic": 0.18680991467165023
+    },
+    "shock_vouch_crosstab": {
+      "bureau_drop_and_vouch_held": {
+        "n": 144,
+        "default_rate": 0.6389,
+        "mean_bureau_drop": -67.49,
+        "mean_vouch_score": 58.98
+      },
+      "bureau_drop_no_vouch": {
+        "n": 665,
+        "default_rate": 0.4226,
+        "mean_bureau_drop": -68.74,
+        "mean_vouch_score": 28.83
+      },
+      "no_bureau_drop_and_vouch_held": {
+        "n": 701,
+        "default_rate": 0.7832,
+        "mean_bureau_drop": -0.87,
+        "mean_vouch_score": 58.88
+      },
+      "no_bureau_drop_no_vouch": {
+        "n": 2992,
+        "default_rate": 0.6661,
+        "mean_bureau_drop": -1.29,
+        "mean_vouch_score": 29.36
+      }
+    },
+    "vouch_risk_reduction_effect": {
+      "diff": 0.2163,
+      "ci_low": -1.0,
+      "ci_high": 1.0
+    }
+  },
+  "distribution_shift_real_to_simulated": {
+    "lightgbm": {
+      "n": 6999,
+      "positives": 1015,
+      "auc": 0.6277,
+      "pr_auc": 0.2598,
+      "brier": 0.125,
+      "log_loss": 0.4194,
+      "ks": 0.1896,
+      "accuracy_at_threshold": 0.855,
+      "balanced_accuracy": 0.5,
+      "f1": 0.0,
+      "precision": 0.0,
+      "recall": 0.0,
+      "approval_rate": 1.0,
+      "threshold": 0.5
+    },
+    "ebm": {
+      "n": 6999,
+      "positives": 1015,
+      "auc": 0.6401,
+      "pr_auc": 0.2814,
+      "brier": 0.1236,
+      "log_loss": 0.4174,
+      "ks": 0.2065,
+      "accuracy_at_threshold": 0.8551,
+      "balanced_accuracy": 0.5005,
+      "f1": 0.002,
+      "precision": 1.0,
+      "recall": 0.001,
+      "approval_rate": 0.9999,
+      "threshold": 0.5
+    },
+    "generalized_ensemble": {
+      "n": 6999,
+      "positives": 1015,
+      "auc": 0.6448,
+      "pr_auc": 0.2654,
+      "brier": 0.1212,
+      "log_loss": 0.4069,
+      "ks": 0.2164,
+      "accuracy_at_threshold": 0.8551,
+      "balanced_accuracy": 0.5005,
+      "f1": 0.002,
+      "precision": 1.0,
+      "recall": 0.001,
+      "approval_rate": 0.9999,
+      "threshold": 0.5
+    }
+  },
+  "time_holdout_real": {
+    "train_rows": 22341,
+    "test_rows": 7659,
+    "test": {
+      "n": 7659,
+      "positives": 572,
+      "auc": 0.6781,
+      "pr_auc": 0.1443,
+      "brier": 0.0673,
+      "log_loss": 0.2526,
+      "ks": 0.2698,
+      "accuracy_at_threshold": 0.9253,
+      "balanced_accuracy": 0.5008,
+      "f1": 0.0035,
+      "precision": 0.5,
+      "recall": 0.0017,
+      "approval_rate": 0.9997,
+      "threshold": 0.5
+    }
+  },
+  "vouch_analysis": {
+    "coverage": {
+      "real_borrowers": 30000,
+      "real_borrowers_with_vouch_rows": 0,
+      "simulated_borrowers": 35000,
+      "simulated_borrowers_with_vouch": 18334,
+      "vouch_rows": 75657,
+      "max_vouches_per_borrower": 18
+    },
+    "vouch_feature_matches_rows": true,
+    "default_by_vouch_count": {
+      "0": {
+        "n": 16666,
+        "default_rate": 0.1769
+      },
+      "1": {
+        "n": 2307,
+        "default_rate": 0.15
+      },
+      "2": {
+        "n": 3141,
+        "default_rate": 0.1369
+      },
+      "3-5": {
+        "n": 8264,
+        "default_rate": 0.1174
+      },
+      "6+": {
+        "n": 4622,
+        "default_rate": 0.0831
+      }
+    },
+    "bureau_shock_crosstab": {
+      "bureau_30plus_months_gt0": {
+        "n_bad_total": 6650,
+        "n_bad_with_vouch": 3439,
+        "n_bad_without_vouch": 3211,
+        "default_with_vouch": 0.2573,
+        "default_without_vouch": 0.393,
+        "difference": {
+          "diff": -0.1357,
+          "ci_low": -1.0,
+          "ci_high": 1.0
+        }
+      },
+      "bureau_max_dpd_60plus": {
+        "n_bad_total": 2614,
+        "n_bad_with_vouch": 1275,
+        "n_bad_without_vouch": 1339,
+        "default_with_vouch": 0.3451,
+        "default_without_vouch": 0.5176,
+        "difference": {
+          "diff": -0.1725,
+          "ci_low": -1.0,
+          "ci_high": 1.0
+        }
+      },
+      "bureau_written_off_gt0": {
+        "n_bad_total": 489,
+        "n_bad_with_vouch": 136,
+        "n_bad_without_vouch": 353,
+        "default_with_vouch": 0.7353,
+        "default_without_vouch": 0.83,
+        "difference": {
+          "diff": -0.0947,
+          "ci_low": -1.0,
+          "ci_high": 1.0
+        }
+      }
+    },
+    "incremental_auc": {
+      "auc_without_vouch": 0.9185,
+      "auc_with_vouch": 0.9188,
+      "delta": {
+        "delta_auc": 0.0002,
+        "ci_low": -0.0009,
+        "ci_high": 0.0014,
+        "significant": false
+      }
+    },
+    "verdict": {
+      "recommendation": "Static dataset has vouches only on simulated rows. The Option A Shock Evaluation dataset provides verified before/after score drops and outcomes."
+    }
+  },
+  "examples": [
+    {
+      "case": "lowest_risk",
+      "borrower_id": "H283995",
+      "default_probability": 0.0298,
+      "conformal_set": {
+        "repay": true,
+        "default": false
+      },
+      "decision": "ELIGIBLE",
+      "reasons": {
+        "risk_factors": [],
+        "positive_factors": [
+          {
+            "code": "DEPENDENTS",
+            "text": "Dependents: 0",
+            "feature": "dependents",
+            "observed": "0",
+            "log_odds": 0.0,
+            "direction": "lowers_risk"
+          },
+          {
+            "code": "TENURE",
+            "text": "Months in current occupation: 0 months",
+            "feature": "occupation_tenure_months",
+            "observed": "0.0",
+            "log_odds": 0.0,
+            "direction": "lowers_risk"
+          },
+          {
+            "code": "INCOME_LEVEL",
+            "text": "Estimated monthly income: INR 158,949",
+            "feature": "income_est_minor",
+            "observed": "15894881.0",
+            "log_odds": 0.0,
+            "direction": "lowers_risk"
+          },
+          {
+            "code": "DTI_ABOVE_CAP",
+            "text": "Debt-to-income after the new EMI: 0.19",
+            "feature": "dti_est",
+            "observed": "0.1925",
+            "log_odds": 0.0,
+            "direction": "lowers_risk"
+          },
+          {
+            "code": "AMOUNT_TO_INCOME_HIGH",
+            "text": "Requested amount relative to income: 1.44",
+            "feature": "amount_to_income",
+            "observed": "1.4439",
+            "log_odds": 0.0,
+            "direction": "lowers_risk"
+          },
+          {
+            "code": "INCOME_INCONSISTENT",
+            "text": "Declared income versus bank credits: 1.44",
+            "feature": "declared_to_bank_income",
+            "observed": "1.4439",
+            "log_odds": 0.0,
+            "direction": "lowers_risk"
+          }
+        ]
+      },
+      "missing_information": [
+        {
+          "code": "MISSING_GST",
+          "text": "Gst shared but incomplete",
+          "status": "PARTIAL"
+        }
+      ]
+    },
+    {
+      "case": "near_threshold",
+      "borrower_id": "H354343",
+      "default_probability": 0.1812,
+      "conformal_set": {
+        "repay": true,
+        "default": false
+      },
+      "decision": "ELIGIBLE",
+      "reasons": {
+        "risk_factors": [],
+        "positive_factors": [
+          {
+            "code": "DEPENDENTS",
+            "text": "Dependents: 1",
+            "feature": "dependents",
+            "observed": "1",
+            "log_odds": 0.0,
+            "direction": "lowers_risk"
+          },
+          {
+            "code": "TENURE",
+            "text": "Months in current occupation: 28 months",
+            "feature": "occupation_tenure_months",
+            "observed": "28.0",
+            "log_odds": 0.0,
+            "direction": "lowers_risk"
+          },
+          {
+            "code": "INCOME_LEVEL",
+            "text": "Estimated monthly income: INR 26,775",
+            "feature": "income_est_minor",
+            "observed": "2677500.0",
+            "log_odds": 0.0,
+            "direction": "lowers_risk"
+          },
+          {
+            "code": "DTI_ABOVE_CAP",
+            "text": "Debt-to-income after the new EMI: 0.35",
+            "feature": "dti_est",
+            "observed": "0.3492",
+            "log_odds": 0.0,
+            "direction": "lowers_risk"
+          },
+          {
+            "code": "AMOUNT_TO_INCOME_HIGH",
+            "text": "Requested amount relative to income: 4.79",
+            "feature": "amount_to_income",
+            "observed": "4.7949",
+            "log_odds": 0.0,
+            "direction": "lowers_risk"
+          },
+          {
+            "code": "INCOME_INCONSISTENT",
+            "text": "Declared income versus bank credits: missing",
+            "feature": "declared_to_bank_income",
+            "observed": null,
+            "log_odds": 0.0,
+            "direction": "lowers_risk"
+          }
+        ]
+      },
+      "missing_information": [
+        {
+          "code": "MISSING_BANK_STATEMENT",
+          "text": "Bank Statement exists but was not shared",
+          "status": "NOT_PROVIDED"
+        },
+        {
+          "code": "MISSING_GST",
+          "text": "Gst does not apply to this applicant",
+          "status": "NOT_APPLICABLE"
+        }
+      ]
+    },
+    {
+      "case": "highest_risk",
+      "borrower_id": "H245897",
+      "default_probability": 0.5025,
+      "conformal_set": {
+        "repay": false,
+        "default": false
+      },
+      "decision": "ABSTAIN",
+      "reasons": {
+        "risk_factors": [],
+        "positive_factors": [
+          {
+            "code": "DEPENDENTS",
+            "text": "Dependents: 2",
+            "feature": "dependents",
+            "observed": "2",
+            "log_odds": 0.0,
+            "direction": "lowers_risk"
+          },
+          {
+            "code": "TENURE",
+            "text": "Months in current occupation: 28 months",
+            "feature": "occupation_tenure_months",
+            "observed": "28.0",
+            "log_odds": 0.0,
+            "direction": "lowers_risk"
+          },
+          {
+            "code": "INCOME_LEVEL",
+            "text": "Estimated monthly income: INR 24,788",
+            "feature": "income_est_minor",
+            "observed": "2478783.0",
+            "log_odds": 0.0,
+            "direction": "lowers_risk"
+          },
+          {
+            "code": "DTI_ABOVE_CAP",
+            "text": "Debt-to-income after the new EMI: 0.94",
+            "feature": "dti_est",
+            "observed": "0.9373",
+            "log_odds": 0.0,
+            "direction": "lowers_risk"
+          },
+          {
+            "code": "AMOUNT_TO_INCOME_HIGH",
+            "text": "Requested amount relative to income: 2.47",
+            "feature": "amount_to_income",
+            "observed": "2.469",
+            "log_odds": 0.0,
+            "direction": "lowers_risk"
+          },
+          {
+            "code": "INCOME_INCONSISTENT",
+            "text": "Declared income versus bank credits: 1.02",
+            "feature": "declared_to_bank_income",
+            "observed": "1.0184",
+            "log_odds": 0.0,
+            "direction": "lowers_risk"
+          }
+        ]
+      },
+      "missing_information": [
+        {
+          "code": "MISSING_GST",
+          "text": "Gst does not apply to this applicant",
+          "status": "NOT_APPLICABLE"
+        }
+      ]
+    }
+  ],
+  "caveats": [
+    "Data includes controlled realistic noise: 5% measurement jitter, 8% MAR missingness, 2.5% label noise.",
+    "Explainable models (EBM, XGBoost GPU, PyTorch GPU, LightGBM, Logistic) run in parallel.",
+    "Generalized model fuses models using inverse-Brier weights with Conformal Prediction guarantees.",
+    "Vouch Shock evaluation tests Option A mechanism: does vouch held reduce defaults after a bureau drop?"
+  ]
+}
