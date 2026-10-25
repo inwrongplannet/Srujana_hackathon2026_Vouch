@@ -45,8 +45,9 @@ flowchart TD
         LIMIT["Approved Credit Limit (paise / INR)"]
     end
 
-    subgraph Execution["4. Lending & Cryptographic Ledger"]
+    subgraph Execution["4. Lending, Platform Treasury & Cryptographic Ledger"]
         LOAN["Loan Contracts (Disbursement / Repayment)"]
+        TREASURY["Platform Treasury & Surcharge<br/>(1.0% Fee Cut on Borrow & Repay)"]
         SLASH["4-Level Atomic Slashing Cascade"]
         LEDGER["Append-Only Event Store<br/>(SQLite + JSONL SHA-256 Hash Chain)"]
         REPLAY["Disaster Recovery & State Replay"]
@@ -55,8 +56,9 @@ flowchart TD
     Data --> Trust
     Trust --> Scoring
     Scoring --> Execution
+    Execution --> TREASURY
     Execution -.->|"Repayment Boost (+R) or Slashing (-R)"| Trust
-    Execution -->|"Audit Trail"| LEDGER
+    Execution -->|"Audit Trail & Fee Logs"| LEDGER
     LEDGER -.->|"State Reconstruction"| REPLAY
 ```
 
@@ -164,22 +166,26 @@ sequenceDiagram
     Engine->>Engine: Conserve capacity & re-weight all siblings
     Engine-->>Alice: Vouch active (Assigned Weight: 5.0)
 
-    Note over Bob,Lending: Step 2: Underwriting & Borrowing
+    Note over Bob,Lending: Step 2: Underwriting, Borrowing & Fee Cut
     Bob->>Lending: borrow("BOB", amount=25000 INR)
     Lending->>Scorer: assess_credit("BOB")
     Scorer->>Engine: enumerate_paths(from anchors to "BOB")
     Scorer-->>Lending: Approved Limit = 32,150 INR (Score: 3.215)
+    Lending->>Lending: Calculate 1.0% platform fee cut: fee = 250 INR, net = 24,750 INR
     Lending->>Ledger: append_event("LOAN_DISBURSED", loan_id="LN_00001", amount=25000)
-    Ledger-->>Lending: Event Committed
-    Lending-->>Bob: Loan LN_00001 Disbursed (Status: ACTIVE)
+    Lending->>Ledger: append_event("PLATFORM_FEE_COLLECTED", fee=250, treasury="PLATFORM_TREASURY")
+    Ledger-->>Lending: Events Committed
+    Lending-->>Bob: Loan LN_00001 Disbursed (Net: 24,750 INR, Fee: 250 INR)
 
-    alt Scenario A: Happy Path (Repayment & Yield Minting)
+    alt Scenario A: Happy Path (Repayment, Fee Cut & Yield Minting)
         Bob->>Lending: repay("LN_00001", amount=25000)
-        Lending->>Ledger: append_event("LOAN_REPAID", balance=0)
+        Lending->>Lending: Calculate 1.0% platform fee cut: fee = 250 INR, net_repay = 24,750 INR
+        Lending->>Ledger: append_event("PLATFORM_FEE_COLLECTED", fee=250, treasury="PLATFORM_TREASURY")
+        Lending->>Ledger: append_event("LOAN_REPAID", net_repaid=24750, balance=0)
         Lending->>Ledger: append_event("REPUTATION_MINTED", subject="BOB", delta=+2.0)
         Lending->>Ledger: append_event("REPUTATION_MINTED", subject="ALICE", delta=+1.0)
         Lending->>Engine: Update reputation: Bob +2.0, Alice +1.0
-        Lending-->>Bob: Loan Settled! Borrower boosted (+2.0), Sponsor rewarded (+1.0)
+        Lending-->>Bob: Loan Settled! Borrower boosted (+2.0), Sponsor rewarded (+1.0), Fee recorded (250 INR)
     else Scenario B: Unhappy Path (Default & Slashing Cascade)
         Lending->>Lending: default_loan("LN_00001")
         Lending->>Ledger: append_event("LOAN_DEFAULTED", subject="BOB")
@@ -275,9 +281,15 @@ python main.py repay LN_00001 5000
 python main.py history BOB
 python main.py history ALICE
 
-# 6. Audit cryptographic integrity of the hash chain
+# 6. Inspect platform treasury fee collection
+python main.py treasury
+
+# 7. Audit cryptographic integrity of the hash chain
 python main.py audit
 
-# 7. Test disaster recovery state reconstruction
+# 8. Run loan optimization & stress testing
+python main.py optimize 15000
+
+# 9. Test disaster recovery state reconstruction
 python main.py replay --restore
 ```

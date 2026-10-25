@@ -201,7 +201,7 @@ python main.py --demo                         # Run automated walkthrough simula
 | `reset` | Reset state to clean demo seed data |
 
 ## Structure
-- `localdocs/`: Architectural briefings and implementation specifications.
+- `localdocs/`: Architectural briefings, master mathematical framework specifications (`FORMULAS_AND_NUMBERS.md`), and implementation specifications.
 - `src/veritrust/`: Production engine package.
   - `models.py`: Pydantic domain entities (`User`, `Transaction`, `Vouch`, `Loan`, `CreditAssessment`, `Evidence`, `LedgerEvent`).
   - `ledger.py`: Append-only event store (`ReputationLedger`), SHA-256 cryptographic hash chaining, idempotency enforcement, and state reconstruction.
