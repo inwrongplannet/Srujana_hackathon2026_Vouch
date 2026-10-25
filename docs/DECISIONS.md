@@ -8,6 +8,13 @@
 
 <!-- ENTRIES -->
 
+### 2026-10-25: Community platform: hybrid known and evidence vouching
+- **Decision:** Two kinds of vouch on one score (`frontend/src/mocks/engine/community.ts`). KNOWN: weight from the voucher's smoothed track record and the relationship's quality, growing over ten years known. EVIDENCE (a stranger who read the borrower's verified summary): the same proposal formula, but reliability counts only after 5 resolved outcomes, edge quality is a flat 0.6, and evidence weight counts up to 0.6 plus two-thirds of the known weight. A vouch keeps the utilisation it was staked at. Strangers see platform-verified summaries the borrower switched on, never statements. Reward on outcome = 100 x 0.1 x w x (y - p), so backing an underrated borrower who repays earns most.
+- **Why:** strangers looking at the data a lender already sees add judgement, not facts (the Vouch proposal warns against double-counting a signal); weighting them by a proven record and capping their share keeps the score from being farmed or carried by strangers.
+- **Alternatives considered:** known-only circles (narrower than the product the team wants); counting every vouch equally (rewards volume and popularity).
+- **Consequences:** the constants are demo values to tune on outcomes; the community runs on an in-memory store with seeded, fictional members until the API contract covers it (needs Abhishek).
+- **By:** Reehan
+
 ### 2026-10-25: Landing-page story values
 - **Decision:** the landing page computes its figures in `frontend/src/mocks/engine/`: the Vouch Score from the Vouch scoring proposal (tau 3, lambda 1, its starting values), EMI from finance-domain, and a demo affordability rule that a plan fits while money left after essentials and EMIs stays at or above zero and DTI stays at or below 0.5. Lender pricing is a demo 24% a year; people, bureau scores and endorser factors are fictional (`src/mocks/story.ts`).
 - **Why:** the page shows live, checkable arithmetic rather than hard-coded numbers.

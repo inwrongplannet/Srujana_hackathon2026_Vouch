@@ -5,6 +5,7 @@
 ## Script
 Start the app with `make dev` and open `http://127.0.0.1:5173`. The dark presenter bar at the bottom shows the next step and the button for it. All figures are illustrative seed data.
 
+0. Community (`/community`, as Meena): open Lakshmi (in your circle), vouch as a neighbour of 9 years and hold; her score moves as the preview said. Open Farida (a stranger): switch to "I read their file", tick the box, and see the smaller weight and bigger reward for backing a thin file. Open Suresh: his setback is posted; press Stand by and the lender line reads "4 of 4 stood by". "My ask" shows Lakshmi choosing what strangers may see.
 1. Landing: the hero panel cycles three cases (hover pauses it). Lakshmi has no bureau file and the one-number lender declines her; Vouch shows four separate signals. Suresh's score fell 77 points after a shock while his endorsements held. Account 7731's twelve ring endorsements score 8, not 55. Below, tab 01 lets you toggle endorsers and watch diminishing returns; tab 02 opens the stress test on her worst month.
 2. Sign-in (`/login`): pick Lakshmi (`0000 0000 4821`), any six-digit code, allow DigiLocker. The nullifier is revealed with its identity glyph: credibility 0, uncertainty 1.00.
 3. Borrower: score -1.00 with a wide hatched band, limit 0 INR. Click "Ask someone who knows your work" and send to Meena.

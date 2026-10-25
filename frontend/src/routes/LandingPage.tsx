@@ -27,6 +27,9 @@ function Hero() {
       <nav className="mx-auto flex h-20 w-full max-w-[1180px] items-center justify-between px-4 sm:px-8">
         <Logo word="Vouch" />
         <div className="flex items-center gap-5">
+          <Link to="/community" className="hidden text-[14px] text-ink-2 hover:text-ink sm:block">
+            Community
+          </Link>
           <Link to="/app/lender" className="hidden text-[14px] text-ink-2 hover:text-ink sm:block">
             Lender console
           </Link>
@@ -61,11 +64,11 @@ function Hero() {
                 Open the lender console
               </Button>
             </Link>
-            <a href="#how">
+            <Link to="/community">
               <Button size="lg" variant="secondary">
-                See how it works
+                Open the community
               </Button>
-            </a>
+            </Link>
           </motion.div>
         </div>
         <motion.div {...enter(0.3)}>

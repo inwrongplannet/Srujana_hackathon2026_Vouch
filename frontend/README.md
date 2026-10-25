@@ -2,7 +2,7 @@
 VeriTrust demo app: onboarding, borrower, voucher and lender views over a mock protocol server.
 
 ## Status
-- Works: landing (Vouch story: assessment panel, Vouch Score builder, stress test, explanation), four-step onboarding (simulated identity anchor), borrower, voucher and lender views, contract-event ledger, demo director, `?jump=<step>` fallback.
+- Works: landing (Vouch story: assessment panel, Vouch Score builder, stress test, explanation), community platform (`/community`: discover feed, profiles with known and evidence vouching, setback stand-by, the borrower's own ask), four-step onboarding (simulated identity anchor), borrower, voucher and lender views, contract-event ledger, demo director, `?jump=<step>` fallback.
 - Mock: no backend yet. `src/mocks/` stands in for it and holds all protocol maths, copied from the graph-trust-engine, dual-axis-scoring and slashing-cascade skills.
 - Missing: generated types from `make types` (the contract is still a placeholder), CI Node setup (needs Abhishek).
 

@@ -14,6 +14,7 @@ TODO: setup commands (verified against the Makefile).
 | Feature | Status | Assignee | What it does |
 |---|---|---|---|
 | Borrower dashboard | in-progress | Reehan | See a two-axis score, ask for a vouch and borrow |
+| Community | in-progress | Reehan | Hybrid vouching platform: borrowers post an ask and choose what strangers may see; anyone can vouch as someone who knows them (KNOWN) or as a stranger who read their verified summary (EVIDENCE, weighted by the voucher's track record and capped); vouchers stand by or step back after a setback |
 | Default cascade | in-progress | Reehan | Watch a default slash sponsors and stop at two hops |
 | Demo director | in-progress | Reehan | Drive the demo story from one presenter bar |
 | Identity onboarding | in-progress | Reehan | Sign in with a demo Aadhaar and get a simulated identity anchor |
