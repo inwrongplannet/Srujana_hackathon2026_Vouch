@@ -3,7 +3,7 @@
 Instructions for every AI coding agent in this repo (Claude Code, OpenCode, Codex, Cursor, Copilot, Gemini CLI, others). Precedence: the user's prompt, then the nearest `AGENTS.md` (`backend/`, `frontend/` and `spikes/` have their own), then this file. `CLAUDE.md` and `GEMINI.md` only point here: never add rules to them.
 
 ## Project snapshot
-- Three people (Abhishek, Reehan, Abhijit), a 24-48h clock. Stack: chosen at kickoff and recorded in `docs/DECISIONS.md` (TODO(kickoff): name it here).
+- Three people (Abhishek, Reehan, Abhijit), a 24-48h clock. Stack: Python 3.11+ (FastAPI, NetworkX, OR-Tools, SQLite) backend; React, Vite, Tailwind frontend (`docs/DECISIONS.md`).
 - Read first: `docs/PROBLEM.md` (goal, judging), `docs/ARCHITECTURE.md`, `docs/API_CONTRACT.md`, `docs/TASKS.md`. Map: `docs/REPO_GUIDE.md`. Writing standard: `docs/STYLE.md`. Pace and timeline: `docs/KICKSTART.md`.
 - Priorities in order: a working demo path, correct money logic, docs that stay true, polish.
 
@@ -130,3 +130,4 @@ Add a line when a human corrects you or you hit a repo-specific gotcha. Prune li
 2026-10-24: Absence of vouch/cash-flow history means sigma2=1.0 (high uncertainty), NOT R=-1; conflating the two is the exact bureau failure we are solving (dual-axis-scoring skill).
 2026-10-24: Cycle absorption visited-set is per-path, not global — a global set causes valid multi-path trust to be incorrectly zeroed (graph-trust-engine skill).
 2026-10-24: `.claude/skills/` is excluded from `check_docs_style.py` (SKIP_PREFIXES) — skill files are agent instructions authored by tooling with their own conventions, not project documentation.
+2026-10-25: Never auto-merge PRs or commit directly to main; Abhishek alone reviews and merges; agents only create branches, push, and open PRs (session protocol).
