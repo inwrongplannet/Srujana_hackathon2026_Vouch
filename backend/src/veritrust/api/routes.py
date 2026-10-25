@@ -8,7 +8,7 @@ from typing import Optional
 from fastapi import APIRouter, HTTPException, status
 from pydantic import BaseModel, Field
 
-from veritrust.affordability import AffordabilityEngine, AffordabilityInput
+from veritrust.affordability import AffordabilityEngine, affordability_input, calculate_emi
 from veritrust.api.deps import get_services
 from veritrust.counterfactual import CounterfactualSimulator
 from veritrust.models import (
@@ -81,7 +81,7 @@ class EndorsementResponse(BaseModel):
 
 class VouchSummaryResponse(BaseModel):
     user_id: str
-    vouch_score: float
+    vouch_score: str  # decimal string 0-100, the same type as in every assessment
     confidence_rating: str
     eligible_endorsement_count: int
     reputation_capacity: str
@@ -127,11 +127,146 @@ class RepayLoanRequest(BaseModel):
     amount: str
 
 
+# Response shapes. Every endpoint declares one so `make types` types the frontend end to end.
+# Money is a decimal string in INR; probabilities and percentages are JSON numbers.
+
+class HealthResponse(BaseModel):
+    status: str
+    version: str
+    timestamp: str
+
+
+class EvidenceResponse(BaseModel):
+    evidence_id: str
+    application_id: str
+    status: str
+    verified_at: str
+
+
+class AffordabilitySummary(BaseModel):
+    gross_monthly_income: str
+    non_discretionary_outflows: str
+    disposable_income: str
+    max_affordable_emi: str
+    protected_cash_buffer: str
+    status: str  # SUFFICIENT, BORDERLINE or INSUFFICIENT
+    binding_rule: str  # DISPOSABLE_INCOME, ITI_FOIR_CAP or DTI_CAP
+
+
+class PlanSummary(BaseModel):
+    principal: str
+    term_months: int
+    monthly_emi: str
+    total_interest: str
+
+
+class StressSummary(BaseModel):
+    rating: str
+    shortfall_probability: float
+    adverse_5th_percentile_cash: str
+    income_shock_tolerance_percent: float
+
+
+class ReasonFactor(BaseModel):
+    code: str
+    text: str
+    source: str
+
+
+class AssessmentResponse(BaseModel):
+    assessment_id: str
+    application_id: str
+    borrower_id: str
+    verdict: str  # APPROVED or RESTRUCTURED_ALTERNATIVE
+    bureau_status: BureauStatus
+    bureau_score: Optional[int] = None
+    vouch_score: str
+    affordability: AffordabilitySummary
+    best_plan: Optional[PlanSummary] = None
+    stress_resilience: Optional[StressSummary] = None
+    reason_codes: list[str]
+    positive_factors: list[ReasonFactor]
+    risk_factors: list[ReasonFactor]
+    missing_information: list[str]
+    review_flags: list[str]
+
+
+class ScenarioResponse(BaseModel):
+    base_assessment_id: str
+    is_feasible: bool
+    monthly_emi: str
+    residual_cash: str
+    income_shock_margin: str
+    binding_constraint: str
+    summary: str
+
+
+class DisputeResponse(BaseModel):
+    dispute_id: str
+    target_record_id: str
+    status: str
+    created_at: str
+
+
+class UserSummary(BaseModel):
+    user_id: str
+    name: str
+    reputation: str
+    capacity: str
+    status: str
+    is_anchor: bool = False
+    n_settled_loans: int = 0
+
+
+class LoanSummary(BaseModel):
+    loan_id: str
+    borrower_id: str
+    lender_id: Optional[str] = None
+    principal: str
+    outstanding_balance: str
+    interest_rate: str
+    tenure_months: int
+    status: str
+
+
+class RepayResponse(BaseModel):
+    loan_id: str
+    status: str
+    outstanding_balance: str
+
+
+class GraphNode(BaseModel):
+    id: str
+    name: str
+    reputation: str
+    capacity: str
+    status: str
+    is_anchor: bool
+
+
+class GraphEdge(BaseModel):
+    source: str
+    target: str
+    weight: str
+
+
+class GraphResponse(BaseModel):
+    nodes: list[GraphNode]
+    edges: list[GraphEdge]
+
+
+def _application_basis(borrower_id: str):
+    """The borrower's affordability input, shared by the assessment and its scenarios."""
+    engine, _, _, _ = get_services()
+    user = engine.get_user(borrower_id)
+    return affordability_input(user.financial_features if user else None)
+
+
 # -----------------------------------------------------------------------------
 # Endpoints
 # -----------------------------------------------------------------------------
 
-@router.get("/health", tags=["System"])
+@router.get("/health", response_model=HealthResponse, tags=["System"])
 def health_check():
     """Health check endpoint exposing no secrets or sensitive parameters."""
     return {
@@ -170,7 +305,7 @@ def create_application(req: CreateApplicationRequest):
     )
 
 
-@router.post("/api/v1/applications/{app_id}/evidence", status_code=status.HTTP_201_CREATED, tags=["Applications"])
+@router.post("/api/v1/applications/{app_id}/evidence", response_model=EvidenceResponse, status_code=status.HTTP_201_CREATED, tags=["Applications"])
 def register_evidence(app_id: str, req: RegisterEvidenceRequest):
     """Register consented evidence metadata linked to a loan application."""
     if app_id not in _applications:
@@ -227,7 +362,7 @@ def get_vouch_summary(user_id: str):
 
     return VouchSummaryResponse(
         user_id=user_id,
-        vouch_score=float(vouch_report.vouch_score),
+        vouch_score=str(vouch_report.vouch_score),
         confidence_rating=vouch_report.confidence,
         eligible_endorsement_count=vouch_report.eligible_endorsements,
         reputation_capacity=str(user.capacity),
@@ -235,7 +370,7 @@ def get_vouch_summary(user_id: str):
     )
 
 
-@router.post("/api/v1/applications/{app_id}/assessments", tags=["Assessments"])
+@router.post("/api/v1/applications/{app_id}/assessments", response_model=AssessmentResponse, tags=["Assessments"])
 def run_assessment(app_id: str, req: RunAssessmentRequest):
     """Run affordability, OR-Tools restructuring, stress testing, and explainability."""
     engine, scorer, _, _ = get_services()
@@ -255,17 +390,11 @@ def run_assessment(app_id: str, req: RunAssessmentRequest):
     # 2. Dual-axis credit score & limit
     dual_axis = scorer.assess_credit(app.borrower_id)
 
-    # 3. Google OR-Tools optimization
-    fin = engine.get_user(app.borrower_id).financial_features  # type: ignore
-    monthly_income = fin.monthly_income if fin else Decimal("0.0")
-    monthly_debt = fin.monthly_debt if fin else Decimal("0.0")
-    essential_expenses = fin.net_operating_income if fin and fin.net_operating_income > 0 else Decimal("10000.00")
-
-    aff_input = AffordabilityInput(
-        monthly_income=monthly_income,
-        essential_expenses=essential_expenses,
-        existing_debt_service=monthly_debt,
-    )
+    # 3. Google OR-Tools optimization, on the same affordability basis as the combined view
+    aff_input = _application_basis(app.borrower_id)
+    monthly_income = aff_input.monthly_income
+    monthly_debt = aff_input.existing_debt_service
+    essential_expenses = aff_input.essential_expenses
     aff_engine = AffordabilityEngine()
     aff_profile = aff_engine.evaluate(aff_input)
 
@@ -283,7 +412,6 @@ def run_assessment(app_id: str, req: RunAssessmentRequest):
     stress_report = None
     best_opt = opt_result.best_feasible_alternative or (opt_result.original_request if opt_result.is_original_feasible else None)
     if req.enable_stress_test:
-        from veritrust.affordability import calculate_emi
         from veritrust.stress_tester import StressTestScenarioConfig
         tester = MonteCarloStressTester(
             config=StressTestScenarioConfig(n_simulations=req.simulation_scenarios, random_seed=42)
@@ -298,6 +426,10 @@ def run_assessment(app_id: str, req: RunAssessmentRequest):
         )
 
     verdict = "APPROVED" if opt_result.is_original_feasible else "RESTRUCTURED_ALTERNATIVE"
+    # Contract reason codes: every cited factor, then the stress rating when one ran.
+    reason_codes = [f["code"] for f in combined.positive_factors + combined.risk_factors]
+    if stress_report:
+        reason_codes.append(f"STRESS_TEST_{stress_report.stress_rating}")
 
     return {
         "assessment_id": combined.assessment_id,
@@ -306,18 +438,21 @@ def run_assessment(app_id: str, req: RunAssessmentRequest):
         "verdict": verdict,
         "bureau_status": combined.bureau.status,
         "bureau_score": combined.bureau.score,
-        "vouch_score": float(combined.vouch.vouch_score),
+        "vouch_score": str(combined.vouch.vouch_score),
         "affordability": {
+            "gross_monthly_income": str(aff_profile.monthly_income),
+            "non_discretionary_outflows": str(aff_profile.total_non_discretionary),
             "disposable_income": str(aff_profile.disposable_income),
             "max_affordable_emi": str(aff_profile.max_affordable_emi),
-            "protected_cash_buffer": str(aff_profile.protected_buffer),
-            "status": aff_profile.binding_policy_rule,
+            "protected_cash_buffer": str(aff_profile.effective_buffer),
+            "status": combined.affordability["status"],
+            "binding_rule": aff_profile.binding_policy_rule,
         },
         "best_plan": {
-            "principal": str(best_opt.principal) if best_opt else None,
-            "term_months": best_opt.tenure_months if best_opt else None,
-            "monthly_emi": str(best_opt.monthly_emi) if best_opt else None,
-            "total_interest": str(best_opt.total_interest) if best_opt else None,
+            "principal": str(best_opt.principal),
+            "term_months": best_opt.tenure_months,
+            "monthly_emi": str(best_opt.monthly_emi),
+            "total_interest": str(best_opt.total_interest),
         } if best_opt else None,
         "stress_resilience": {
             "rating": stress_report.stress_rating,
@@ -325,6 +460,7 @@ def run_assessment(app_id: str, req: RunAssessmentRequest):
             "adverse_5th_percentile_cash": str(stress_report.residual_cash_p05),
             "income_shock_tolerance_percent": float(stress_report.shock_tolerance_pct),
         } if stress_report else None,
+        "reason_codes": reason_codes,
         "positive_factors": combined.positive_factors,
         "risk_factors": combined.risk_factors,
         "missing_information": combined.missing_information,
@@ -332,7 +468,7 @@ def run_assessment(app_id: str, req: RunAssessmentRequest):
     }
 
 
-@router.get("/api/v1/assessments/{asm_id}", tags=["Assessments"])
+@router.get("/api/v1/assessments/{asm_id}", response_model=CombinedAssessment, tags=["Assessments"])
 def get_assessment(asm_id: str):
     """Retrieve full combined assessment and audit explanation by ID."""
     if asm_id not in _assessments:
@@ -340,7 +476,7 @@ def get_assessment(asm_id: str):
     return _assessments[asm_id].model_dump(mode="json")
 
 
-@router.post("/api/v1/assessments/{asm_id}/scenarios", tags=["Assessments"])
+@router.post("/api/v1/assessments/{asm_id}/scenarios", response_model=ScenarioResponse, tags=["Assessments"])
 def run_scenario(asm_id: str, req: ScenarioSimRequest):
     """Run counterfactual simulation without modifying the base assessment."""
     if asm_id not in _assessments:
@@ -348,25 +484,25 @@ def run_scenario(asm_id: str, req: ScenarioSimRequest):
 
     combined = _assessments[asm_id]
     engine, scorer, _, _ = get_services()
-    user = engine.get_user(combined.borrower_id)
-    if not user:
+    if not engine.get_user(combined.borrower_id):
         raise HTTPException(status_code=404, detail="Borrower not found.")
+    app = _applications.get(combined.application_id or "")
+    if not app:
+        raise HTTPException(status_code=404, detail=f"Application for assessment '{asm_id}' not found.")
 
-    fin = user.financial_features
-    income = Decimal(req.simulated_income) if req.simulated_income else (fin.monthly_income if fin else Decimal("35000.00"))
-    expenses = Decimal(req.simulated_expenses) if req.simulated_expenses else Decimal("12000.00")
-    debt = fin.monthly_debt if fin else Decimal("5000.00")
-    principal = Decimal(req.simulated_principal) if req.simulated_principal else Decimal("50000.00")
-    tenure = req.simulated_tenure if req.simulated_tenure else 12
-
-    simulator = CounterfactualSimulator()
-    report = simulator.simulate(
-        monthly_income=income,
-        essential_expenses=expenses,
-        existing_debt=debt,
-        requested_principal=principal,
-        requested_tenure_months=tenure,
-        max_approved_credit_limit=Decimal("500000.00"),
+    # Anything not overridden comes from the same basis, application and limit as the assessment,
+    # so moving nothing reproduces the assessment's own numbers.
+    basis = _application_basis(combined.borrower_id)
+    report = CounterfactualSimulator().simulate(
+        monthly_income=Decimal(req.simulated_income) if req.simulated_income else basis.monthly_income,
+        essential_expenses=Decimal(req.simulated_expenses) if req.simulated_expenses else basis.essential_expenses,
+        existing_debt=basis.existing_debt_service,
+        requested_principal=Decimal(req.simulated_principal) if req.simulated_principal else app.principal,
+        requested_tenure_months=req.simulated_tenure or app.term_months,
+        annual_rate=app.annual_rate,
+        max_approved_credit_limit=scorer.assess_credit(combined.borrower_id).max_loan_limit,
+        data_completeness=basis.data_completeness,
+        is_verified=basis.is_verified,
     )
 
     residual = report.comparison_table[0].residual_monthly_cash if report.comparison_table else Decimal("0.0")
@@ -382,7 +518,7 @@ def run_scenario(asm_id: str, req: ScenarioSimRequest):
     }
 
 
-@router.post("/api/v1/endorsements/{endorsement_id}/dispute", tags=["Recourse"])
+@router.post("/api/v1/endorsements/{endorsement_id}/dispute", response_model=DisputeResponse, tags=["Recourse"])
 def dispute_endorsement(endorsement_id: str, req: DisputeRequest):
     """File a formal dispute against an endorsement or transaction."""
     engine, scorer, _, _ = get_services()
@@ -415,7 +551,7 @@ def dispute_endorsement(endorsement_id: str, req: DisputeRequest):
 # Additional Utility Routes for Frontend Integration
 # -----------------------------------------------------------------------------
 
-@router.get("/api/v1/users", tags=["Users"])
+@router.get("/api/v1/users", response_model=list[UserSummary], tags=["Users"])
 def list_users():
     """List all registered network nodes with reputation and capacity."""
     engine, _, _, _ = get_services()
@@ -433,7 +569,7 @@ def list_users():
     ]
 
 
-@router.post("/api/v1/users", status_code=status.HTTP_201_CREATED, tags=["Users"])
+@router.post("/api/v1/users", response_model=UserSummary, status_code=status.HTTP_201_CREATED, tags=["Users"])
 def create_user(req: CreateUserRequest):
     """Register a new user node in the Web-of-Trust graph."""
     engine, _, lending, store = get_services()
@@ -463,7 +599,7 @@ def create_user(req: CreateUserRequest):
     }
 
 
-@router.get("/api/v1/loans", tags=["Loans"])
+@router.get("/api/v1/loans", response_model=list[LoanSummary], tags=["Loans"])
 def list_loans():
     """List all active and historical loan contracts."""
     _, _, lending, _ = get_services()
@@ -482,7 +618,7 @@ def list_loans():
     ]
 
 
-@router.post("/api/v1/loans/repay", tags=["Loans"])
+@router.post("/api/v1/loans/repay", response_model=RepayResponse, tags=["Loans"])
 def repay_loan(req: RepayLoanRequest):
     """Apply loan repayment and award reputation yield to borrower and sponsors."""
     engine, _, lending, store = get_services()
@@ -498,7 +634,7 @@ def repay_loan(req: RepayLoanRequest):
         raise HTTPException(status_code=400, detail=str(e))
 
 
-@router.get("/api/v1/graph", tags=["Graph"])
+@router.get("/api/v1/graph", response_model=GraphResponse, tags=["Graph"])
 def get_graph():
     """Return nodes and weighted edges for Web-of-Trust graph visualization."""
     engine, _, _, _ = get_services()
@@ -506,18 +642,19 @@ def get_graph():
         {
             "id": u.user_id,
             "name": u.name,
-            "reputation": float(u.reputation),
-            "capacity": float(u.capacity),
+            "reputation": str(u.reputation),
+            "capacity": str(u.capacity),
             "status": u.status,
             "is_anchor": u.is_anchor,
         }
         for u in engine.list_users()
     ]
+    # Weights stay Decimal strings: the graph engine never leaves Decimal (backend/AGENTS.md).
     edges = [
         {
             "source": u,
             "target": v,
-            "weight": float(data.get("weight", 0.0)),
+            "weight": str(data.get("weight", Decimal("0.0"))),
         }
         for u, v, data in engine.graph.edges(data=True)
     ]

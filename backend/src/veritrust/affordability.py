@@ -6,8 +6,11 @@ Strictly separates missing or unverified financial information from low affordab
 """
 
 from decimal import Decimal, ROUND_HALF_UP
-from typing import Literal, Optional
+from typing import TYPE_CHECKING, Literal, Optional
 from pydantic import BaseModel, Field, field_validator
+
+if TYPE_CHECKING:
+    from veritrust.models import FinancialFeatures
 
 
 def quantize_inr(value: Decimal) -> Decimal:
@@ -86,6 +89,42 @@ class AffordabilityInput(BaseModel):
         if isinstance(value, Decimal):
             return value
         return Decimal(str(value))
+
+
+# Used only when a borrower shared income but no operating costs: a conservative stand-in, flagged
+# as missing information by the assessment, so a blank never reads as "no expenses".
+UNDOCUMENTED_EXPENSES = Decimal("10000.00")
+
+
+def affordability_input(fin: Optional["FinancialFeatures"]) -> AffordabilityInput:
+    """One affordability basis for every route, so an assessment and its what-if agree.
+
+    Essential expenses are income minus net operating income (`FinancialFeatures` defines NOI as
+    income after operating expenses), the same reading `cli.py` and `audit_explorer.py` use.
+    No financial data means zero income, zero expenses and zero completeness: unknown, never imputed.
+    Nothing on file is bank-verified yet, so `is_verified` stays False. Amounts are INR Decimals.
+    """
+    if fin is None:
+        return AffordabilityInput(monthly_income=Decimal("0.00"), data_completeness=Decimal("0.0"))
+    if fin.net_operating_income > Decimal("0.0"):
+        expenses = max(Decimal("0.00"), fin.monthly_income - fin.net_operating_income)
+    else:
+        expenses = UNDOCUMENTED_EXPENSES
+    return AffordabilityInput(
+        monthly_income=fin.monthly_income,
+        essential_expenses=expenses,
+        existing_debt_service=fin.monthly_debt,
+        data_completeness=fin.completeness,
+    )
+
+
+def affordability_status(disposable_income: Decimal) -> str:
+    """SUFFICIENT, BORDERLINE (under INR 3,000 a month to spare) or INSUFFICIENT."""
+    if disposable_income <= Decimal("0.0"):
+        return "INSUFFICIENT"
+    if disposable_income < Decimal("3000.00"):
+        return "BORDERLINE"
+    return "SUFFICIENT"
 
 
 class AffordabilityResult(BaseModel):

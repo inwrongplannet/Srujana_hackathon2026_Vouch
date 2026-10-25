@@ -282,10 +282,11 @@ class CreditScorer:
         return min(Decimal("1.0"), max(Decimal("0.0"), raw))
 
     def compute_vouch_score(
-        self, target_id: str, tau: Decimal = Decimal("5.0")
+        self, target_id: str, tau: Decimal = Decimal("3.0")
     ) -> VouchScoreReport:
         """Calculate bounded Vouch Score in [0, 100] (Section 6.2 of Master Doc v2).
 
+        tau = 3, the Vouch scoring proposal's value, shared with the frontend (docs/DECISIONS.md).
         W = sum(w_xy) for all incoming eligible endorsements.
         support = 1 - exp(-W / tau)
         quality = clamp(C, 0, 1)
@@ -380,7 +381,12 @@ class CreditScorer:
     ) -> CombinedAssessment:
         """Produce the unblended side-by-side assessment (Section 8 of Master Doc v2)."""
         import uuid
-        from veritrust.affordability import AffordabilityEngine, AffordabilityInput, calculate_emi
+        from veritrust.affordability import (
+            AffordabilityEngine,
+            affordability_input,
+            affordability_status,
+            calculate_emi,
+        )
 
         user = self.engine.get_user(borrower_id)
         if not user:
@@ -398,18 +404,10 @@ class CreditScorer:
 
         # 3. Affordability Signal
         fin = user.financial_features
-        monthly_income = fin.monthly_income if fin else Decimal("0.0")
-        monthly_debt = fin.monthly_debt if fin else Decimal("0.0")
-        essential_expenses = fin.net_operating_income if fin and fin.net_operating_income > 0 else Decimal("10000.00")
-
-        affordability_engine = AffordabilityEngine()
-        aff_profile = affordability_engine.evaluate(
-            AffordabilityInput(
-                monthly_income=monthly_income,
-                essential_expenses=essential_expenses,
-                existing_debt_service=monthly_debt,
-            )
-        )
+        aff_input = affordability_input(fin)
+        monthly_income = aff_input.monthly_income
+        monthly_debt = aff_input.existing_debt_service
+        aff_profile = AffordabilityEngine().evaluate(aff_input)
 
         # 4. Reason Codes & Factor Synthesis (Section 9 of Master Doc v2)
         positive_factors: list[dict] = []
@@ -462,6 +460,10 @@ class CreditScorer:
         if fin and fin.completeness < Decimal("0.80"):
             missing_information.append("Living costs and cash-flow statements not fully documented")
             review_flags.append("DATA_COMPLETENESS_REVIEW")
+        if fin is None:
+            missing_information.append("No income or expense data shared yet: affordability is unknown, not poor")
+        elif fin.net_operating_income <= Decimal("0.0"):
+            missing_information.append("Operating costs not shared: a conservative INR 10,000 a month is assumed")
 
         if loan_app and aff_profile.max_affordable_emi > Decimal("0.0"):
             app_emi = calculate_emi(
@@ -477,11 +479,7 @@ class CreditScorer:
                 })
                 review_flags.append("RESTRUCTURING_RECOMMENDED")
 
-        aff_status = "SUFFICIENT"
-        if aff_profile.disposable_income <= Decimal("0.0"):
-            aff_status = "INSUFFICIENT"
-        elif aff_profile.disposable_income < Decimal("3000.00"):
-            aff_status = "BORDERLINE"
+        aff_status = affordability_status(aff_profile.disposable_income)
 
         data_quality = "HIGH_CONFIDENCE_VERIFIED"
         if fin is None or fin.completeness < Decimal("0.50"):
@@ -498,6 +496,7 @@ class CreditScorer:
             affordability={
                 "status": aff_status,
                 "gross_monthly_income": str(aff_profile.monthly_income),
+                "non_discretionary_outflows": str(aff_profile.total_non_discretionary),
                 "disposable_income": str(aff_profile.disposable_income),
                 "protected_cash_buffer": str(aff_profile.protected_buffer),
                 "max_affordable_emi": str(aff_profile.max_affordable_emi),
