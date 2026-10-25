@@ -13,7 +13,7 @@ Before every commit that changes code, config, scripts, skills or structure. Als
 
 ## Steps
 1. **List what changed.** Run `git diff --name-status $(git merge-base origin/main HEAD)` and `git ls-files -o --exclude-standard` (untracked). If there is no `origin/main`, use `git status`.
-2. **Map each change to docs** with the table in `AGENTS.md` (Documentation rules). Typical targets: zone README (Run, Structure, Interfaces, Config, Testing), `docs/API_CONTRACT.md`, `docs/features/<name>.md`, `.env.example`, `docs/DECISIONS.md`, `docs/DEMO.md`, `data/README.md`, `docs/REPO_GUIDE.md`.
+2. **Map each change to docs** with the table in `AGENTS.md` (Documentation rules). Typical targets: zone README (Run, Structure, Interfaces, Config, Testing), `docs/API_CONTRACT.md`, `docs/frontend-features/<name>.md`, `.env.example`, `docs/DECISIONS.md`, `docs/DEMO.md`, `data/README.md`, `docs/REPO_GUIDE.md`.
 3. **Verify, then write.** Open each target doc. Run the command or read the code to confirm the facts; never document from memory. Make the smallest accurate edit and delete text that is now false.
 4. **Comments and docstrings.** Every new public function, class and endpoint handler has a docstring (summary; arguments and return when not obvious; currency, units and rounding for money).
 5. **AGENTS.md sync (mandatory when conventions moved).** Did a command, convention, structure, tool, skill or rule change? Update `AGENTS.md` (or the zone's `AGENTS.md` for zone-specific rules). Stay inside the line budgets (root 150, zone 80): prune before you add. Never put rules in `CLAUDE.md` or `GEMINI.md`. Update the Skills and commands table and the OpenCode wrapper when you add a skill, command or agent. If a human corrected you, add one dated line under Lessons.

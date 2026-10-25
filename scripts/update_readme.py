@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
-"""Regenerates the README features table from docs/features/*.md so it is never hand-typed.
+"""Regenerates the README features table from docs/frontend-features/*.md so it is never hand-typed.
 
 Usage: update_readme.py          rewrite the table between BEGIN:features / END:features
        update_readme.py --check  exit 1 if the README is out of date (used by `make check`)
-Each manifest is docs/features/<name>.md in the docs/templates/feature-manifest.md format.
+Each manifest is docs/frontend-features/<name>.md in the docs/templates/feature-manifest.md format.
 """
 import re
 import sys
@@ -11,7 +11,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 README = ROOT / "README.md"
-FEATURES = ROOT / "docs" / "features"
+FEATURES = ROOT / "docs" / "frontend-features"
 BLOCK = re.compile(r"(<!-- BEGIN:features -->\n)(.*?)(<!-- END:features -->)", re.S)
 
 
@@ -34,7 +34,7 @@ def table() -> str:
         name = title.group(1).strip() if title else path.stem
         rows.append((name, field(text, "Status"), field(text, "Assignee"), field(text, "One-liner")))
     if not rows:
-        return "_No features yet. Add one in `docs/features/`, then run `make readme`._\n"
+        return "_No features yet. Add one in `docs/frontend-features/`, then run `make readme`._\n"
     lines = ["| Feature | Status | Assignee | What it does |", "|---|---|---|---|"]
     lines += [f"| {cell(n)} | {cell(s)} | {cell(o)} | {cell(d)} |" for n, s, o, d in rows]
     return "\n".join(lines) + "\n"
