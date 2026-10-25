@@ -58,6 +58,7 @@ A zone is a top-level folder with its own `AGENTS.md` (`backend/`, `frontend/`, 
 | `docs/features/` | One manifest per feature; feeds README table and `/status` | As features start |
 | `docs/templates/` | Fixed formats for tasks, spike write-ups, feature manifests | Before event |
 | `backend/` | API and finance logic, scaffolded by whoever the task is assigned to | Event day |
+| `backend/localdocs/VOUCH_DEVELOPER_MASTER_V2.md` | Master developer specification v2: architecture, graph math, scenarios, and acceptance criteria | Done |
 | `frontend/` | User-facing app, scaffolded by whoever the task is assigned to | Event day |
 | `spikes/` | Sandbox for experiments; messy is fine, findings must be written | During event |
 | `data/` | Small sample and seed files | During event |
