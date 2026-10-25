@@ -1,0 +1,178 @@
+@import 'tailwindcss';
+
+/*
+  VeriTrust tokens: "ink on ledger paper".
+  One brand ink (neel, the indigo of dyed cloth) on warm khadi paper. Node-state colours carry meaning only.
+*/
+@theme {
+  --color-paper: #f4f1ea;
+  --color-paper-2: #ebe6db;
+  --color-paper-3: #e3ddcf;
+  --color-surface: #fbfaf6;
+  --color-ink: #16181f;
+  --color-ink-2: #464955;
+  --color-ink-3: #6a6d76;
+  --color-rule: #ddd7cb;
+  --color-rule-2: #c9c2b4;
+
+  --color-neel-950: #0c1233;
+  --color-neel-900: #131c46;
+  --color-neel-800: #1b2a6b;
+  --color-neel-700: #24368f;
+  --color-neel-600: #2f45aa;
+  --color-neel-500: #3d56c2;
+  --color-neel-300: #9aa8dc;
+  --color-neel-200: #c9d0ec;
+  --color-neel-100: #dde2f3;
+  --color-neel-50: #eceef7;
+
+  --color-active: #2e7a4d;
+  --color-active-tint: #e2eee5;
+  --color-restricted: #b87a1a;
+  --color-restricted-ink: #8a560a;
+  --color-restricted-tint: #f5ead3;
+  --color-defaulted: #a8352a;
+  --color-defaulted-tint: #f3deda;
+  --color-cold: #7c7f87;
+  --color-cold-tint: #e6e4df;
+
+  --font-display: 'Anek Latin Variable', 'Anek Devanagari Variable', system-ui, sans-serif;
+  --font-deva: 'Anek Devanagari Variable', 'Anek Latin Variable', system-ui, sans-serif;
+  --font-sans: 'IBM Plex Sans', system-ui, sans-serif;
+  --font-mono: 'IBM Plex Mono', ui-monospace, monospace;
+
+  --radius-input: 6px;
+  --radius-card: 12px;
+
+  --ease-ink: cubic-bezier(0.2, 0, 0, 1);
+  --ease-out-soft: cubic-bezier(0.22, 1, 0.36, 1);
+
+  --shadow-lift: 0 1px 0 rgb(22 24 31 / 0.04), 0 8px 24px -12px rgb(22 24 31 / 0.18);
+  --shadow-float: 0 1px 0 rgb(22 24 31 / 0.05), 0 18px 48px -18px rgb(19 28 70 / 0.35);
+}
+
+@layer base {
+  html {
+    -webkit-text-size-adjust: 100%;
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+  }
+  body {
+    background: var(--color-paper);
+    color: var(--color-ink);
+    font-family: var(--font-sans);
+    font-size: 15px;
+    line-height: 1.55;
+  }
+  ::selection {
+    background: var(--color-neel-200);
+    color: var(--color-neel-950);
+  }
+  :focus-visible {
+    outline: 2px solid var(--color-neel-500);
+    outline-offset: 2px;
+    border-radius: 4px;
+  }
+  button {
+    cursor: pointer;
+  }
+  button:disabled {
+    cursor: not-allowed;
+  }
+}
+
+@layer components {
+  /* Display type: Anek at a slightly condensed width reads as confident, not shouty. */
+  .display {
+    font-family: var(--font-display);
+    font-variation-settings: 'wdth' 92;
+    letter-spacing: -0.018em;
+    font-weight: 600;
+  }
+  .eyebrow {
+    font-size: 11.5px;
+    line-height: 1.2;
+    font-weight: 500;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--color-ink-3);
+  }
+  .num {
+    font-variant-numeric: tabular-nums;
+  }
+  /* Uncertainty is drawn as hatching: the cartographer's mark for unsurveyed land. */
+  .hatch {
+    background-image: repeating-linear-gradient(
+      -45deg,
+      var(--color-neel-200) 0 1.5px,
+      transparent 1.5px 6px
+    );
+    background-color: var(--color-neel-50);
+  }
+  .hatch-ink {
+    background-image: repeating-linear-gradient(
+      -45deg,
+      rgb(22 24 31 / 0.12) 0 1px,
+      transparent 1px 5px
+    );
+  }
+  /* Ruled ledger lines for tables and explanation rows. */
+  .ruled > * + * {
+    border-top: 1px solid var(--color-rule);
+  }
+  .card {
+    background: var(--color-surface);
+    border: 1px solid var(--color-rule);
+    border-radius: var(--radius-card);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+}
+
+/* Range input: ink track, neel fill, a node for a thumb. */
+.vt-range {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 18px;
+  background: transparent;
+  cursor: pointer;
+}
+.vt-range::-webkit-slider-runnable-track {
+  height: 4px;
+  border-radius: 999px;
+  background: linear-gradient(to right, var(--color-neel-700) var(--fill, 50%), var(--color-paper-3) var(--fill, 50%));
+}
+.vt-range::-moz-range-track {
+  height: 4px;
+  border-radius: 999px;
+  background: linear-gradient(to right, var(--color-neel-700) var(--fill, 50%), var(--color-paper-3) var(--fill, 50%));
+}
+.vt-range::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 16px;
+  height: 16px;
+  margin-top: -6px;
+  border-radius: 50%;
+  background: var(--color-surface);
+  border: 2px solid var(--color-neel-700);
+  box-shadow: 0 1px 3px rgb(19 28 70 / 0.25);
+  transition: transform 120ms var(--ease-ink);
+}
+.vt-range::-moz-range-thumb {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--color-surface);
+  border: 2px solid var(--color-neel-700);
+}
+.vt-range:active::-webkit-slider-thumb {
+  transform: scale(1.15);
+}

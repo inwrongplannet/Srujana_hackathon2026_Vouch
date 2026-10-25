@@ -18,7 +18,7 @@ Use these words exactly. The right-hand column is what not to write.
 | zone | A top-level folder with its own `AGENTS.md` (`backend/`, `frontend/`, `spikes/`); nobody owns it | area, module, domain |
 | task | One `TASK-NNN` block in `docs/TASKS.md` | ticket, story, issue |
 | spike | A time-boxed experiment in `spikes/<name>/` | POC, experiment folder |
-| feature manifest | One `docs/features/<name>.md` file | feature doc, feature spec |
+| feature manifest | One `docs/frontend-features/<name>.md` file | feature doc, feature spec |
 | contract | `docs/API_CONTRACT.md` | API spec, swagger doc |
 | endpoint | One method plus path in the contract | route, API call |
 | skill | A how-to at `.claude/skills/<name>/SKILL.md`, readable by any agent | playbook, recipe |
@@ -36,7 +36,7 @@ Proper names: Abhishek, Reehan, Abhijit, GitHub, README, OpenCode, Claude Code, 
 |---|---|---|
 | Repo root docs | `UPPERCASE.md` | `README.md`, `CONTRIBUTING.md` |
 | `docs/*.md` | `UPPER_SNAKE.md` | `API_CONTRACT.md` |
-| `docs/features/`, `docs/templates/` | `kebab-case.md` | `portfolio-view.md` |
+| `docs/frontend-features/`, `docs/templates/` | `kebab-case.md` | `portfolio-view.md` |
 | Skills, commands, agents | kebab-case name; skill folder equals frontmatter `name` | `.claude/skills/docs-sync/SKILL.md` |
 | Spikes | `spikes/<kebab-case>/` | `spikes/fx-rates/` |
 | Branches | `feat/`, `fix/`, `docs/`, `spike/` plus kebab-case | `feat/task-012-portfolio-chart` |

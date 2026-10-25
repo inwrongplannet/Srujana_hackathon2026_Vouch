@@ -17,8 +17,8 @@ WAIVE_DOCS = re.compile(r"^\s*Docs-Impact:\s*none\s*\(([^()<>]{5,})\)", re.I | r
 WAIVE_AGENTS = re.compile(r"^\s*Agents-Impact:\s*none\s*\(([^()<>]{5,})\)", re.I | re.M)
 
 ZONE_DOCS = {
-    "backend": ["backend/README.md", "backend/AGENTS.md", "docs/API_CONTRACT.md", "docs/ARCHITECTURE.md", "docs/features/*.md"],
-    "frontend": ["frontend/README.md", "frontend/AGENTS.md", "docs/features/*.md"],
+    "backend": ["backend/README.md", "backend/AGENTS.md", "docs/API_CONTRACT.md", "docs/ARCHITECTURE.md", "docs/frontend-features/*.md"],
+    "frontend": ["frontend/README.md", "frontend/AGENTS.md", "docs/frontend-features/*.md"],
     "scripts": ["AGENTS.md", "CONTRIBUTING.md", "docs/REPO_GUIDE.md", "docs/KICKSTART.md", "docs/STYLE.md"],
 }
 LOCKFILES = {"package-lock.json", "yarn.lock", "pnpm-lock.yaml", "poetry.lock", "uv.lock", "bun.lock", "Cargo.lock", "Pipfile.lock"}

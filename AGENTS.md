@@ -57,7 +57,7 @@ Run one test or one lint file: see the zone's `AGENTS.md` (Stack notes).
 | You changed | Update in the same PR |
 |---|---|
 | Endpoint (path, request, response, status) | `docs/API_CONTRACT.md` first, zone README Interfaces, seed data shape, then `make types` |
-| Feature behaviour or a new feature | `docs/features/<name>.md` (status, one-liner), then `make readme` |
+| Feature behaviour or a new feature | `docs/frontend-features/<name>.md` (status, one-liner), then `make readme` |
 | Env var or secret key | `.env.example` and zone README Config |
 | Dependency added or removed | `docs/DECISIONS.md` (`/decide`) and zone README Run |
 | How a zone runs, tests or is laid out | zone README (Run, Structure, Testing) |

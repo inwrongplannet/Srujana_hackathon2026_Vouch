@@ -12,7 +12,7 @@ description: Write and change endpoint shapes in docs/API_CONTRACT.md before imp
 Adding, changing or removing an endpoint, or when the frontend and backend disagree on a shape.
 
 ## Steps
-1. Read `docs/API_CONTRACT.md`, the relevant `docs/features/*.md`, and `scripts/seed.py` output in `data/`.
+1. Read `docs/API_CONTRACT.md`, the relevant `docs/frontend-features/*.md`, and `scripts/seed.py` output in `data/`.
 2. Write each endpoint with the file's template: **Method + path**, **Request** (params, body with field types), **Response** (success body and error shape), **Status** (`proposed` -> `agreed` -> `implemented`). Give a realistic example payload that matches the seed data.
 3. Rules for shapes:
    - Money fields are decimal **strings** with an explicit `currency` (ISO 4217), never JSON numbers; rates are decimal fractions; dates are `YYYY-MM-DD`, timestamps are ISO 8601 UTC.
