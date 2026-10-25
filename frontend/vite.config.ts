@@ -14,6 +14,7 @@ export default defineConfig(({ mode }) => {
     // Dev only: the browser calls /api and /health on :5173 and Vite forwards them to the FastAPI
     // backend, so the page never needs the backend's host or CORS.
     server: {
+      allowedHosts: true,
       proxy: {
         '/api': { target: api, changeOrigin: true },
         '/health': { target: api, changeOrigin: true },
