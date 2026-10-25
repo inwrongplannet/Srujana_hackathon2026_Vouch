@@ -131,6 +131,22 @@ class Settings(BaseModel):
     )
 
     # -------------------------------------------------------------------------
+    # Temporal Uncertainty & Freshness Decay Parameters
+    # -------------------------------------------------------------------------
+    vouch_half_life_months: Decimal = Field(
+        default_factory=lambda: _get_env_decimal(["VOUCH_HALF_LIFE_MONTHS", "TEMPORAL_VOUCH_HALF_LIFE"], "24.0"),
+        description="Confidence half-life H_vouch in months for peer endorsements (default: 24 months / 2 years)",
+    )
+    cashflow_half_life_months: Decimal = Field(
+        default_factory=lambda: _get_env_decimal(["CASHFLOW_HALF_LIFE_MONTHS", "TEMPORAL_CASHFLOW_HALF_LIFE"], "6.0"),
+        description="Confidence half-life H_cashflow in months for cash flow & bank statement evidence (default: 6 months)",
+    )
+    repayment_half_life_months: Decimal = Field(
+        default_factory=lambda: _get_env_decimal(["REPAYMENT_HALF_LIFE_MONTHS", "TEMPORAL_REPAYMENT_HALF_LIFE"], "36.0"),
+        description="Confidence half-life H_repay in months for settled loan track record (default: 36 months / 3 years)",
+    )
+
+    # -------------------------------------------------------------------------
     # Mathematical Framework & Calibration Parameters (Master Model 2026)
     # -------------------------------------------------------------------------
     m0: Decimal = Field(

@@ -17,7 +17,10 @@ from typing import Any, Dict, List, Optional, Tuple, Union
 
 import numpy as np
 import pandas as pd
-from interpret.glassbox import ExplainableBoostingClassifier
+try:
+    from interpret.glassbox import ExplainableBoostingClassifier
+except ImportError:
+    ExplainableBoostingClassifier = None
 import lightgbm as lgb
 from sklearn.linear_model import LogisticRegression
 from sklearn.pipeline import make_pipeline
@@ -250,6 +253,8 @@ class EBMModel:
         self.feature_names: List[str] = []
 
     def fit(self, X_tr: pd.DataFrame, y_tr: np.ndarray, categorical: Optional[List[str]] = None) -> "EBMModel":
+        if ExplainableBoostingClassifier is None:
+            raise ImportError("interpret package is required for EBMModel. Install with 'pip install interpret'")
         self.feature_names = list(X_tr.columns)
         cat_set = set(categorical or [])
         feature_types = ["nominal" if c in cat_set else "continuous" for c in self.feature_names]

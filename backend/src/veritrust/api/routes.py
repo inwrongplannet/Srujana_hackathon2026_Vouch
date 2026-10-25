@@ -23,6 +23,7 @@ from veritrust.models import (
 from veritrust.optimizer import LoanOptimizer, OptimizationResult
 from veritrust.recourse import BorrowerRecourseWorkflow, DisputeCase
 from veritrust.stress_tester import MonteCarloStressTester
+from veritrust.prediction import evaluate_credit_prediction
 
 router = APIRouter()
 
@@ -274,6 +275,101 @@ class GraphEdge(BaseModel):
 class GraphResponse(BaseModel):
     nodes: list[GraphNode]
     edges: list[GraphEdge]
+
+
+class PredictFactorItem(BaseModel):
+    code: str
+    text: str
+    feature: str
+    observed: Optional[str] = None
+    log_odds: float
+    direction: str
+
+
+class MissingEvidenceItem(BaseModel):
+    code: str
+    text: str
+    status: str
+
+
+class TemporalFreshnessReport(BaseModel):
+    evidence_age_months: float
+    vouch_confidence: float
+    cashflow_confidence: float
+    repayment_confidence: float
+    composite_confidence: float
+    is_stale: bool
+    staleness_warning: Optional[str] = None
+
+
+class MultidimensionalScoreBreakdown(BaseModel):
+    financial_capacity_score: float
+    evidence_reliability_score: float
+    graph_reputation_score: float
+    stress_resilience_score: float
+
+
+class CounterfactualRemedy(BaseModel):
+    target_decision: str = "ELIGIBLE"
+    is_already_eligible: bool
+    max_recommended_principal: str
+    recommended_tenure_months: int
+    sustainable_emi: str
+    required_additional_monthly_income: Optional[str] = None
+    actionable_recommendations: list[str]
+
+
+class PredictionDetails(BaseModel):
+    default_probability: float
+    repayment_probability: float
+    credit_score: int
+    risk_tier: str
+    decision: str
+    conformal_set: list[str]
+    confidence_level: float = 0.90
+    epistemic_uncertainty: float
+
+
+class ExplanationDetails(BaseModel):
+    summary: str
+    positive_factors: list[PredictFactorItem]
+    risk_factors: list[PredictFactorItem]
+    missing_information: list[MissingEvidenceItem]
+
+
+class PredictRequest(BaseModel):
+    borrower_id: Optional[str] = None
+    monthly_income: Optional[str] = None
+    monthly_debt: Optional[str] = None
+    net_operating_income: Optional[str] = None
+    requested_amount: Optional[str] = "100000.00"
+    requested_tenure_months: Optional[int] = 12
+    annual_interest_rate: Optional[float] = 0.18
+    bureau_score: Optional[int] = None
+    bureau_status: Optional[str] = "NO_FILE"
+    bureau_max_dpd_24m: Optional[int] = 0
+    bureau_months_30plus_24m: Optional[int] = 0
+    bureau_written_off: Optional[int] = 0
+    bureau_utilisation: Optional[float] = 0.0
+    vouch_count: Optional[int] = 0
+    vouch_score: Optional[str] = None
+    bank_bounces_3m: Optional[int] = 0
+    bank_income_cv: Optional[float] = 0.10
+    bank_surplus_median: Optional[str] = None
+    bank_statement_status: Optional[str] = "VERIFIED"
+    gst_status: Optional[str] = "NOT_APPLICABLE"
+    declared_income_status: Optional[str] = "VERIFIED"
+    occupation_tenure_months: Optional[int] = 24
+    evidence_age_months: Optional[float] = 0.0
+
+
+class PredictResponse(BaseModel):
+    borrower_id: Optional[str] = None
+    prediction: PredictionDetails
+    explanation: ExplanationDetails
+    temporal_freshness: TemporalFreshnessReport
+    multidimensional_scores: MultidimensionalScoreBreakdown
+    counterfactual_remedy: CounterfactualRemedy
 
 
 def _application_basis(borrower_id: str):
@@ -720,3 +816,34 @@ def get_platform_treasury():
         "transaction_count": treasury.transaction_count,
         "currency": treasury.currency,
     }
+
+
+@router.post("/api/v1/predict", response_model=PredictResponse, tags=["Prediction"])
+def predict_credit_risk(req: PredictRequest):
+    """Predict credit default probability, conformal decision set, and multi-dimensional explanation."""
+    engine, scorer, _, _ = get_services()
+    try:
+        raw_result = evaluate_credit_prediction(req.model_dump(), engine=engine, scorer=scorer)
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc))
+    return raw_result
+
+
+@router.get("/api/v1/predict/sample", response_model=PredictRequest, tags=["Prediction"])
+def get_predict_sample():
+    """Retrieve sample payload demonstrating loan prediction and explanation inputs."""
+    return PredictRequest(
+        borrower_id="LAKSHMI",
+        monthly_income="38000.00",
+        monthly_debt="2500.00",
+        net_operating_income="20000.00",
+        requested_amount="150000.00",
+        requested_tenure_months=24,
+        annual_interest_rate=0.18,
+        bureau_status="NO_FILE",
+        vouch_count=2,
+        vouch_score="63.5",
+        bank_statement_status="VERIFIED",
+        evidence_age_months=0.0,
+    )
+

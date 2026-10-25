@@ -219,7 +219,9 @@ python main.py --demo                         # Run automated walkthrough simula
   - `recourse.py`: Borrower recourse protocol, evidence-quality tracking (`MISSING`, `STALE`, `DUPLICATED`, `DISPUTED`), and recalculation audit.
   - `community.py`: Community vouching engine (KNOWN and EVIDENCE vouches, capped evidence weight, reward preview) and its in-memory seeded store.
   - `simulator.py`: Simulation and parameter calibration engine across canonical Web-of-Trust benchmark topologies.
-  - `api/`: FastAPI REST API package. `routes.py`: applications, evidence, endorsements, assessments, scenarios, disputes, users, loans, graph (uses the OR-Tools optimizer). `protocol_routes.py`: vouch requests, lender decisions, defaults. `community_routes.py`: the community platform. `registry.py`: in-memory applications and assessments shared by the routers.
+  - `temporal.py`: Temporal uncertainty and evidence freshness decay engine ($C(t) = 2^{-\Delta t / H}$, multi-horizon asymmetric half-lives, epistemic uncertainty inflation, LCB loan limits).
+  - `prediction.py`: Predictive credit risk inference, Basel scorecard rating, honest conformal prediction sets (ELIGIBLE, REVIEW, DECLINE_CANDIDATE), additive local reason codes, missing evidence disclosures, and actionable counterfactual remedies.
+  - `api/`: FastAPI REST API package. `routes.py`: applications, evidence, endorsements, assessments, scenarios, disputes, users, loans, platform treasury, predictions. `protocol_routes.py`: vouch requests, lender decisions, defaults. `community_routes.py`: the community platform. `registry.py`: in-memory applications and assessments shared by the routers.
 - `tests/`: Pytest unit tests for all mathematical invariants, state transitions, and ledger integrity.
 - `main.py`: End-to-end interactive CLI demonstration.
 - `requirements.txt`: Python package requirements (`pydantic`, `networkx`, `ortools`, `fastapi`, `uvicorn`, `httpx`, `pytest`).
@@ -236,6 +238,8 @@ python main.py --demo                         # Run automated walkthrough simula
 - **`TrustGraphAttackSimulator`**: Evaluates Sybil cliques, collusion rings, sponsor dilution, and temporal burst anomalies.
 - **`DecisionAuditExplorer`**: Forensic inspection of rule thresholds, graph paths, evidence, and input sensitivity.
 - **`BorrowerRecourseWorkflow`**: Dispute filing, evidence corrections, recalculation tracking, and quality auditing.
+- **`PredictiveInferenceEngine`**: Predictive credit risk and explainability service (`POST /api/v1/predict`) combining calibrated default probability, conformal prediction sets (`ELIGIBLE`, `REVIEW`, `DECLINE_CANDIDATE`), additive feature reasons, missing evidence disclosures, and actionable counterfactual remedies.
+- **`TemporalUncertaintyEngine`**: Multi-horizon evidence decay ($C(t) = 2^{-\Delta t / H}$), epistemic uncertainty inflation, and staleness detection.
 - **`FastAPI REST API`**: Interactive OpenAPI docs available at `http://localhost:8000/docs`; shapes in `docs/API_CONTRACT.md`. Every endpoint declares a response model, so `make types` generates `frontend/src/types/api.d.ts`.
 - **`CommunityStore`**: Community asks, vouches, setbacks and consent, exposed under `/api/v1/community`.
 - **CLI**: Executed via `python main.py`.
