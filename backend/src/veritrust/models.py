@@ -118,13 +118,19 @@ class Vouch(BaseModel):
     weight: Decimal = Field(
         default=Decimal("0.0"), description="Allocated vouch weight W_uv satisfying out-degree conservation"
     )
+    rank: int = Field(
+        default=1, description="Chronological rank r_uv among endorsements received by target (1-based, immutable)"
+    )
+    alpha: Decimal = Field(
+        default=Decimal("1.0"), description="Chronological rank weight alpha_uv = 1 / 2^(r_uv - 1)"
+    )
     active: bool = Field(default=True, description="Whether this endorsement is currently active")
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
-    @field_validator("weight", mode="before")
+    @field_validator("weight", "alpha", mode="before")
     @classmethod
-    def parse_weight(cls, value: object) -> Decimal:
-        """Ensure weight is strictly Decimal."""
+    def parse_weight_decimals(cls, value: object) -> Decimal:
+        """Ensure numeric fields are strictly Decimal."""
         if isinstance(value, Decimal):
             return value
         return Decimal(str(value))
@@ -371,6 +377,51 @@ class CombinedAssessment(BaseModel):
     review_flags: list[str] = Field(default_factory=list, description="Flags requiring human underwriter review")
     algorithm_version: str = Field(default="vouch-v2.0", description="Version of credit assessment rules")
     timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+
+class PropagatedCredibilityReport(BaseModel):
+    """Consolidated credibility propagated across the endorsement graph."""
+
+    user_id: str
+    g_raw: Decimal = Field(description="Uncapped propagated credibility G(u) = sum(p_u(s))")
+    g_score: Decimal = Field(description="Scoring-capped propagated credibility G_score(u) = min(G(u), G_max)")
+    source_contributions: dict[str, Decimal] = Field(
+        default_factory=dict, description="Consolidated min-path contribution p_u(s) per distinct source s"
+    )
+    paths: list[ContributingPath] = Field(
+        default_factory=list, description="All evaluated simple paths with individual T(P) values"
+    )
+
+
+class EndorserPenaltyDetail(BaseModel):
+    """Detailed record of an endorser penalty resulting from a borrower default."""
+
+    source_id: str
+    contribution: Decimal = Field(description="Pre-default contribution p_D(u)")
+    contribution_share: Decimal = Field(description="Contribution share a_u = p_D(u) / sum(p_D)")
+    penalty_fraction: Decimal = Field(description="Endorser penalty fraction q_u = eta * q_D * a_u")
+    delta_reputation: Decimal = Field(description="Owned reputation deducted Delta_u = R_u * q_u")
+    pre_reputation: Decimal = Field(description="Pre-penalty owned reputation R_u")
+    post_reputation: Decimal = Field(description="Post-penalty owned reputation R_u'")
+
+
+class DefaultPenaltyReport(BaseModel):
+    """Complete forensic record of an atomic snapshot-based default event."""
+
+    loan_id: str
+    defaulter_id: str
+    outstanding_exposure: Decimal = Field(description="Exposure E_D = P_D + I_D")
+    default_severity: Decimal = Field(description="Severity S_D = E_D * R_D / (R_D + G_D)")
+    unpaid_fraction: Decimal = Field(description="Unpaid obligation fraction x_D = min(1, E_D / L_D)")
+    normalized_overdue: Decimal = Field(description="Normalized overdue time tau_D = t_overdue / T_0")
+    borrower_penalty_fraction: Decimal = Field(description="Borrower loss fraction q_D")
+    borrower_delta: Decimal = Field(description="Borrower owned reputation deduction Delta_D")
+    borrower_pre_reputation: Decimal
+    borrower_post_reputation: Decimal
+    borrower_pre_propagated_g: Decimal
+    endorser_penalties: dict[str, EndorserPenaltyDetail] = Field(default_factory=dict)
+    applied_atomically: bool = True
+
 
 
 

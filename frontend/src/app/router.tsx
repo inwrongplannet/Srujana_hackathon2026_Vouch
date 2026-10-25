@@ -5,6 +5,7 @@ import { BorrowerPage } from '@/routes/BorrowerPage';
 import { VoucherPage } from '@/routes/VoucherPage';
 import { LenderPage } from '@/routes/LenderPage';
 import { ApplicantPage } from '@/routes/ApplicantPage';
+import { AssessPage } from '@/routes/AssessPage';
 import { LandingPage } from '@/routes/LandingPage';
 import { CommunityShell } from '@/layout/CommunityShell';
 import { CommunityPage } from '@/routes/CommunityPage';
@@ -23,6 +24,7 @@ export const router = createBrowserRouter([
       { path: 'voucher', element: <VoucherPage /> },
       { path: 'lender', element: <LenderPage /> },
       { path: 'lender/:nodeId', element: <ApplicantPage /> },
+      { path: 'assess', element: <AssessPage /> },
     ],
   },
   {

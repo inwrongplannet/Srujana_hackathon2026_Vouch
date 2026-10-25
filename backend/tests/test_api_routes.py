@@ -4,6 +4,7 @@ from decimal import Decimal
 import pytest
 from fastapi.testclient import TestClient
 
+from veritrust.affordability import calculate_emi
 from veritrust.api.app import app
 from veritrust.api.deps import reset_services
 
@@ -35,8 +36,8 @@ def test_list_and_create_users(client):
     assert res.status_code == 200
     users = res.json()
     user_ids = [u["user_id"] for u in users]
-    assert "ANCHOR_BANK" in user_ids
-    assert "BOB" in user_ids
+    assert "SAHYOG" in user_ids
+    assert "LAKSHMI" in user_ids
 
     # Create new user
     create_payload = {
@@ -53,28 +54,28 @@ def test_list_and_create_users(client):
 
 def test_vouch_summary(client):
     """Verify /api/v1/users/{id}/vouch-summary returns Vouch score report."""
-    res = client.get("/api/v1/users/BOB/vouch-summary")
+    res = client.get("/api/v1/users/LAKSHMI/vouch-summary")
     assert res.status_code == 200
     data = res.json()
-    assert data["user_id"] == "BOB"
-    assert "vouch_score" in data
+    assert data["user_id"] == "LAKSHMI"
+    assert isinstance(data["vouch_score"], str)  # a decimal string, as in every assessment
     assert data["confidence_rating"] in ("LOW", "MEDIUM", "HIGH")
     assert data["eligible_endorsement_count"] >= 1
 
 
 def test_endorsement_creation(client):
     """Verify issuing a peer endorsement via POST /api/v1/endorsements."""
-    # Alice endorses Charlie
+    # Meena endorses Imran
     endorse_payload = {
-        "endorser_id": "ALICE",
-        "recipient_id": "CHARLIE",
-        "statement": "Validating Charlie's artisan craft workshop",
+        "endorser_id": "MEENA",
+        "recipient_id": "IMRAN",
+        "statement": "Imran has run the stall beside my shop for two years",
     }
     res = client.post("/api/v1/endorsements", json=endorse_payload)
     assert res.status_code == 201
     data = res.json()
-    assert data["endorser_id"] == "ALICE"
-    assert data["recipient_id"] == "CHARLIE"
+    assert data["endorser_id"] == "MEENA"
+    assert data["recipient_id"] == "IMRAN"
     assert data["status"] == "ACTIVE"
 
 
@@ -82,7 +83,7 @@ def test_loan_application_and_assessment_lifecycle(client):
     """Verify full application -> evidence -> assessment flow."""
     # 1. Create loan application
     app_payload = {
-        "borrower_id": "BOB",
+        "borrower_id": "LAKSHMI",
         "principal": "50000.00",
         "annual_rate": 0.12,
         "term_months": 12,
@@ -111,7 +112,10 @@ def test_loan_application_and_assessment_lifecycle(client):
     res_asm = client.post(f"/api/v1/applications/{app_id}/assessments", json=asm_payload)
     assert res_asm.status_code == 200
     asm_data = res_asm.json()
-    assert asm_data["borrower_id"] == "BOB"
+    assert asm_data["borrower_id"] == "LAKSHMI"
+    assert asm_data["affordability"]["status"] in ("SUFFICIENT", "BORDERLINE", "INSUFFICIENT")
+    assert isinstance(asm_data["vouch_score"], str)
+    assert asm_data["reason_codes"]
     assert asm_data["bureau_status"] == "NO_FILE"
     assert asm_data["verdict"] in ("APPROVED", "RESTRUCTURED_ALTERNATIVE")
     assert "stress_resilience" in asm_data
@@ -133,6 +137,13 @@ def test_loan_application_and_assessment_lifecycle(client):
     assert scen_data["base_assessment_id"] == asm_id
     assert "monthly_emi" in scen_data
 
+    # 6. An unchanged what-if reproduces the assessment: same rate, data and limit.
+    res_same = client.post(f"/api/v1/assessments/{asm_id}/scenarios", json={})
+    assert res_same.status_code == 200
+    same = res_same.json()
+    assert same["monthly_emi"] == str(calculate_emi(Decimal("50000.00"), Decimal("0.12"), 12))
+    assert same["is_feasible"] == (asm_data["verdict"] == "APPROVED")
+
 
 def test_recourse_dispute_endpoint(client):
     """Verify filing dispute via /api/v1/endorsements/{id}/dispute."""
@@ -140,10 +151,10 @@ def test_recourse_dispute_endpoint(client):
         "record_id": "TX_999",
         "record_type": "TRANSACTION",
         "reason": "Contested erroneous charge",
-        "borrower_id": "BOB",
+        "borrower_id": "LAKSHMI",
     }
     res = client.post("/api/v1/endorsements/VOUCH_001/dispute", json=dispute_payload)
-    assert res.status_code == 200
+    assert res.status_code == 201
     data = res.json()
     assert data["target_record_id"] == "TX_999"
     assert data["status"] == "OPEN"

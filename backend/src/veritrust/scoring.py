@@ -22,21 +22,38 @@ from veritrust.models import (
     CreditAssessment,
     FinancialFeatures,
     LoanApplication,
+    PropagatedCredibilityReport,
     User,
     VouchScoreReport,
 )
 
 
-def _decimal_exp(x: Decimal, terms: int = 15) -> Decimal:
+def _decimal_exp(x: Decimal, terms: int = 40) -> Decimal:
     """Compute exp(x) strictly using Decimal arithmetic (Taylor series).
 
-    Prevents IEEE-754 float drift in exponential reputation multipliers.
+    For x < 0, computes 1 / exp(-x) to prevent catastrophic alternating series
+    cancellation. Prevents IEEE-754 float drift in exponential multipliers.
     """
+    if x == Decimal("0.0"):
+        return Decimal("1.0")
+
+    if x < Decimal("0.0"):
+        pos_x = -x
+        if pos_x > Decimal("50.0"):
+            return Decimal("0.0")
+        exp_pos = _decimal_exp(pos_x, terms=terms)
+        if exp_pos == Decimal("0.0"):
+            return Decimal("0.0")
+        return Decimal("1.0") / exp_pos
+
+    # For x > 0, compute Taylor series with dynamic convergence tolerance
     result = Decimal("1.0")
     term = Decimal("1.0")
     for i in range(1, terms):
         term = term * x / Decimal(i)
         result += term
+        if term < Decimal("1e-12"):
+            break
     return result
 
 
@@ -149,6 +166,126 @@ class CreditScorer:
                     )
 
         return total_trust, contributing_paths
+
+    def compute_propagated_credibility(
+        self,
+        target_id: str,
+        delta: Optional[Decimal] = None,
+        g_max: Optional[Decimal] = None,
+        sources_only: Optional[list[str]] = None,
+    ) -> PropagatedCredibilityReport:
+        """Consolidate propagated credibility across the endorsement graph.
+
+        Implements Sections 6, 7, 8, 9 of Master Mathematical Framework (2026):
+            T(P) = R_s * (prod 1/d_v_i) * (prod alpha_v_i_v_i+1) * delta^(h-1)
+            p_u(s) = min_{P in P(s, u)} T(P)   (Min-path consolidation per source)
+            G(u) = sum_{s != u} p_u(s)          (Distinct original source aggregation)
+            G_score(u) = min(G(u), G_max)       (Scoring cap)
+        """
+        import networkx as nx
+        settings = get_settings()
+        decay_delta = delta if delta is not None else settings.hop_decay_delta
+        cap_max = g_max if g_max is not None else settings.g_max
+
+        all_paths_evaluated: list[ContributingPath] = []
+        source_paths_map: dict[str, list[Decimal]] = {}
+
+        # Candidate sources: all nodes s != target_id with owned reputation R_s > 0
+        if sources_only is not None:
+            candidate_sources = [s for s in sources_only if s != target_id]
+        else:
+            candidate_sources = [
+                u.user_id
+                for u in self.engine.list_users()
+                if u.user_id != target_id and u.reputation > Decimal("0.0")
+            ]
+
+        for s in candidate_sources:
+            if not self.engine.graph.has_node(s) or not self.engine.graph.has_node(target_id):
+                continue
+
+            source_user = self.engine.get_user(s)
+            r_s = source_user.reputation if source_user else Decimal("0.0")
+            if r_s <= Decimal("0.0"):
+                continue
+
+            # Enumerate simple paths from s to target_id (per-path cycle elimination)
+            try:
+                paths_gen = nx.all_simple_paths(self.engine.graph, source=s, target=target_id)
+            except (nx.NetworkXNoPath, nx.NodeNotFound):
+                continue
+
+            for path in paths_gen:
+                h = len(path) - 1
+                if h < 1:
+                    continue
+
+                # Term 1: R_s
+                # Term 2: prod_{i=0}^{h-1} (1 / d_{v_i})
+                # Term 3: prod_{i=0}^{h-1} alpha_{v_i v_{i+1}}
+                out_deg_product = Decimal("1.0")
+                rank_alpha_product = Decimal("1.0")
+                hop_weights: list[Decimal] = []
+
+                valid_path = True
+                for i in range(h):
+                    curr_node = path[i]
+                    next_node = path[i + 1]
+
+                    out_degree = len(list(self.engine.graph.out_edges(curr_node)))
+                    if out_degree == 0:
+                        valid_path = False
+                        break
+
+                    out_deg_product *= (Decimal("1.0") / Decimal(out_degree))
+
+                    edge_data = self.engine.graph[curr_node][next_node]
+                    edge_alpha = edge_data.get("alpha", Decimal("1.0"))
+                    edge_weight = edge_data.get("weight", Decimal("0.0"))
+                    rank_alpha_product *= edge_alpha
+                    hop_weights.append(edge_weight)
+
+                if not valid_path:
+                    continue
+
+                # Term 4: delta^(h - 1)
+                hop_attenuation = Decimal("1.0")
+                if h > 1 and decay_delta > Decimal("0.0"):
+                    hop_attenuation = decay_delta ** (h - 1)
+
+                t_p = (r_s * out_deg_product * rank_alpha_product * hop_attenuation).quantize(Decimal("0.0001"))
+
+                if s not in source_paths_map:
+                    source_paths_map[s] = []
+                source_paths_map[s].append(t_p)
+
+                all_paths_evaluated.append(
+                    ContributingPath(
+                        path=path,
+                        hop_weights=hop_weights,
+                        path_trust=t_p,
+                    )
+                )
+
+        # Section 8: Same-source consolidation -> min_{P in P(s, u)} T(P)
+        p_u_s: dict[str, Decimal] = {}
+        for s, path_trusts in source_paths_map.items():
+            if path_trusts:
+                p_u_s[s] = min(path_trusts)
+
+        # Section 9: Aggregate distinct sources -> G(u) = sum_{s != u} p_u(s)
+        g_raw = sum(p_u_s.values(), Decimal("0.0")).quantize(Decimal("0.0001"))
+
+        # Scoring cap: G_score(u) = min(G(u), G_max)
+        g_score = min(g_raw, cap_max).quantize(Decimal("0.0001"))
+
+        return PropagatedCredibilityReport(
+            user_id=target_id,
+            g_raw=g_raw,
+            g_score=g_score,
+            source_contributions=p_u_s,
+            paths=all_paths_evaluated,
+        )
 
     def compute_s_cashflow(self, financials: FinancialFeatures | None) -> Decimal:
         """Compute cash-flow strength score in [0.0, 1.0]."""
@@ -282,10 +419,11 @@ class CreditScorer:
         return min(Decimal("1.0"), max(Decimal("0.0"), raw))
 
     def compute_vouch_score(
-        self, target_id: str, tau: Decimal = Decimal("5.0")
+        self, target_id: str, tau: Decimal = Decimal("3.0")
     ) -> VouchScoreReport:
         """Calculate bounded Vouch Score in [0, 100] (Section 6.2 of Master Doc v2).
 
+        tau = 3, the Vouch scoring proposal's value, shared with the frontend (docs/DECISIONS.md).
         W = sum(w_xy) for all incoming eligible endorsements.
         support = 1 - exp(-W / tau)
         quality = clamp(C, 0, 1)
@@ -301,7 +439,9 @@ class CreditScorer:
         total_defaults = 0
 
         for source_id, _ in in_edges:
-            edge_weight = self.engine.graph[source_id][target_id].get("weight", Decimal("0.0"))
+            edge_data = self.engine.graph[source_id][target_id]
+            edge_weight = edge_data.get("weight", Decimal("0.0"))
+            edge_alpha = edge_data.get("alpha", Decimal("1.0"))
             source_user = self.engine.get_user(source_id)
             if not source_user:
                 continue
@@ -313,7 +453,7 @@ class CreditScorer:
             p_xy = Decimal("0.0")
 
             w_xy = self.compute_endorsement_weight(r_x, q_x, e_xy, d_xy, p_xy)
-            total_w += edge_weight * w_xy
+            total_w += edge_weight * edge_alpha * w_xy
 
             total_settled += source_user.n_settled_loans
             if source_user.status == "DEFAULTED":
@@ -380,7 +520,12 @@ class CreditScorer:
     ) -> CombinedAssessment:
         """Produce the unblended side-by-side assessment (Section 8 of Master Doc v2)."""
         import uuid
-        from veritrust.affordability import AffordabilityEngine, AffordabilityInput, calculate_emi
+        from veritrust.affordability import (
+            AffordabilityEngine,
+            affordability_input,
+            affordability_status,
+            calculate_emi,
+        )
 
         user = self.engine.get_user(borrower_id)
         if not user:
@@ -398,18 +543,10 @@ class CreditScorer:
 
         # 3. Affordability Signal
         fin = user.financial_features
-        monthly_income = fin.monthly_income if fin else Decimal("0.0")
-        monthly_debt = fin.monthly_debt if fin else Decimal("0.0")
-        essential_expenses = fin.net_operating_income if fin and fin.net_operating_income > 0 else Decimal("10000.00")
-
-        affordability_engine = AffordabilityEngine()
-        aff_profile = affordability_engine.evaluate(
-            AffordabilityInput(
-                monthly_income=monthly_income,
-                essential_expenses=essential_expenses,
-                existing_debt_service=monthly_debt,
-            )
-        )
+        aff_input = affordability_input(fin)
+        monthly_income = aff_input.monthly_income
+        monthly_debt = aff_input.existing_debt_service
+        aff_profile = AffordabilityEngine().evaluate(aff_input)
 
         # 4. Reason Codes & Factor Synthesis (Section 9 of Master Doc v2)
         positive_factors: list[dict] = []
@@ -462,6 +599,10 @@ class CreditScorer:
         if fin and fin.completeness < Decimal("0.80"):
             missing_information.append("Living costs and cash-flow statements not fully documented")
             review_flags.append("DATA_COMPLETENESS_REVIEW")
+        if fin is None:
+            missing_information.append("No income or expense data shared yet: affordability is unknown, not poor")
+        elif fin.net_operating_income <= Decimal("0.0"):
+            missing_information.append("Operating costs not shared: a conservative INR 10,000 a month is assumed")
 
         if loan_app and aff_profile.max_affordable_emi > Decimal("0.0"):
             app_emi = calculate_emi(
@@ -477,11 +618,7 @@ class CreditScorer:
                 })
                 review_flags.append("RESTRUCTURING_RECOMMENDED")
 
-        aff_status = "SUFFICIENT"
-        if aff_profile.disposable_income <= Decimal("0.0"):
-            aff_status = "INSUFFICIENT"
-        elif aff_profile.disposable_income < Decimal("3000.00"):
-            aff_status = "BORDERLINE"
+        aff_status = affordability_status(aff_profile.disposable_income)
 
         data_quality = "HIGH_CONFIDENCE_VERIFIED"
         if fin is None or fin.completeness < Decimal("0.50"):
@@ -498,6 +635,7 @@ class CreditScorer:
             affordability={
                 "status": aff_status,
                 "gross_monthly_income": str(aff_profile.monthly_income),
+                "non_discretionary_outflows": str(aff_profile.total_non_discretionary),
                 "disposable_income": str(aff_profile.disposable_income),
                 "protected_cash_buffer": str(aff_profile.protected_buffer),
                 "max_affordable_emi": str(aff_profile.max_affordable_emi),

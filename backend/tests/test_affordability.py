@@ -12,11 +12,15 @@ from decimal import Decimal
 import pytest
 
 from veritrust.affordability import (
+    UNDOCUMENTED_EXPENSES,
     AffordabilityEngine,
     AffordabilityInput,
     AffordabilityResult,
+    affordability_input,
+    affordability_status,
     calculate_emi,
 )
+from veritrust.models import FinancialFeatures
 
 
 def test_calculate_emi_known_values():
@@ -169,3 +173,38 @@ def test_validate_plan():
     assert bad_valid is False
     assert len(bad_violations) > 0
     assert "exceeds maximum affordable instalment" in bad_violations[0]
+
+
+def test_affordability_basis_reads_noi_as_income_after_expenses():
+    """Expenses = income - NOI, shared by the assessment and its what-if (known answer)."""
+    fin = FinancialFeatures(
+        monthly_income=Decimal("35000.00"),
+        monthly_debt=Decimal("6000.00"),
+        net_operating_income=Decimal("22000.00"),
+        completeness=Decimal("0.90"),
+    )
+    inp = affordability_input(fin)
+    assert inp.essential_expenses == Decimal("13000.00")
+    assert inp.existing_debt_service == Decimal("6000.00")
+    assert inp.is_verified is False
+    # Buffer max(3,000, 15% x 35,000) = 5,250, x 1.15 for unverified data = 6,037.50.
+    # D = 35,000 - (13,000 + 6,000) - 6,037.50 = 9,962.50.
+    res = AffordabilityEngine().evaluate(inp)
+    assert res.effective_buffer == Decimal("6037.50")
+    assert res.disposable_income == Decimal("9962.50")
+
+
+def test_affordability_basis_never_imputes_missing_data():
+    """No financial data is zero income at zero completeness; undocumented costs use the flagged stand-in."""
+    blank = affordability_input(None)
+    assert blank.monthly_income == Decimal("0.00")
+    assert blank.data_completeness == Decimal("0.0")
+    no_costs = affordability_input(FinancialFeatures(monthly_income=Decimal("20000.00")))
+    assert no_costs.essential_expenses == UNDOCUMENTED_EXPENSES
+
+
+def test_affordability_status_bands():
+    """SUFFICIENT from INR 3,000 a month to spare, BORDERLINE below, INSUFFICIENT at zero or less."""
+    assert affordability_status(Decimal("3000.00")) == "SUFFICIENT"
+    assert affordability_status(Decimal("2999.99")) == "BORDERLINE"
+    assert affordability_status(Decimal("0.00")) == "INSUFFICIENT"

@@ -3,6 +3,8 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from veritrust.api.community_routes import router as community_router
+from veritrust.api.protocol_routes import router as protocol_router
 from veritrust.api.routes import router
 
 
@@ -31,6 +33,8 @@ def create_app() -> FastAPI:
     )
 
     app.include_router(router)
+    app.include_router(protocol_router)
+    app.include_router(community_router)
     return app
 
 

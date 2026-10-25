@@ -1,76 +1,157 @@
 {
-  "version": "1.0",
-  "updated_at": "2026-10-24T18:04:50.858693+00:00",
+  "version": "2.0",
+  "updated_at": "2026-10-25T06:33:18.954226+00:00",
   "users": [
     {
-      "user_id": "ANCHOR_BANK",
-      "name": "Microfinance Institutional Anchor",
+      "user_id": "SAHYOG",
+      "name": "Sahyog Microfinance",
       "reputation": "20.0",
       "capacity": "20.0",
       "status": "ACTIVE",
       "is_anchor": true,
       "financial_features": null,
       "n_settled_loans": 0,
-      "created_at": "2026-10-24T18:04:50.803496Z"
+      "created_at": "2026-10-25T06:33:18.953550Z"
     },
     {
-      "user_id": "ALICE",
-      "name": "Alice (Community Leader)",
+      "user_id": "MEENA",
+      "name": "Meena Patil (Kirana store, Old Hubballi)",
       "reputation": "10.0",
       "capacity": "10.0",
       "status": "ACTIVE",
       "is_anchor": false,
       "financial_features": null,
       "n_settled_loans": 0,
-      "created_at": "2026-10-24T18:04:50.814322Z"
+      "created_at": "2026-10-25T06:33:18.953611Z"
     },
     {
-      "user_id": "BOB",
-      "name": "Bob (Micro-Business Owner)",
+      "user_id": "RAMESH",
+      "name": "Ramesh Hegde (Cloth wholesaler)",
+      "reputation": "8.0",
+      "capacity": "8.0",
+      "status": "ACTIVE",
+      "is_anchor": false,
+      "financial_features": null,
+      "n_settled_loans": 0,
+      "created_at": "2026-10-25T06:33:18.953633Z"
+    },
+    {
+      "user_id": "ANAND",
+      "name": "Anand Kulkarni (Retired bank officer)",
+      "reputation": "6.0",
+      "capacity": "6.0",
+      "status": "ACTIVE",
+      "is_anchor": false,
+      "financial_features": null,
+      "n_settled_loans": 0,
+      "created_at": "2026-10-25T06:33:18.953646Z"
+    },
+    {
+      "user_id": "LAKSHMI",
+      "name": "Lakshmi Naik (Tailoring unit, Hubballi)",
       "reputation": "0.0",
       "capacity": "0.0",
       "status": "ACTIVE",
       "is_anchor": false,
       "financial_features": {
-        "monthly_income": "35000.00",
-        "monthly_debt": "6000.00",
-        "net_operating_income": "22000.00",
-        "debt_service": "5000.00",
-        "income_volatility": "0.10",
-        "cashflow_volatility": "0.12",
+        "monthly_income": "38000.00",
+        "monthly_debt": "2000.00",
+        "net_operating_income": "17500.00",
+        "debt_service": "2000.00",
+        "income_volatility": "0.0992",
+        "cashflow_volatility": "0.15",
         "completeness": "0.90"
       },
       "n_settled_loans": 0,
-      "created_at": "2026-10-24T18:04:50.824839Z"
+      "created_at": "2026-10-25T06:33:18.953719Z"
     },
     {
-      "user_id": "CHARLIE",
-      "name": "Charlie (New Farmer)",
+      "user_id": "SURESH",
+      "name": "Suresh Kulkarni (Auto-rickshaw driver)",
       "reputation": "0.0",
       "capacity": "0.0",
       "status": "ACTIVE",
       "is_anchor": false,
-      "financial_features": null,
+      "financial_features": {
+        "monthly_income": "32000.00",
+        "monthly_debt": "9500.00",
+        "net_operating_income": "16000.00",
+        "debt_service": "9500.00",
+        "income_volatility": "0.15",
+        "cashflow_volatility": "0.15",
+        "completeness": "0.90"
+      },
       "n_settled_loans": 0,
-      "created_at": "2026-10-24T18:04:50.836188Z"
+      "created_at": "2026-10-25T06:33:18.953748Z"
+    },
+    {
+      "user_id": "IMRAN",
+      "name": "Imran Mulla (Mobile repair stall)",
+      "reputation": "0.0",
+      "capacity": "0.0",
+      "status": "ACTIVE",
+      "is_anchor": false,
+      "financial_features": {
+        "monthly_income": "22000.00",
+        "monthly_debt": "0.0",
+        "net_operating_income": "0.0",
+        "debt_service": "0.0",
+        "income_volatility": "0.15",
+        "cashflow_volatility": "0.15",
+        "completeness": "0.75"
+      },
+      "n_settled_loans": 0,
+      "created_at": "2026-10-25T06:33:18.953773Z"
     }
   ],
   "vouches": [
     {
-      "vouch_id": "V_ANCHOR_BANK_ALICE",
-      "source": "ANCHOR_BANK",
-      "target": "ALICE",
-      "weight": "20.0",
+      "vouch_id": "V_SAHYOG_MEENA",
+      "source": "SAHYOG",
+      "target": "MEENA",
+      "weight": "6.666666666666666666666666667",
       "active": true,
-      "created_at": "2026-10-24T18:04:50.847648Z"
+      "created_at": "2026-10-25T06:33:18.953837Z"
     },
     {
-      "vouch_id": "V_ALICE_BOB",
-      "source": "ALICE",
-      "target": "BOB",
+      "vouch_id": "V_SAHYOG_RAMESH",
+      "source": "SAHYOG",
+      "target": "RAMESH",
+      "weight": "6.666666666666666666666666667",
+      "active": true,
+      "created_at": "2026-10-25T06:33:18.953915Z"
+    },
+    {
+      "vouch_id": "V_SAHYOG_ANAND",
+      "source": "SAHYOG",
+      "target": "ANAND",
+      "weight": "6.666666666666666666666666667",
+      "active": true,
+      "created_at": "2026-10-25T06:33:18.953958Z"
+    },
+    {
+      "vouch_id": "V_RAMESH_LAKSHMI",
+      "source": "RAMESH",
+      "target": "LAKSHMI",
+      "weight": "8.0",
+      "active": true,
+      "created_at": "2026-10-25T06:33:18.953996Z"
+    },
+    {
+      "vouch_id": "V_ANAND_LAKSHMI",
+      "source": "ANAND",
+      "target": "LAKSHMI",
+      "weight": "6.0",
+      "active": true,
+      "created_at": "2026-10-25T06:33:18.954026Z"
+    },
+    {
+      "vouch_id": "V_MEENA_SURESH",
+      "source": "MEENA",
+      "target": "SURESH",
       "weight": "10.0",
       "active": true,
-      "created_at": "2026-10-24T18:04:50.858558Z"
+      "created_at": "2026-10-25T06:33:18.954056Z"
     }
   ],
   "loans": [],

@@ -121,6 +121,58 @@ class Settings(BaseModel):
         default_factory=lambda: _get_env_bool(["DEMO_MODE"], True),
         description="When True, external data rails are short-circuited to deterministic seed data",
     )
+    platform_fee_rate: Decimal = Field(
+        default_factory=lambda: _get_env_decimal(["PLATFORM_FEE_RATE", "TRANSACTION_FEE_RATE"], "0.01"),
+        description="Platform transaction fee rate cut as a decimal fraction (e.g. 0.01 = 1.0% / 100 bps)",
+    )
+    platform_treasury_id: str = Field(
+        default_factory=lambda: os.getenv("PLATFORM_TREASURY_ID", "PLATFORM_TREASURY"),
+        description="Designated identifier for the platform treasury account",
+    )
+
+    # -------------------------------------------------------------------------
+    # Mathematical Framework & Calibration Parameters (Master Model 2026)
+    # -------------------------------------------------------------------------
+    m0: Decimal = Field(
+        default_factory=lambda: _get_env_decimal(["M_0", "MINT_BASE_REWARD"], "2.0"),
+        description="Base reputation reward M_0 minted from first qualifying transaction in a pair",
+    )
+    mint_lambda: Decimal = Field(
+        default_factory=lambda: _get_env_decimal(["MINT_LAMBDA", "LAMBDA_MINT"], "0.693147"),
+        description="Diminishing return decay parameter lambda for repeated transactions between same pair (ln(2) = 0.693147)",
+    )
+    hop_decay_delta: Decimal = Field(
+        default_factory=lambda: _get_env_decimal(["DELTA_HOP", "HOP_DECAY_DELTA"], "0.70"),
+        description="Separate hop decay parameter delta in (0, 1] for multi-hop path transmission",
+    )
+    g_max: Decimal = Field(
+        default_factory=lambda: _get_env_decimal(["G_MAX", "PROPAGATED_CREDIBILITY_CAP"], "100.0"),
+        description="Scoring cap G_max applied to propagated credibility during loan underwriting",
+    )
+    q_max: Decimal = Field(
+        default_factory=lambda: _get_env_decimal(["Q_MAX", "MAX_PENALTY_FRACTION"], "1.0"),
+        description="Maximum allowed borrower default reputation penalty fraction q_max",
+    )
+    penalty_kappa: Decimal = Field(
+        default_factory=lambda: _get_env_decimal(["PENALTY_KAPPA", "KAPPA_DEFAULT"], "1.5"),
+        description="Default penalty strength parameter kappa scaling borrower reputation loss",
+    )
+    penalty_beta: Decimal = Field(
+        default_factory=lambda: _get_env_decimal(["PENALTY_BETA", "BETA_TIME_ESCALATION"], "1.0"),
+        description="Time-escalation parameter beta for overdue default penalty",
+    )
+    t0_days: Decimal = Field(
+        default_factory=lambda: _get_env_decimal(["T_0", "T0_DAYS"], "30.0"),
+        description="Reference overdue duration T_0 in days",
+    )
+    penalty_eta: Decimal = Field(
+        default_factory=lambda: _get_env_decimal(["PENALTY_ETA", "ETA_ENDORSER_TRANSFER"], "0.5"),
+        description="Endorser penalty transfer-strength parameter eta passing borrower default loss to contributing sources",
+    )
+    epsilon: Decimal = Field(
+        default_factory=lambda: _get_env_decimal(["EPSILON", "NUMERICAL_STABILIZER"], "0.0001"),
+        description="Numerical stabilizer epsilon to prevent division by zero in default severity calculations",
+    )
 
 
 def get_settings() -> Settings:

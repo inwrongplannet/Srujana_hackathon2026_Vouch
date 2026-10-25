@@ -983,7 +983,7 @@ def cmd_recourse(args: argparse.Namespace) -> None:
         if dispute_id not in workflow.disputes:
             workflow.disputes[dispute_id] = DisputeCase(
                 dispute_id=dispute_id,
-                borrower_id=args.borrower or current_user or "BOB",
+                borrower_id=args.borrower or current_user or "LAKSHMI",
                 target_record_id="REC_001",
                 target_record_type="INCOME_STATEMENT",
                 contestation_reason="Income under-reported due to processing lag",
