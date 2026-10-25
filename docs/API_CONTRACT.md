@@ -166,7 +166,7 @@ All endpoints accept and return `application/json`. Timestamps follow ISO 8601 U
     "bureau_score": null
   }
   ```
-- **Response** (affordability shown for Lakshmi; plan, stress and codes illustrative):
+- **Response** (Lakshmi asking for 1,50,000 INR over 12 months at 24%, from a live run):
   ```json
   {
     "assessment_id": "ASM_4AC19E0AFA3D",
@@ -192,12 +192,12 @@ All endpoints accept and return `application/json`. Timestamps follow ISO 8601 U
       "total_interest": "40335.84"
     },
     "stress_resilience": {
-      "rating": "RESILIENT",
-      "shortfall_probability": 0.0256,
-      "adverse_5th_percentile_cash": "2716.92",
-      "income_shock_tolerance_percent": 19.9
+      "rating": "MODERATE",
+      "shortfall_probability": 0.131,
+      "adverse_5th_percentile_cash": "-4710.64",
+      "income_shock_tolerance_percent": 19.92
     },
-    "reason_codes": ["INCOME_PRESENT", "INCOME_STABLE", "COMMUNITY_VOUCH_ACTIVE", "DISPOSABLE_INCOME_SUFFICIENT", "AFFORDABILITY_DEFICIT", "STRESS_TEST_RESILIENT"],
+    "reason_codes": ["INCOME_PRESENT", "INCOME_STABLE", "COMMUNITY_VOUCH_ACTIVE", "DISPOSABLE_INCOME_SUFFICIENT", "AFFORDABILITY_DEFICIT", "STRESS_TEST_MODERATE"],
     "positive_factors": [{"code": "INCOME_PRESENT", "text": "Verified recurring monthly income of INR 38,000.00 documented", "source": "BANK_STATEMENT"}],
     "risk_factors": [{"code": "AFFORDABILITY_DEFICIT", "text": "Requested instalment of INR 14,183.94 exceeds affordable limit of INR 8,945.00", "source": "AFFORDABILITY_ENGINE"}],
     "missing_information": ["Credit bureau history is unavailable on file (thin-file applicant)"],
