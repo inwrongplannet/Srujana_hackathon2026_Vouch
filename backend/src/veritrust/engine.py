@@ -19,6 +19,8 @@ class TrustEngine:
         self.graph: nx.DiGraph = nx.DiGraph()
         self.users: dict[str, User] = {}
         self.vouches: dict[str, Vouch] = {}  # key: f"{source}_{target}"
+        self.target_endorsement_counters: dict[str, int] = {}
+        self.pair_transaction_counters: dict[str, int] = {}
         self.ledger = ledger
 
     def create_user(
@@ -211,14 +213,27 @@ class TrustEngine:
                 event_id=event_id,
             )
 
-        # Insert edge into graph and register vouch
-        self.graph.add_edge(source_id, target_id, weight=Decimal("0.0"))
+        # Determine fixed chronological rank r_uv among endorsements received by target
+        current_rank = self.target_endorsement_counters.get(target_id, 0) + 1
+        self.target_endorsement_counters[target_id] = current_rank
+        rank_weight = Decimal("1.0") / Decimal(2 ** (current_rank - 1))
+
+        # Insert edge into graph and register vouch with chronological rank weight
+        self.graph.add_edge(
+            source_id,
+            target_id,
+            weight=Decimal("0.0"),
+            rank=current_rank,
+            alpha=rank_weight,
+        )
 
         vouch_record = Vouch(
             vouch_id=f"V_{source_id}_{target_id}",
             source=source_id,
             target=target_id,
             weight=Decimal("0.0"),
+            rank=current_rank,
+            alpha=rank_weight,
             active=True,
         )
         self.vouches[f"{source_id}_{target_id}"] = vouch_record
@@ -287,4 +302,71 @@ class TrustEngine:
 
         total_weight = sum(edge_data.get("weight", Decimal("0.0")) for _, _, edge_data in out_edges)
         return total_weight <= user.capacity
+
+    def mint_transaction_reputation(
+        self,
+        user_a: str,
+        user_b: str,
+        m0: Optional[Decimal] = None,
+        mint_lambda: Optional[Decimal] = None,
+        directional: bool = False,
+        evidence: Optional[Evidence] = None,
+        event_id: Optional[str] = None,
+    ) -> Decimal:
+        """Mint diminishing reputation rewards for repeated qualifying transactions between a pair.
+
+        Formula (Section 2 & 3 of Master Model 2026):
+            M_k = M_0 * exp(-lambda * (k - 1))
+            R_u' = R_u + M_k
+        """
+        from veritrust.config import get_settings
+        from veritrust.scoring import _decimal_exp
+
+        settings = get_settings()
+        base_m0 = m0 if m0 is not None else settings.m0
+        lam = mint_lambda if mint_lambda is not None else settings.mint_lambda
+
+        ua = self.get_user(user_a)
+        ub = self.get_user(user_b)
+        if not ua:
+            raise ValueError(f"User '{user_a}' does not exist.")
+        if not ub:
+            raise ValueError(f"User '{user_b}' does not exist.")
+
+        pair_key = f"{user_a}_{user_b}" if directional else f"{min(user_a, user_b)}_{max(user_a, user_b)}"
+        current_k = self.pair_transaction_counters.get(pair_key, 0) + 1
+        self.pair_transaction_counters[pair_key] = current_k
+
+        # Compute M_k = M_0 * exp(-lambda * (k - 1))
+        exponent = -lam * Decimal(current_k - 1)
+        decay_factor = _decimal_exp(exponent)
+        m_k = (base_m0 * decay_factor).quantize(Decimal("0.0001"))
+
+        if m_k > Decimal("0.0"):
+            # Update owned reputation for both users
+            for u in (ua, ub):
+                u.reputation += m_k
+                u.update_capacity()
+                self._sync_node_to_graph(u)
+                self.recompute_weights(u.user_id)
+
+                if self.ledger is not None:
+                    self.ledger.append_event(
+                        event_type="REPUTATION_MINTED",
+                        actor_id="SYSTEM_TRANSACTION_ORACLE",
+                        subject_id=u.user_id,
+                        delta_reputation=m_k,
+                        payload={
+                            "reason": "qualifying_transaction_pair",
+                            "partner_id": user_b if u == ua else user_a,
+                            "k_counter": current_k,
+                            "m0": str(base_m0),
+                            "lambda": str(lam),
+                        },
+                        evidence=evidence,
+                        event_id=event_id,
+                    )
+
+        return m_k
+
 

@@ -10,8 +10,14 @@ from typing import Optional
 
 from veritrust.config import get_settings
 from veritrust.engine import TrustEngine
-from veritrust.models import Evidence, Loan, Transaction
-from veritrust.scoring import CreditScorer
+from veritrust.models import (
+    DefaultPenaltyReport,
+    EndorserPenaltyDetail,
+    Evidence,
+    Loan,
+    Transaction,
+)
+from veritrust.scoring import CreditScorer, _decimal_exp
 
 
 class LendingService:
@@ -464,6 +470,189 @@ class LendingService:
                 self.engine.recompute_weights(ancestor_id)
 
         # Level k >= 3: delta = 0 (Hard isolation boundary)
+
+    def apply_snapshot_default_penalty(
+        self,
+        loan_id: str,
+        t_overdue_days: Decimal = Decimal("30.0"),
+        original_obligation_l: Optional[Decimal] = None,
+        kappa: Optional[Decimal] = None,
+        beta: Optional[Decimal] = None,
+        t0_days: Optional[Decimal] = None,
+        eta: Optional[Decimal] = None,
+        q_max: Optional[Decimal] = None,
+        delta_hop: Optional[Decimal] = None,
+        evidence: Optional[Evidence] = None,
+        event_id: Optional[str] = None,
+    ) -> DefaultPenaltyReport:
+        """Execute atomic snapshot-based borrower default & endorser slashing.
+
+        Implements Sections 10, 11, 12, 13 of Master Mathematical Framework (2026):
+            E_D = P_D + I_D
+            S_D = E_D * (R_D / (R_D + G_D))
+            x_D = min(1, E_D / L_D)
+            tau_D = t_overdue / T_0
+            q_D = min[ q_max, kappa * (S_D / (E_D + eps)) * x_D * (1 - exp(-beta * tau_D)) ]
+            a_u = p_D(u) / sum(p_D)
+            q_u = eta * q_D * a_u
+            Atomic update: R^(t+1) = R^(t) - Delta
+        """
+        loan = self.loans.get(loan_id)
+        if not loan:
+            raise ValueError(f"Loan '{loan_id}' does not exist.")
+
+        if loan.status != "ACTIVE":
+            raise ValueError(f"Cannot default loan '{loan_id}' with status '{loan.status}'.")
+
+        settings = get_settings()
+        kap = kappa if kappa is not None else settings.penalty_kappa
+        bet = beta if beta is not None else settings.penalty_beta
+        t0 = t0_days if t0_days is not None else settings.t0_days
+        transfer_eta = eta if eta is not None else settings.penalty_eta
+        max_q = q_max if q_max is not None else settings.q_max
+        eps = settings.epsilon
+
+        defaulter_id = loan.borrower_id
+        defaulter = self.engine.get_user(defaulter_id)
+        if not defaulter:
+            raise ValueError(f"Borrower '{defaulter_id}' does not exist.")
+
+        # 1. Snapshot Pre-Default State
+        pre_r_d = defaulter.reputation
+        cred_report = self.scorer.compute_propagated_credibility(defaulter_id, delta=delta_hop)
+        g_d = cred_report.g_raw
+        source_contributions = cred_report.source_contributions
+
+        # 2. Exposure & Obligation
+        e_d = loan.outstanding_balance
+        l_d = original_obligation_l if original_obligation_l is not None else (
+            loan.principal * (Decimal("1.0") + loan.interest_rate)
+        )
+        if l_d <= Decimal("0.0"):
+            l_d = e_d if e_d > Decimal("0.0") else Decimal("1.0")
+
+        # 3. Severity (Section 10)
+        denom_cred = pre_r_d + g_d
+        if denom_cred > Decimal("0.0"):
+            s_d = (e_d * (pre_r_d / denom_cred)).quantize(Decimal("0.0001"))
+        else:
+            s_d = Decimal("0.0")
+
+        # 4. Borrower Default Penalty Fraction (Section 11)
+        x_d = min(Decimal("1.0"), max(Decimal("0.0"), e_d / l_d))
+        tau_d = max(Decimal("0.0"), t_overdue_days / t0)
+        time_escalation = Decimal("1.0") - _decimal_exp(-bet * tau_d)
+        time_escalation = min(Decimal("1.0"), max(Decimal("0.0"), time_escalation))
+
+        severity_ratio = s_d / (e_d + eps)
+        raw_q_d = kap * severity_ratio * x_d * time_escalation
+        q_d = min(max_q, max(Decimal("0.0"), raw_q_d)).quantize(Decimal("0.0001"))
+        delta_d = (pre_r_d * q_d).quantize(Decimal("0.0001"))
+
+        # 5. Endorser Penalties (Section 12)
+        total_contributing_p = sum(source_contributions.values(), Decimal("0.0"))
+        endorser_penalty_details: dict[str, EndorserPenaltyDetail] = {}
+
+        for source_id, p_val in source_contributions.items():
+            source_user = self.engine.get_user(source_id)
+            if not source_user:
+                continue
+
+            if total_contributing_p > Decimal("0.0"):
+                a_u = (p_val / total_contributing_p).quantize(Decimal("0.0001"))
+            else:
+                a_u = Decimal("0.0")
+
+            q_u = min(Decimal("1.0"), max(Decimal("0.0"), transfer_eta * q_d * a_u)).quantize(Decimal("0.0001"))
+            pre_r_u = source_user.reputation
+            delta_u = (pre_r_u * q_u).quantize(Decimal("0.0001"))
+            post_r_u = max(Decimal("0.0"), pre_r_u - delta_u)
+
+            endorser_penalty_details[source_id] = EndorserPenaltyDetail(
+                source_id=source_id,
+                contribution=p_val,
+                contribution_share=a_u,
+                penalty_fraction=q_u,
+                delta_reputation=delta_u,
+                pre_reputation=pre_r_u,
+                post_reputation=post_r_u,
+            )
+
+        # 6. Atomic Snapshot Application (Section 13)
+        # Apply borrower deduction
+        post_r_d = max(Decimal("0.0"), pre_r_d - delta_d)
+        defaulter.reputation = post_r_d
+        defaulter.status = "DEFAULTED"
+        defaulter.update_capacity()
+        self.engine._sync_node_to_graph(defaulter)
+        self.engine.recompute_weights(defaulter_id)
+
+        # Apply endorser deductions
+        for source_id, detail in endorser_penalty_details.items():
+            source_user = self.engine.get_user(source_id)
+            if source_user:
+                source_user.reputation = detail.post_reputation
+                if source_user.reputation <= Decimal("0.0") and source_user.status == "ACTIVE":
+                    source_user.status = "RESTRICTED"
+                source_user.update_capacity()
+                self.engine._sync_node_to_graph(source_user)
+                self.engine.recompute_weights(source_id)
+
+        # Mark loan defaulted
+        loan.status = "DEFAULTED"
+
+        # Record audit events in ledger
+        if self.engine.ledger is not None:
+            default_notice = evidence or Evidence(
+                evidence_id=f"EVID_DEFAULT_{loan_id}",
+                evidence_type="DEFAULT_NOTICE",
+                description=f"Snapshot default penalty executed on loan {loan_id}",
+                recorded_by="SYSTEM_DEFAULT_ORACLE",
+            )
+            self.engine.ledger.append_event(
+                event_type="LOAN_DEFAULTED",
+                actor_id="SYSTEM_DEFAULT_ORACLE",
+                subject_id=defaulter_id,
+                payload={
+                    "loan_id": loan_id,
+                    "outstanding_exposure": str(e_d),
+                    "severity": str(s_d),
+                    "q_d": str(q_d),
+                    "delta_d": str(delta_d),
+                },
+                evidence=default_notice,
+                event_id=event_id,
+            )
+            for source_id, detail in endorser_penalty_details.items():
+                self.engine.ledger.append_event(
+                    event_type="REPUTATION_SLASHED",
+                    actor_id="SYSTEM_DEFAULT_ORACLE",
+                    subject_id=source_id,
+                    delta_reputation=-detail.delta_reputation,
+                    payload={
+                        "loan_id": loan_id,
+                        "defaulter_id": defaulter_id,
+                        "q_u": str(detail.penalty_fraction),
+                        "a_u": str(detail.contribution_share),
+                    },
+                    evidence=default_notice,
+                )
+
+        return DefaultPenaltyReport(
+            loan_id=loan_id,
+            defaulter_id=defaulter_id,
+            outstanding_exposure=e_d,
+            default_severity=s_d,
+            unpaid_fraction=x_d,
+            normalized_overdue=tau_d,
+            borrower_penalty_fraction=q_d,
+            borrower_delta=delta_d,
+            borrower_pre_reputation=pre_r_d,
+            borrower_post_reputation=post_r_d,
+            borrower_pre_propagated_g=g_d,
+            endorser_penalties=endorser_penalty_details,
+            applied_atomically=True,
+        )
 
     def get_loan(self, loan_id: str) -> Optional[Loan]:
         """Fetch loan by ID."""

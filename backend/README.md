@@ -217,6 +217,7 @@ python main.py --demo                         # Run automated walkthrough simula
   - `audit_explorer.py`: Forensic decision explorer detailing numerical rule traces, evidence links, and sensitivity deltas.
   - `recourse.py`: Borrower recourse protocol, evidence-quality tracking (`MISSING`, `STALE`, `DUPLICATED`, `DISPUTED`), and recalculation audit.
   - `community.py`: Community vouching engine (KNOWN and EVIDENCE vouches, capped evidence weight, reward preview) and its in-memory seeded store.
+  - `simulator.py`: Simulation and parameter calibration engine across canonical Web-of-Trust benchmark topologies.
   - `api/`: FastAPI REST API package. `routes.py`: applications, evidence, endorsements, assessments, scenarios, disputes, users, loans, graph (uses the OR-Tools optimizer). `protocol_routes.py`: vouch requests, lender decisions, defaults. `community_routes.py`: the community platform. `registry.py`: in-memory applications and assessments shared by the routers.
 - `tests/`: Pytest unit tests for all mathematical invariants, state transitions, and ledger integrity.
 - `main.py`: End-to-end interactive CLI demonstration.
@@ -274,6 +275,7 @@ pytest tests/test_explainer.py      # 4-dimension explanation engine, traceable 
 pytest tests/test_community.py      # Community vouching known answers (same as the frontend's)
 pytest tests/test_protocol_routes.py # Vouch requests, decisions, defaults, community API (no OR-Tools needed)
 pytest tests/test_api_routes.py     # Assessment, scenario and other REST routes (needs OR-Tools)
+pytest tests/test_mathematical_framework.py # Complete mathematical framework, rank weights, and calibration invariants
 ```
 
 ## Notes
