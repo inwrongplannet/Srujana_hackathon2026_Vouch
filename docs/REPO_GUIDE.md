@@ -51,6 +51,7 @@ A zone is a top-level folder with its own `AGENTS.md` (`backend/`, `frontend/`, 
 | `docs/IDEA.md` | Initial abstract technical design: web-of-trust graph, dual-axis scoring, ZK identity, slashing dynamics, hackathon scope reductions | At kickoff |
 | `docs/ARCHITECTURE.md` | The agreed technical plan | At kickoff via `/kickoff` |
 | `docs/API_CONTRACT.md` | Lets frontend and backend be built in parallel | At kickoff, then ongoing |
+| `docs/FRONTEND_GUIDE.md` | Capabilities, data requirements, screen mappings, and request guidelines for the frontend | Ongoing |
 | `docs/TASKS.md` | Task board; how work is assigned | Via `/task` |
 | `docs/DECISIONS.md` | Log of choices and dependencies; pitch material | Via `/decide` |
 | `docs/OR_TOOLS_AND_MONTE_CARLO.md` | Technical rationale for OR-Tools optimization and Monte Carlo stress testing | Ongoing |
@@ -58,7 +59,13 @@ A zone is a top-level folder with its own `AGENTS.md` (`backend/`, `frontend/`, 
 | `docs/frontend-features/` | One manifest per feature; feeds README table and `/status` | As features start |
 | `docs/templates/` | Fixed formats for tasks, spike write-ups, feature manifests | Before event |
 | `backend/` | API and finance logic, scaffolded by whoever the task is assigned to | Event day |
+| `backend/ml/` | Explainable ML models (EBM, XGBoost GPU, PyTorch GPU), conformal prediction sets, noise generator and ablation engine | Done |
+| `backend/localdocs/Implementation_Doc.md` | Master implementation roadmap, stages 1-9, code organization and production verification | Done |
+| `backend/localdocs/BENCHMARKS_AND_METRICS.md` | Consolidated empirical benchmark evaluation, model metrics, ablation findings, and conformal coverage | Done |
 | `backend/localdocs/VOUCH_DEVELOPER_MASTER_V2.md` | Master developer specification v2: architecture, graph math, scenarios, and acceptance criteria | Done |
+| `backend/localdocs/FORMULAS_AND_NUMBERS.md` | Master mathematical specification: formulas, processes, constants, and calibration numbers | Done |
+| `backend/localdocs/TEMPORAL_UNCERTAINTY_AND_FRESHNESS.md` | Temporal uncertainty decay model: confidence half-lives, epistemic inflation, and LCB limit derivation | Done |
+| `backend/localdocs/PROSPER_AND_LITERATURE_LESSONS.md` | Empirical analysis of 55k Prosper loans, cheap-talk failure modes, and literature synthesis | Done |
 | `frontend/` | User-facing app, scaffolded by whoever the task is assigned to | Event day |
 | `spikes/` | Sandbox for experiments; messy is fine, findings must be written | During event |
 | `data/` | Small sample and seed files | During event |

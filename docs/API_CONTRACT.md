@@ -405,3 +405,128 @@ In memory and reseeded on restart. There is no login yet: the caller names the v
 - **Request:** `{"shown": false}`
 - **Response:** the ask, as its owner sees it.
 - **Status:** 200 OK; 404 unknown ask or item.
+
+---
+
+## 7. Predictive risk and explainability endpoints
+
+### Predict credit risk and explainability
+- **Method + path:** `POST /api/v1/predict`
+- **Request:**
+  ```json
+  {
+    "borrower_id": "LAKSHMI",
+    "requested_amount": "150000.00",
+    "requested_tenure_months": 24,
+    "annual_interest_rate": 0.18,
+    "bureau_status": "NO_FILE",
+    "vouch_score": "63.5",
+    "vouch_count": 2,
+    "bank_statement_status": "VERIFIED",
+    "evidence_age_months": 0.0
+  }
+  ```
+  `borrower_id` is optional; when supplied, financial and graph fields default to the borrower's registered profile. When omitted, all calculations execute directly from the provided parameters.
+- **Response:**
+  ```json
+  {
+    "borrower_id": "LAKSHMI",
+    "prediction": {
+      "default_probability": 0.0067,
+      "repayment_probability": 0.9933,
+      "credit_score": 889,
+      "risk_tier": "LOW_RISK",
+      "decision": "ELIGIBLE",
+      "conformal_set": [
+        "REPAY"
+      ],
+      "confidence_level": 0.9,
+      "epistemic_uncertainty": 0.12
+    },
+    "explanation": {
+      "summary": "Borrower is ELIGIBLE for the requested loan of INR 150,000.00. Calculated default probability is 0.7% (equivalent score 889). Primary strengths include Freshness-adjusted Web-of-Trust score: 63.5.",
+      "positive_factors": [
+        {
+          "code": "VOUCH_REPUTATION",
+          "text": "Freshness-adjusted Web-of-Trust score: 63.5",
+          "feature": "vouch_score",
+          "observed": "63.5",
+          "log_odds": -0.7,
+          "direction": "lowers_risk"
+        },
+        {
+          "code": "DTI_ABOVE_CAP",
+          "text": "Debt-to-income after the new EMI: 0.25",
+          "feature": "dti_est",
+          "observed": "0.25",
+          "log_odds": -0.45,
+          "direction": "lowers_risk"
+        },
+        {
+          "code": "MONTHLY_SURPLUS",
+          "text": "Median monthly surplus before EMIs: INR 15,500.00",
+          "feature": "bank_surplus_median_minor",
+          "observed": "INR 15,500.00",
+          "log_odds": -0.35,
+          "direction": "lowers_risk"
+        }
+      ],
+      "risk_factors": [
+        {
+          "code": "AMOUNT_TO_INCOME_HIGH",
+          "text": "Requested amount relative to income: 3.95",
+          "feature": "amount_to_income",
+          "observed": "3.95",
+          "log_odds": 0.05,
+          "direction": "raises_risk"
+        }
+      ],
+      "missing_information": [
+        {
+          "code": "MISSING_BUREAU_FILE",
+          "text": "Credit bureau history is unavailable on file (thin-file applicant; alternative cash-flow and vouch evidence utilized)",
+          "status": "NO_FILE"
+        },
+        {
+          "code": "MISSING_GST",
+          "text": "GST filings do not apply to this micro-enterprise category",
+          "status": "NOT_APPLICABLE"
+        }
+      ]
+    },
+    "temporal_freshness": {
+      "evidence_age_months": 0.0,
+      "vouch_confidence": 1.0,
+      "cashflow_confidence": 1.0,
+      "repayment_confidence": 1.0,
+      "composite_confidence": 1.0,
+      "is_stale": false,
+      "staleness_warning": null
+    },
+    "multidimensional_scores": {
+      "financial_capacity_score": 100.0,
+      "evidence_reliability_score": 75.0,
+      "graph_reputation_score": 63.5,
+      "stress_resilience_score": 33.3
+    },
+    "counterfactual_remedy": {
+      "target_decision": "ELIGIBLE",
+      "is_already_eligible": true,
+      "max_recommended_principal": "236358.78",
+      "recommended_tenure_months": 18,
+      "sustainable_emi": "11800.00",
+      "required_additional_monthly_income": null,
+      "actionable_recommendations": [
+        "Current loan terms are fully sustainable within disposable cash flow.",
+        "Maintaining on-time repayments will further strengthen Web-of-Trust borrowing capacity."
+      ]
+    }
+  }
+  ```
+- **Status:** 200 OK; 404 if the requested `borrower_id` does not exist.
+
+### Get sample prediction request
+- **Method + path:** `GET /api/v1/predict/sample`
+- **Response:** sample request body with default values for Lakshmi.
+- **Status:** 200 OK
+

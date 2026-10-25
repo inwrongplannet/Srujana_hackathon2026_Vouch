@@ -1,6 +1,6 @@
 {
   "version": "2.0",
-  "updated_at": "2026-10-25T13:48:36.969230+00:00",
+  "updated_at": "2026-10-25T14:57:57.470217+00:00",
   "total_platform_fees": "0.00",
   "users": [
     {
@@ -12,7 +12,7 @@
       "is_anchor": true,
       "financial_features": null,
       "n_settled_loans": 0,
-      "created_at": "2026-10-25T13:48:36.968921Z"
+      "created_at": "2026-10-25T14:57:57.469824Z"
     },
     {
       "user_id": "MEENA",
@@ -23,7 +23,7 @@
       "is_anchor": false,
       "financial_features": null,
       "n_settled_loans": 0,
-      "created_at": "2026-10-25T13:48:36.968944Z"
+      "created_at": "2026-10-25T14:57:57.469863Z"
     },
     {
       "user_id": "RAMESH",
@@ -34,7 +34,7 @@
       "is_anchor": false,
       "financial_features": null,
       "n_settled_loans": 0,
-      "created_at": "2026-10-25T13:48:36.968953Z"
+      "created_at": "2026-10-25T14:57:57.469873Z"
     },
     {
       "user_id": "ANAND",
@@ -45,7 +45,7 @@
       "is_anchor": false,
       "financial_features": null,
       "n_settled_loans": 0,
-      "created_at": "2026-10-25T13:48:36.968960Z"
+      "created_at": "2026-10-25T14:57:57.469881Z"
     },
     {
       "user_id": "LAKSHMI",
@@ -64,7 +64,7 @@
         "completeness": "0.90"
       },
       "n_settled_loans": 0,
-      "created_at": "2026-10-25T13:48:36.968986Z"
+      "created_at": "2026-10-25T14:57:57.469921Z"
     },
     {
       "user_id": "SURESH",
@@ -83,7 +83,7 @@
         "completeness": "0.90"
       },
       "n_settled_loans": 0,
-      "created_at": "2026-10-25T13:48:36.969000Z"
+      "created_at": "2026-10-25T14:57:57.469937Z"
     },
     {
       "user_id": "IMRAN",
@@ -102,7 +102,7 @@
         "completeness": "0.75"
       },
       "n_settled_loans": 0,
-      "created_at": "2026-10-25T13:48:36.969012Z"
+      "created_at": "2026-10-25T14:57:57.469951Z"
     }
   ],
   "vouches": [
@@ -114,7 +114,8 @@
       "rank": 1,
       "alpha": "1.0",
       "active": true,
-      "created_at": "2026-10-25T13:48:36.969044Z"
+      "created_at": "2026-10-25T14:57:57.470004Z",
+      "last_reaffirmed_at": null
     },
     {
       "vouch_id": "V_SAHYOG_RAMESH",
@@ -124,7 +125,8 @@
       "rank": 1,
       "alpha": "1.0",
       "active": true,
-      "created_at": "2026-10-25T13:48:36.969073Z"
+      "created_at": "2026-10-25T14:57:57.470041Z",
+      "last_reaffirmed_at": null
     },
     {
       "vouch_id": "V_SAHYOG_ANAND",
@@ -134,7 +136,8 @@
       "rank": 1,
       "alpha": "1.0",
       "active": true,
-      "created_at": "2026-10-25T13:48:36.969099Z"
+      "created_at": "2026-10-25T14:57:57.470065Z",
+      "last_reaffirmed_at": null
     },
     {
       "vouch_id": "V_RAMESH_LAKSHMI",
@@ -144,7 +147,8 @@
       "rank": 1,
       "alpha": "1.0",
       "active": true,
-      "created_at": "2026-10-25T13:48:36.969123Z"
+      "created_at": "2026-10-25T14:57:57.470090Z",
+      "last_reaffirmed_at": null
     },
     {
       "vouch_id": "V_ANAND_LAKSHMI",
@@ -154,7 +158,8 @@
       "rank": 2,
       "alpha": "0.5",
       "active": true,
-      "created_at": "2026-10-25T13:48:36.969142Z"
+      "created_at": "2026-10-25T14:57:57.470108Z",
+      "last_reaffirmed_at": null
     },
     {
       "vouch_id": "V_MEENA_SURESH",
@@ -164,7 +169,8 @@
       "rank": 1,
       "alpha": "1.0",
       "active": true,
-      "created_at": "2026-10-25T13:48:36.969163Z"
+      "created_at": "2026-10-25T14:57:57.470127Z",
+      "last_reaffirmed_at": null
     }
   ],
   "loans": [],
