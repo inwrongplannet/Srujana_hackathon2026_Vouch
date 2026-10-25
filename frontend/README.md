@@ -62,4 +62,4 @@ Tests cover every calculation with a known answer: trust paths, cycle absorption
 ## Notes
 - Money is a decimal string with an ISO 4217 code; `decimal.js` does all arithmetic and rounding happens only in `src/lib/format.ts`.
 - Identity copy says "simulated identity anchor", never "zero-knowledge proof". Demo identity numbers start with `0000`, which no real Aadhaar does.
-- Stack and parameter choices: `docs/DECISIONS.md`. Demo script: `docs/DEMO.md`.
+- Stack and parameter choices: `docs/DECISIONS.md`. Demo script: `docs/DEMO.md`. Integration guide and capabilities: `docs/FRONTEND_GUIDE.md`.

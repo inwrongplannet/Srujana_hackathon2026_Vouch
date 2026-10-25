@@ -51,6 +51,7 @@ A zone is a top-level folder with its own `AGENTS.md` (`backend/`, `frontend/`, 
 | `docs/IDEA.md` | Initial abstract technical design: web-of-trust graph, dual-axis scoring, ZK identity, slashing dynamics, hackathon scope reductions | At kickoff |
 | `docs/ARCHITECTURE.md` | The agreed technical plan | At kickoff via `/kickoff` |
 | `docs/API_CONTRACT.md` | Lets frontend and backend be built in parallel | At kickoff, then ongoing |
+| `docs/FRONTEND_GUIDE.md` | Capabilities, data requirements, screen mappings, and request guidelines for the frontend | Ongoing |
 | `docs/TASKS.md` | Task board; how work is assigned | Via `/task` |
 | `docs/DECISIONS.md` | Log of choices and dependencies; pitch material | Via `/decide` |
 | `docs/OR_TOOLS_AND_MONTE_CARLO.md` | Technical rationale for OR-Tools optimization and Monte Carlo stress testing | Ongoing |
