@@ -823,7 +823,9 @@ def predict_credit_risk(req: PredictRequest):
     """Predict credit default probability, conformal decision set, and multi-dimensional explanation."""
     engine, scorer, _, _ = get_services()
     try:
-        raw_result = evaluate_credit_prediction(req.model_dump(), engine=engine, scorer=scorer)
+        # Only the fields the caller sent: an unsent bureau field is missing, not zero, and an unsent
+        # vouch count is the borrower's own.
+        raw_result = evaluate_credit_prediction(req.model_dump(exclude_unset=True), engine=engine, scorer=scorer)
     except ValueError as exc:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc))
     return raw_result
