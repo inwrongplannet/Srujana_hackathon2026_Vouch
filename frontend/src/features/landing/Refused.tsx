@@ -12,7 +12,7 @@ const count = new Intl.NumberFormat('en-IN');
 export function Refused() {
   const reduce = useReducedMotion();
   return (
-    <div className="mt-12 grid gap-12 lg:grid-cols-[0.9fr_1fr] lg:items-center">
+    <div className="mt-8 grid gap-12 lg:grid-cols-[0.9fr_1fr] lg:items-center">
       <Reveal>
         <div
           className="grid max-w-[380px] grid-cols-10 gap-1.5 sm:gap-2"

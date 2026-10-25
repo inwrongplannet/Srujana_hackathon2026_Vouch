@@ -7,6 +7,7 @@ import { IconArrowRight } from '@/components/icons';
 import { AssessmentPanel } from '@/features/landing/AssessmentPanel';
 import { Refused } from '@/features/landing/Refused';
 import { HowItDecides } from '@/features/landing/HowItDecides';
+import { CreditGap, Research } from '@/features/landing/Evidence';
 import { Reveal, Section } from '@/features/landing/Story';
 
 /** Ledger paper: faint blue rules with the red margin line of a bahi-khata page. */
@@ -84,8 +85,14 @@ export function LandingPage() {
     <div className="min-h-dvh">
       <Hero />
 
-      <Section kicker="The cost of a blank file" title="People without a file are not an edge case.">
+      <Section kicker="The gap" title="People without a file are not an edge case.">
+        <CreditGap />
+        <p className="mt-20 border-t border-rule pt-6 font-mono text-[11.5px] tracking-[0.16em] text-neel-700">IN OUR DATASET REPLAY</p>
         <Refused />
+      </Section>
+
+      <Section id="evidence" kicker="What the research says" title="The signal is real. So is the trap.">
+        <Research />
       </Section>
 
       <Section id="how" kicker="How it works" title="Evidence, not popularity.">
@@ -98,6 +105,10 @@ export function LandingPage() {
           <Reveal>
             <p className="display max-w-[16ch] text-[clamp(36px,5.4vw,76px)] leading-[0.95] tracking-[-0.03em] text-balance">
               Signals, not a verdict. A person decides.
+            </p>
+            <p className="mt-6 max-w-[56ch] text-[15px] leading-relaxed text-paper/75">
+              Vouch tests whether accountable, outcome-weighted endorsements can improve assessment for thin-file and unusual-circumstance borrowers,
+              while measuring default risk, fairness and manipulation resistance.
             </p>
           </Reveal>
           <Reveal delay={0.12} className="flex flex-wrap gap-3 lg:justify-end">
@@ -118,7 +129,7 @@ export function LandingPage() {
       <footer className="mx-auto flex max-w-[1180px] flex-wrap items-center justify-between gap-4 px-4 py-8 sm:px-8">
         <Logo size={22} word="Vouch" />
         <IllustrativeNotice />
-        <p className="text-[12px] text-ink-3">People, scores and cases are fictional demo data. Dataset figures: data/combined/README.md</p>
+        <p className="text-[12px] text-ink-3">People, scores and cases are fictional demo data. Research figures link to their sources; dataset figures: data/combined/README.md</p>
       </footer>
     </div>
   );
