@@ -8,6 +8,13 @@
 
 <!-- ENTRIES -->
 
+### 2026-10-25: Platform transaction fee cut and treasury tracking
+- **Decision:** (1) Implemented a platform transaction fee cut on all monetary transactions (disbursements and repayments), defaulting to 1.0% (100 bps) surcharge configurable via `PLATFORM_FEE_RATE` env var. (2) Tracked `fee` and `net_amount` Decimal fields on every `Transaction` model and logged them in ledger event payloads (`LOAN_DISBURSED`, `LOAN_REPAID`). (3) Accumulated collected fees in a dedicated `PlatformTreasury` in `LendingService` persisted in `store.json`. (4) Exposed REST endpoints `GET /api/v1/transactions` and `GET /api/v1/platform/treasury`, updated `POST /api/v1/loans/repay` to report `fee_paid`, and added a `treasury` CLI command.
+- **Why:** To enable platform monetization by taking a small fee cut from every transaction processed across the protocol, supporting sustainable operations and verifiable treasury auditing.
+- **Alternatives considered:** Flat fixed fee per transaction (penalizes micro-borrowers disproportionately); deducting from borrower disbursement proceeds (reduces needed capital disbursement).
+- **Consequences:** All transactions now carry auditable fee metadata; cumulative fees are tracked deterministically across ledger replay and state persistence without altering borrower repayment boost logic.
+- **By:** Abhishek, Reehan, Abhijit
+
 ### 2026-10-25: Backend matches the story: one affordability basis, tau 3, the story cast, community API
 - **Decision:** (1) Every route reads essential expenses as income minus net operating income (the `FinancialFeatures` definition, already used by `cli.py` and `audit_explorer.py`) through `affordability_input()`, and a scenario keeps the assessment's rate, tenure, principal, data and dual-axis limit unless overridden. (2) The backend Vouch Score uses tau 3, the Vouch scoring proposal's value, which the frontend already uses; this supersedes the tau 5 noted in the wiring entry below. (3) The seed is the story cast (Sahyog Microfinance; Meena, Ramesh, Anand; Lakshmi, Suresh, Imran), with a store version that reseeds older stores. (4) The community engine moves to `veritrust.community` with the frontend's known answers, plus endpoints for vouch requests, lender decisions and defaults. (5) Every endpoint declares a response model; `docs/API_CONTRACT.md` records the shapes.
 - **Why:** the assessment and its what-if disagreed (the scenario route used fixed INR 12,000 expenses, INR 35,000 income and a 10% rate), the two scales of Vouch Score confused the demo, and the frontend's community maths had no server behind it.

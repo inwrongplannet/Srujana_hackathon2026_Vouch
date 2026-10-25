@@ -73,6 +73,7 @@ python main.py audit                          # Cryptographically audit SHA-256 
 python main.py replay --restore               # Deterministically reconstruct state from raw events
 python main.py denounce IMRAN               # Denounce bad actor and trigger slashing
 python main.py graph                          # Inspect Web-of-Trust graph topology
+python main.py treasury                       # Inspect platform treasury fees and cut rate
 python main.py --demo                         # Run automated walkthrough simulation
 ```
 
@@ -251,6 +252,8 @@ All algorithmic parameters can be configured via environment variables or a `.en
 - `BORROWER_REWARD`: Settlement reputation reward for borrower (default: `2.0`).
 - `SPONSOR_REWARD`: Settlement reputation reward for sponsor (default: `1.0`).
 - `CIRCUIT_BREAKER_THRESHOLD`: Cluster default rate pause threshold $\theta$ (default: `0.30`).
+- `PLATFORM_FEE_RATE`: Platform transaction fee cut rate as decimal fraction (default: `0.01` / 1.0%).
+- `PLATFORM_TREASURY_ID`: Designated identifier for the platform treasury account (default: `PLATFORM_TREASURY`).
 - `POSEIDON_PROTOCOL_SALT`: Simulated identity anchor protocol salt (`# ZK_STUB`).
 - `DEMO_MODE`: Boolean flag for deterministic demo paths (default: `true`).
 
@@ -275,6 +278,7 @@ pytest tests/test_explainer.py      # 4-dimension explanation engine, traceable 
 pytest tests/test_community.py      # Community vouching known answers (same as the frontend's)
 pytest tests/test_protocol_routes.py # Vouch requests, decisions, defaults, community API (no OR-Tools needed)
 pytest tests/test_api_routes.py     # Assessment, scenario and other REST routes (needs OR-Tools)
+pytest tests/test_platform_fee.py    # Transaction fees, treasury cuts, ledger replay and persistence
 pytest tests/test_mathematical_framework.py # Complete mathematical framework, rank weights, and calibration invariants
 ```
 

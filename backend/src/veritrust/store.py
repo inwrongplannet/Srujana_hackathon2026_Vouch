@@ -70,6 +70,7 @@ class StateStore:
         payload = {
             "version": STORE_VERSION,
             "updated_at": datetime.now(timezone.utc).isoformat(),
+            "total_platform_fees": str(lending.total_platform_fees),
             "users": users_data,
             "vouches": vouches_data,
             "loans": loans_data,
@@ -145,15 +146,25 @@ class StateStore:
                 lending.loans[loan.loan_id] = loan
 
             # Load transactions
+            lending.transactions = []
+            total_fees = Decimal(str(raw.get("total_platform_fees", "0.00")))
             for t_data in raw.get("transactions", []):
+                fee = Decimal(str(t_data.get("fee", "0.00")))
+                net_amount = Decimal(str(t_data.get("net_amount", t_data.get("amount", "0.00"))))
                 tx = Transaction(
                     tx_id=t_data["tx_id"],
                     user_id=t_data["user_id"],
                     amount=Decimal(str(t_data["amount"])),
+                    fee=fee,
+                    net_amount=net_amount,
                     currency=t_data.get("currency", "INR"),
                     tx_type=t_data["tx_type"],
                 )
                 lending.transactions.append(tx)
+
+            if total_fees == Decimal("0.00") and lending.transactions:
+                total_fees = sum((tx.fee for tx in lending.transactions), Decimal("0.00"))
+            lending.total_platform_fees = total_fees
 
             # Synchronize internal counters so new IDs never collide with loaded IDs
             lending.sync_counters()
@@ -269,3 +280,4 @@ class StateStore:
         engine.vouch("RAMESH", "LAKSHMI")
         engine.vouch("ANAND", "LAKSHMI")
         engine.vouch("MEENA", "SURESH")
+        lending.total_platform_fees = Decimal("0.00")

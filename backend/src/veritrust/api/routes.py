@@ -234,6 +234,26 @@ class RepayResponse(BaseModel):
     loan_id: str
     status: str
     outstanding_balance: str
+    fee_paid: Optional[str] = "0.00"
+
+
+class TransactionSummary(BaseModel):
+    tx_id: str
+    user_id: str
+    amount: str
+    fee: str
+    net_amount: str
+    currency: str
+    tx_type: str
+    timestamp: str
+
+
+class PlatformTreasurySummary(BaseModel):
+    treasury_id: str
+    total_fees_collected: str
+    fee_rate: str
+    transaction_count: int
+    currency: str
 
 
 class GraphNode(BaseModel):
@@ -630,10 +650,13 @@ def repay_loan(req: RepayLoanRequest):
     try:
         loan = lending.repay(req.loan_id, Decimal(req.amount))
         store.save(engine, lending)
+        last_tx = lending.transactions[-1] if lending.transactions else None
+        fee_str = str(last_tx.fee) if last_tx and last_tx.tx_type == "REPAYMENT" else "0.00"
         return {
             "loan_id": loan.loan_id,
             "status": loan.status,
             "outstanding_balance": str(loan.outstanding_balance),
+            "fee_paid": fee_str,
         }
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
@@ -664,3 +687,36 @@ def get_graph():
         for u, v, data in engine.graph.edges(data=True)
     ]
     return {"nodes": nodes, "edges": edges}
+
+
+@router.get("/api/v1/transactions", response_model=list[TransactionSummary], tags=["Platform"])
+def list_transactions():
+    """List all transactions including platform fee cuts and net amounts."""
+    _, _, lending, _ = get_services()
+    return [
+        {
+            "tx_id": tx.tx_id,
+            "user_id": tx.user_id,
+            "amount": str(tx.amount),
+            "fee": str(tx.fee),
+            "net_amount": str(tx.net_amount),
+            "currency": tx.currency,
+            "tx_type": tx.tx_type,
+            "timestamp": tx.timestamp.isoformat(),
+        }
+        for tx in lending.list_transactions()
+    ]
+
+
+@router.get("/api/v1/platform/treasury", response_model=PlatformTreasurySummary, tags=["Platform"])
+def get_platform_treasury():
+    """Retrieve cumulative platform fee cut and treasury status."""
+    _, _, lending, _ = get_services()
+    treasury = lending.get_treasury_summary()
+    return {
+        "treasury_id": treasury.treasury_id,
+        "total_fees_collected": str(treasury.total_fees_collected),
+        "fee_rate": str(treasury.fee_rate),
+        "transaction_count": treasury.transaction_count,
+        "currency": treasury.currency,
+    }

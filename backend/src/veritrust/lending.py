@@ -5,7 +5,7 @@ and atomic 4-level slashing cascades on default. No smart contracts.
 """
 
 from datetime import datetime, timezone
-from decimal import Decimal
+from decimal import Decimal, ROUND_HALF_UP
 from typing import Optional
 
 from veritrust.config import get_settings
@@ -15,6 +15,7 @@ from veritrust.models import (
     EndorserPenaltyDetail,
     Evidence,
     Loan,
+    PlatformTreasury,
     Transaction,
 )
 from veritrust.scoring import CreditScorer, _decimal_exp
@@ -31,6 +32,7 @@ class LendingService:
         sponsor_reward: Optional[Decimal] = None,
         default_base_slash: Optional[Decimal] = None,
         gamma: Optional[Decimal] = None,
+        platform_fee_rate: Optional[Decimal] = None,
     ) -> None:
         """Initialize the lending service.
 
@@ -41,6 +43,7 @@ class LendingService:
             sponsor_reward: Credibility increment awarded to direct sponsors on repayment.
             default_base_slash: Primary default penalty delta0.
             gamma: Sponsor penalty fraction (delta1 = gamma * W_AB * delta0).
+            platform_fee_rate: Platform cut fraction (e.g. 0.01 = 1%).
         """
         settings = get_settings()
         self.engine = engine
@@ -51,11 +54,29 @@ class LendingService:
             default_base_slash if default_base_slash is not None else settings.default_base_slash
         )
         self.gamma = gamma if gamma is not None else settings.gamma
+        self.platform_fee_rate = (
+            platform_fee_rate if platform_fee_rate is not None else settings.platform_fee_rate
+        )
 
         self.loans: dict[str, Loan] = {}
         self.transactions: list[Transaction] = []
+        self.total_platform_fees: Decimal = Decimal("0.00")
         self._tx_counter: int = 0
         self._loan_counter: int = 0
+
+    def compute_platform_fee(self, amount: Decimal) -> Decimal:
+        """Calculate platform transaction fee cut (surcharge) in INR quantized to paise.
+
+        Args:
+            amount: Transaction amount in INR.
+
+        Returns:
+            Fee cut in INR quantized using ROUND_HALF_UP.
+        """
+        if self.platform_fee_rate <= Decimal("0.0"):
+            return Decimal("0.00")
+        raw_fee = amount * self.platform_fee_rate
+        return raw_fee.quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
 
     def sync_counters(self) -> None:
         """Synchronize internal counters with loaded loans and transactions to avoid collisions."""
@@ -146,6 +167,8 @@ class LendingService:
             )
 
         loan_id = self._next_loan_id()
+        fee = self.compute_platform_fee(amount)
+        self.total_platform_fees += fee
 
         # Record immutable event in ledger first (Source of Truth)
         if self.engine.ledger is not None:
@@ -153,7 +176,13 @@ class LendingService:
                 event_type="LOAN_DISBURSED",
                 actor_id=lender_id or borrower_id,
                 subject_id=borrower_id,
-                payload={"loan_id": loan_id, "principal": str(amount), "tenure_months": tenure_months},
+                payload={
+                    "loan_id": loan_id,
+                    "principal": str(amount),
+                    "tenure_months": tenure_months,
+                    "fee": str(fee),
+                    "net_amount": str(amount),
+                },
                 event_id=event_id,
             )
 
@@ -174,6 +203,8 @@ class LendingService:
             tx_id=self._next_tx_id(),
             user_id=borrower_id,
             amount=amount,
+            fee=fee,
+            net_amount=amount,
             tx_type="DISBURSEMENT",
         )
         self.transactions.append(tx)
@@ -241,6 +272,8 @@ class LendingService:
         # Cap payment to outstanding balance
         actual_payment = min(amount, loan.outstanding_balance)
         new_balance = loan.outstanding_balance - actual_payment
+        fee = self.compute_platform_fee(actual_payment)
+        self.total_platform_fees += fee
 
         # Record repayment event in ledger first (Source of Truth)
         if self.engine.ledger is not None:
@@ -252,6 +285,8 @@ class LendingService:
                     "loan_id": loan_id,
                     "payment_amount": str(actual_payment),
                     "remaining_balance": str(new_balance),
+                    "fee": str(fee),
+                    "net_amount": str(actual_payment),
                 },
                 evidence=evidence,
                 event_id=event_id,
@@ -264,6 +299,8 @@ class LendingService:
             tx_id=self._next_tx_id(),
             user_id=loan.borrower_id,
             amount=actual_payment,
+            fee=fee,
+            net_amount=actual_payment,
             tx_type="REPAYMENT",
         )
         self.transactions.append(tx)
@@ -665,4 +702,15 @@ class LendingService:
     def list_transactions(self) -> list[Transaction]:
         """Return all transaction ledger entries."""
         return list(self.transactions)
+
+    def get_treasury_summary(self) -> PlatformTreasury:
+        """Return platform treasury revenue statistics."""
+        settings = get_settings()
+        return PlatformTreasury(
+            treasury_id=settings.platform_treasury_id,
+            total_fees_collected=self.total_platform_fees,
+            fee_rate=self.platform_fee_rate,
+            transaction_count=len(self.transactions),
+            currency="INR",
+        )
 
