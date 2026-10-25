@@ -67,7 +67,8 @@ function Desk() {
   const [users, setUsers] = useState<BackendUser[] | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [borrower, setBorrower] = useState('');
-  const [principal, setPrincipal] = useState('50000');
+  // Opens on the story: Lakshmi asks for 1.5 lakh over 12 months (docs/DEMO.md).
+  const [principal, setPrincipal] = useState('150000');
   const [term, setTerm] = useState(12);
   const [rate, setRate] = useState('24');
   const [bureau, setBureau] = useState<BureauStatus>('NO_FILE');
@@ -84,7 +85,7 @@ function Desk() {
         if (!alive) return;
         const people = list.filter((u) => !u.is_anchor);
         setUsers(people);
-        setBorrower((current) => current || people[0]?.user_id || '');
+        setBorrower((current) => current || people.find((u) => u.user_id === 'LAKSHMI')?.user_id || people[0]?.user_id || '');
       })
       .catch((e: unknown) => alive && setLoadError(e instanceof ApiError ? e.message : 'Could not load applicants'));
     return () => {

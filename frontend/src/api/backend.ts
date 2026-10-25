@@ -1,113 +1,69 @@
 /**
- * Typed calls to the live FastAPI backend (`backend/src/veritrust/api/routes.py`). Request bodies
- * come from the generated OpenAPI types (`make types`); most responses have no `response_model`
- * in the backend yet, so their shapes are written here from routes.py and must follow it.
- * Money arrives as decimal strings in rupees; it is never turned into a JS number here.
+ * Typed calls to the live FastAPI backend (`backend/src/veritrust/api/`). Every request and
+ * response type comes from the generated OpenAPI types (`make types` -> `src/types/api.d.ts`);
+ * nothing here is hand-written. Money, scores and weights arrive as decimal strings and are never
+ * turned into JS numbers here.
  */
 import { request } from './http';
 import type { components } from '@/types/api';
 
 type Schemas = components['schemas'];
-export type CreateApplicationRequest = Schemas['CreateApplicationRequest'];
-export type RunAssessmentRequest = Schemas['RunAssessmentRequest'];
-export type ScenarioRequest = Schemas['ScenarioSimRequest'];
-export type BureauStatus = NonNullable<RunAssessmentRequest['bureau_status']>;
-export type ApplicationResponse = Schemas['ApplicationResponse'];
+export type Health = Schemas['HealthResponse'];
+export type BackendUser = Schemas['UserSummary'];
 export type VouchSummary = Schemas['VouchSummaryResponse'];
+export type CreateApplicationRequest = Schemas['CreateApplicationRequest'];
+export type ApplicationResponse = Schemas['ApplicationResponse'];
+export type RunAssessmentRequest = Schemas['RunAssessmentRequest'];
+export type BureauStatus = NonNullable<RunAssessmentRequest['bureau_status']>;
+export type AssessmentResult = Schemas['AssessmentResponse'];
+export type Factor = Schemas['ReasonFactor'];
+export type CombinedAssessment = Schemas['CombinedAssessment'];
+export type ScenarioRequest = Schemas['ScenarioSimRequest'];
+export type ScenarioResult = Schemas['ScenarioResponse'];
+export type Decision = Schemas['DecisionRequest']['decision'];
+export type DecisionResult = Schemas['DecisionResponse'];
+export type DefaultResult = Schemas['DefaultResponse'];
+export type VouchRequest = Schemas['VouchRequestResponse'];
+export type CommunityMember = Schemas['MemberView'];
+export type CommunityAsk = Schemas['AskView'];
+export type CommunityVouch = Schemas['VouchBody'];
+export type VouchPreview = Schemas['PreviewView'];
 
-export interface Health {
-  status: string;
-  version: string;
-  timestamp: string;
-}
-
-export interface BackendUser {
-  user_id: string;
-  name: string;
-  reputation: string;
-  capacity: string;
-  status: string;
-  is_anchor: boolean;
-  n_settled_loans: number;
-}
-
-/** One reason code with the evidence it rests on (backend `assess_combined`). */
-export interface Factor {
-  code: string;
-  text: string;
-  source: string;
-}
-
-/** `POST /api/v1/applications/{id}/assessments` (routes.py `run_assessment`). */
-export interface AssessmentResult {
-  assessment_id: string;
-  application_id: string;
-  borrower_id: string;
-  verdict: 'APPROVED' | 'RESTRUCTURED_ALTERNATIVE';
-  bureau_status: BureauStatus;
-  bureau_score: number | null;
-  vouch_score: number;
-  affordability: {
-    disposable_income: string;
-    max_affordable_emi: string;
-    protected_cash_buffer: string;
-    status: string;
-  };
-  best_plan: {
-    principal: string | null;
-    term_months: number | null;
-    monthly_emi: string | null;
-    total_interest: string | null;
-  } | null;
-  stress_resilience: {
-    rating: string;
-    shortfall_probability: number;
-    adverse_5th_percentile_cash: string;
-    income_shock_tolerance_percent: number;
-  } | null;
-  positive_factors: Factor[];
-  risk_factors: Factor[];
-  missing_information: string[];
-  review_flags: string[];
-}
-
-/** `GET /api/v1/assessments/{id}`: the stored side-by-side record, used for the vouch detail. */
-export interface CombinedAssessment {
-  assessment_id: string;
-  borrower_id: string;
-  bureau: { status: BureauStatus; score: number | null; source: string | null };
-  vouch: {
-    vouch_score: string;
-    status: 'PROVISIONAL' | 'ACTIVE' | 'RESTRICTED';
-    confidence: 'LOW' | 'MEDIUM' | 'HIGH';
-    eligible_endorsements: number;
-    raw_support: string;
-    quality_factor: string;
-  };
-  data_quality: 'HIGH_CONFIDENCE_VERIFIED' | 'MEDIUM' | 'LOW';
-  algorithm_version: string;
-}
-
-/** `POST /api/v1/assessments/{id}/scenarios` (routes.py `run_scenario`). */
-export interface ScenarioResult {
-  base_assessment_id: string;
-  is_feasible: boolean;
-  monthly_emi: string;
-  residual_cash: string;
-  income_shock_margin: string;
-  binding_constraint: string;
-  summary: string;
-}
+const enc = encodeURIComponent;
+const viewer = (viewerId?: string) => (viewerId ? `?viewer_id=${enc(viewerId)}` : '');
 
 export const backend = {
   health: () => request<Health>('GET', '/health', undefined, 2500),
   users: () => request<BackendUser[]>('GET', '/api/v1/users'),
-  vouchSummary: (userId: string) => request<VouchSummary>('GET', `/api/v1/users/${encodeURIComponent(userId)}/vouch-summary`),
+  vouchSummary: (userId: string) => request<VouchSummary>('GET', `/api/v1/users/${enc(userId)}/vouch-summary`),
+
   createApplication: (body: CreateApplicationRequest) => request<ApplicationResponse>('POST', '/api/v1/applications', body),
   // The stress test runs thousands of Monte Carlo paths, so it gets a longer timeout.
   runAssessment: (applicationId: string, body: RunAssessmentRequest) =>
-    request<AssessmentResult>('POST', `/api/v1/applications/${encodeURIComponent(applicationId)}/assessments`, body, 30_000),
-  assessment: (assessmentId: string) => request<CombinedAssessment>('GET', `/api/v1/assessments/${encodeURIComponent(assessmentId)}`),
+    request<AssessmentResult>('POST', `/api/v1/applications/${enc(applicationId)}/assessments`, body, 30_000),
+  assessment: (assessmentId: string) => request<CombinedAssessment>('GET', `/api/v1/assessments/${enc(assessmentId)}`),
   scenario: (assessmentId: string, body: ScenarioRequest) =>
-    request<ScenarioResult>('POST', `/api/v1/assessments/${encodeURIComponent(assessmentId)}/scenarios`, body),
+    request<ScenarioResult>('POST', `/api/v1/assessments/${enc(assessmentId)}/scenarios`, body),
+  decide: (applicationId: string, decision: Decision) =>
+    request<DecisionResult>('POST', `/api/v1/applications/${enc(applicationId)}/decision`, { decision }),
+  defaultLoan: (loanId: string, delta0?: string) => request<DefaultResult>('POST', `/api/v1/loans/${enc(loanId)}/default`, { delta0 }),
+
+  askForVouch: (requesterId: string, voucherId: string, note: string) =>
+    request<VouchRequest>('POST', '/api/v1/vouch-requests', { requester_id: requesterId, voucher_id: voucherId, note }),
+  vouchRequests: (voucherId: string) => request<VouchRequest[]>('GET', `/api/v1/vouch-requests?voucher_id=${enc(voucherId)}`),
+  answerVouch: (requestId: string, accept: boolean) =>
+    request<VouchRequest>('POST', `/api/v1/vouch-requests/${enc(requestId)}/respond`, { accept }),
+
+  community: {
+    members: () => request<CommunityMember[]>('GET', '/api/v1/community/members'),
+    asks: (viewerId?: string) => request<CommunityAsk[]>('GET', `/api/v1/community/asks${viewer(viewerId)}`),
+    ask: (askId: string, viewerId?: string) => request<CommunityAsk>('GET', `/api/v1/community/asks/${enc(askId)}${viewer(viewerId)}`),
+    preview: (askId: string, body: CommunityVouch) => request<VouchPreview>('POST', `/api/v1/community/asks/${enc(askId)}/vouch-preview`, body),
+    vouch: (askId: string, body: CommunityVouch) => request<CommunityAsk>('POST', `/api/v1/community/asks/${enc(askId)}/vouches`, body),
+    postSetback: (askId: string, text: string) => request<CommunityAsk>('POST', `/api/v1/community/asks/${enc(askId)}/setback`, { text }),
+    respond: (askId: string, voucherId: string, choice: 'STAND_BY' | 'STEP_BACK') =>
+      request<CommunityAsk>('POST', `/api/v1/community/asks/${enc(askId)}/setback/respond`, { voucher_id: voucherId, choice }),
+    setShown: (askId: string, key: string, shown: boolean) =>
+      request<CommunityAsk>('POST', `/api/v1/community/asks/${enc(askId)}/verified/${enc(key)}`, { shown }),
+  },
 };

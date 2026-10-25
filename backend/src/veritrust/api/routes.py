@@ -519,7 +519,7 @@ def run_scenario(asm_id: str, req: ScenarioSimRequest):
     }
 
 
-@router.post("/api/v1/endorsements/{endorsement_id}/dispute", response_model=DisputeResponse, tags=["Recourse"])
+@router.post("/api/v1/endorsements/{endorsement_id}/dispute", response_model=DisputeResponse, status_code=status.HTTP_201_CREATED, tags=["Recourse"])
 def dispute_endorsement(endorsement_id: str, req: DisputeRequest):
     """File a formal dispute against an endorsement or transaction."""
     engine, scorer, _, _ = get_services()

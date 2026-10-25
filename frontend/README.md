@@ -36,7 +36,8 @@ python main.py serve --port 8000
 | `src/styles/index.css` | Tailwind v4 theme tokens (ink on ledger paper) |
 
 ## Interfaces
-- Live backend (Assessment desk only): `GET /health`, `GET /api/v1/users`, `POST /api/v1/applications`, `POST /api/v1/applications/{id}/assessments`, `GET /api/v1/assessments/{id}`, `POST /api/v1/assessments/{id}/scenarios` (`docs/API_CONTRACT.md`, `src/api/backend.ts`).
+- Live backend, used by the Assessment desk: `GET /health`, `GET /api/v1/users`, `POST /api/v1/applications`, `POST /api/v1/applications/{id}/assessments`, `GET /api/v1/assessments/{id}`, `POST /api/v1/assessments/{id}/scenarios` (`docs/API_CONTRACT.md`).
+- Typed in `src/api/backend.ts` and ready for the other screens, not yet wired: vouch requests, application decisions, defaults and the `/api/v1/community` endpoints.
 - Every other screen consumes the shapes in `src/api/types.ts`, served by `src/mocks/server.ts` until the backend has endpoints for them.
 - Calls a backend would serve: register, requestVouch, respondVouch, previewVouch, linkSource, applyLoan, decideLoan, settle, defaultLoan, simulate, restructure.
 - Demo-only calls: advance, regionalShock, reset, jumpTo.

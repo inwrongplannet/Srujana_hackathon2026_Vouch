@@ -78,7 +78,7 @@ export function WhatIf({ assessmentId, principal, tenure }: { assessmentId: stri
       <div className="mt-5 grid gap-5 md:grid-cols-2">
         <div className="space-y-4">
           <Slider id="wi-income" label="Monthly income" value={income} min={5000} max={100000} step={500} unset="as on file" onChange={setIncome} />
-          <Slider id="wi-expenses" label="Essential expenses a month" value={expenses} min={0} max={80000} step={500} unset="backend default" onChange={setExpenses} />
+          <Slider id="wi-expenses" label="Essential expenses a month" value={expenses} min={0} max={80000} step={500} unset="as on file" onChange={setExpenses} />
           <Slider id="wi-amount" label="Loan amount" value={amount} min={5000} max={500000} step={5000} onChange={setAmount} />
           <div>
             <p className="text-[12.5px] text-ink-3">Months</p>
@@ -116,9 +116,6 @@ export function WhatIf({ assessmentId, principal, tenure }: { assessmentId: stri
                 <dd className="text-right">{result.binding_constraint.toLowerCase().replaceAll('_', ' ')}</dd>
               </dl>
               <p className="mt-3 text-ink-2">{result.summary}</p>
-              <p className="mt-3 text-[12px] text-ink-3">
-                The backend's scenario check does not take the application's interest rate yet, and assumes ₹12,000 of expenses unless you move that slider, so it can disagree with the assessment above.
-              </p>
             </>
           ) : (
             <p className="text-ink-3">Checking…</p>

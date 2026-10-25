@@ -8,6 +8,13 @@
 
 <!-- ENTRIES -->
 
+### 2026-10-25: Backend matches the story: one affordability basis, tau 3, the story cast, community API
+- **Decision:** (1) Every route reads essential expenses as income minus net operating income (the `FinancialFeatures` definition, already used by `cli.py` and `audit_explorer.py`) through `affordability_input()`, and a scenario keeps the assessment's rate, tenure, principal, data and dual-axis limit unless overridden. (2) The backend Vouch Score uses tau 3, the Vouch scoring proposal's value, which the frontend already uses; this supersedes the tau 5 noted in the wiring entry below. (3) The seed is the story cast (Sahyog Microfinance; Meena, Ramesh, Anand; Lakshmi, Suresh, Imran), with a store version that reseeds older stores. (4) The community engine moves to `veritrust.community` with the frontend's known answers, plus endpoints for vouch requests, lender decisions and defaults. (5) Every endpoint declares a response model; `docs/API_CONTRACT.md` records the shapes.
+- **Why:** the assessment and its what-if disagreed (the scenario route used fixed INR 12,000 expenses, INR 35,000 income and a 10% rate), the two scales of Vouch Score confused the demo, and the frontend's community maths had no server behind it.
+- **Alternatives considered:** keeping NOI as expenses (contradicts the model and the contract's own example); tau 5 everywhere (the proposal and the landing page use 3).
+- **Consequences:** Vouch Scores and assessment numbers change from earlier runs; an old `backend/data/store.json` is replaced on load. Community and vouch-request state is in memory and has no login. Contract changes need Abhishek's review in the PR.
+- **By:** Reehan
+
 ### 2026-10-25: Frontend-backend wiring, option C (hybrid)
 - **Decision:** The assessment flow runs on the real FastAPI backend: a new Assessment desk (`/app/assess`) calls `/health`, `/api/v1/users`, `/applications`, `/assessments` and `/scenarios` through `frontend/src/api/http.ts` and `backend.ts`, via a Vite dev proxy to `localhost:8000` (or `VITE_API_BASE_URL`). The mock story screens (borrower, voucher, lender, community, demo controls) stay on the in-browser mock until the backend has endpoints for them. The desk shows the backend's own Vouch Score (tau 5, `scoring.py`); the landing page keeps its illustrative tau 3.
 - **Why:** the four-signal assessment is what F-04 judges, and the backend already computes it; the mock keeps the rest of the demo working if the API is down.

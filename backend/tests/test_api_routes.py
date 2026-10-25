@@ -154,7 +154,7 @@ def test_recourse_dispute_endpoint(client):
         "borrower_id": "LAKSHMI",
     }
     res = client.post("/api/v1/endorsements/VOUCH_001/dispute", json=dispute_payload)
-    assert res.status_code == 200
+    assert res.status_code == 201
     data = res.json()
     assert data["target_record_id"] == "TX_999"
     assert data["status"] == "OPEN"

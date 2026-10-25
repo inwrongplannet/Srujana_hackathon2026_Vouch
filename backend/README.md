@@ -11,7 +11,8 @@ Web-of-trust credit engine, dual-axis underwriting, and lending simulations.
   - **Loan optimizer using Google OR-Tools:** Solves discrete search grid with CP-SAT constraint programming, optimizing for either lowest total borrowing cost (`MIN_COST`) or largest sustainable principal (`MAX_PRINCIPAL`). Outputs original request, best feasible alternative, EMI, total interest, and binding constraints.
   - **Monte Carlo stress tester:** Simulates thousands of stochastic financial scenarios (income volatility, payment delays, emergency expense shocks) using reproducible seeded pseudo-random sampling (no ML). Measures shortfall frequency, 5th-percentile adverse residual cash, and the exact income shock tolerance boundary.
   - **Explanation and evidence engine:** Generates traceable, auditable natural language explanations from the exact rules that fired, evaluating Financial Capacity, Evidence Reliability, Graph Reputation, and Stress-Test Resilience as four separate dimensions.
-- **Test Suite Complete:** 60 comprehensive unit tests covering models, vouch conservation, propagation, slashing, cryptographic ledger integrity, affordability rules, OR-Tools optimization, Monte Carlo stress testing, and explanation synthesis.
+- **Test Suite Complete:** pytest suite covering models, vouch conservation, propagation, slashing, cryptographic ledger integrity, affordability rules, OR-Tools optimization, Monte Carlo stress testing, explanation synthesis, the community engine and every API router.
+- **Demo seed:** the story cast (Sahyog Microfinance anchoring Meena, Ramesh and Anand; borrowers Lakshmi, Suresh and Imran), in `data/store.json` (store version 2.0; an older store is reseeded on load).
 
 ## Run
 Create and activate a virtual environment, install dependencies, and run the engine:
@@ -47,10 +48,10 @@ You will enter an interactive prompt where you can execute commands directly:
 =======================================================================
 
 veritrust> users
-veritrust> login ALICE
-veritrust (ALICE)> whoami
-veritrust (ALICE)> vouch CHARLIE
-veritrust (ALICE)> exit
+veritrust> login MEENA
+veritrust (MEENA)> whoami
+veritrust (MEENA)> vouch IMRAN
+veritrust (MEENA)> exit
 ```
 
 ### Mode B: Single Command Line Invocations
@@ -60,17 +61,17 @@ Run commands directly from your terminal:
 ```bash
 python main.py users                          # List all users
 python main.py signup DAVID "David Miller"    # Create a new user
-python main.py login ALICE                    # Log in as Alice
+python main.py login MEENA                    # Log in as Meena
 python main.py whoami                         # View current session details & credit limit
-python main.py check BOB                      # Check vouch status & credit limit
-python main.py vouch DAVID                    # Vouch for David as Alice
+python main.py check LAKSHMI                      # Check vouch status & credit limit
+python main.py vouch DAVID                    # Vouch for David as Meena
 python main.py borrow 15000                   # Borrow INR 15,000 within credit limit
-python main.py lend CHARLIE 5000              # Peer-to-peer lend to Charlie
+python main.py lend IMRAN 5000              # Peer-to-peer lend to Imran
 python main.py repay LN_00001 15000           # Repay active loan
-python main.py history BOB                    # View audit trail of all reputation events for Bob
+python main.py history LAKSHMI                    # View audit trail of all reputation events for Lakshmi
 python main.py audit                          # Cryptographically audit SHA-256 ledger hash chain
 python main.py replay --restore               # Deterministically reconstruct state from raw events
-python main.py denounce CHARLIE               # Denounce bad actor and trigger slashing
+python main.py denounce IMRAN               # Denounce bad actor and trigger slashing
 python main.py graph                          # Inspect Web-of-Trust graph topology
 python main.py --demo                         # Run automated walkthrough simulation
 ```
@@ -95,24 +96,24 @@ python main.py --demo                         # Run automated walkthrough simula
    ```
    *Output: `UNVOUCHED: User 'DAVID' has no active endorsements. Credit Limit: INR 0.00`.*
 
-4. **Log in as Alice (Community Leader):**
+4. **Log in as Meena (kirana store, Old Hubballi):**
    ```bash
-   python main.py login ALICE
+   python main.py login MEENA
    python main.py whoami
    ```
-   *Shows Alice's profile, $10.0$ capacity, active loans, and who she is endorsing.*
+   *Shows Meena's profile, $10.0$ capacity, active loans, and who she is endorsing.*
 
 5. **Vouch for David:**
    ```bash
    python main.py vouch DAVID
    ```
-   *Alice endorses David. Capacity is automatically conserved and divided equally among her vouchees.*
+   *Meena endorses David. Capacity is automatically conserved and divided equally among her vouchees.*
 
 6. **Check David again:**
    ```bash
    python main.py check DAVID
    ```
-   *Output: `VOUCHED: User 'DAVID' is actively endorsed. Approved Credit Limit: INR 321,551.28`.*
+   *Output: `VOUCHED: User 'DAVID' is actively endorsed.` with the limit the graph now supports.*
 
 7. **Log in as David and borrow money:**
    ```bash
@@ -126,22 +127,22 @@ python main.py --demo                         # Run automated walkthrough simula
    ```bash
    python main.py repay LN_00001 25000
    ```
-   *Full settlement achieved! David’s reputation is boosted ($R + 2.0$), and Alice receives sponsor yield ($R + 1.0$).*
+   *Full settlement achieved! David’s reputation is boosted ($R + 2.0$), and Meena receives sponsor yield ($R + 1.0$).*
 
 9. **Audit the Cryptographic Reputation Ledger:**
    ```bash
-   python main.py history BOB
+   python main.py history LAKSHMI
    python main.py audit
    ```
-   *Displays the immutable history of all events impacting Bob's score, attached settlement evidence, and verifies the complete SHA-256 hash chain from Genesis to Head.*
+   *Displays the immutable history of all events impacting Lakshmi's score, attached settlement evidence, and verifies the complete SHA-256 hash chain from Genesis to Head.*
 
-10. **Peer-to-peer lending (Alice funds Charlie directly):**
+10. **Peer-to-peer lending (Meena funds Imran directly):**
     ```bash
-    python main.py login ALICE
-    python main.py vouch CHARLIE
-    python main.py lend CHARLIE 5000
+    python main.py login MEENA
+    python main.py vouch IMRAN
+    python main.py lend IMRAN 5000
     ```
-    *Alice funds Charlie's loan directly. The contract tracks Alice as the lender.*
+    *Meena funds Imran's loan directly. The contract tracks Meena as the lender.*
 
 11. **View the Trust Graph:**
     ```bash
@@ -151,10 +152,10 @@ python main.py --demo                         # Run automated walkthrough simula
 
 12. **Denounce a bad actor / trigger default:**
     ```bash
-    python main.py denounce CHARLIE --reason "Default on micro-loan"
-    python main.py check CHARLIE
+    python main.py denounce IMRAN --reason "Default on micro-loan"
+    python main.py check IMRAN
     ```
-    *Charlie is marked `DEFAULTED`, capacity is frozen to 0, and the **atomic 4-level slashing cascade** penalizes Alice and transitive ancestors.*
+    *Imran is marked `DEFAULTED`, capacity is frozen to 0, and the **atomic 4-level slashing cascade** penalizes Meena and transitive ancestors.*
 
 13. **Disaster Recovery & State Replay:**
     ```bash
@@ -215,7 +216,8 @@ python main.py --demo                         # Run automated walkthrough simula
   - `attack_simulator.py`: Web-of-Trust attack simulator (Sybil cliques, collusion rings, sponsor dilution, burst anomalies).
   - `audit_explorer.py`: Forensic decision explorer detailing numerical rule traces, evidence links, and sensitivity deltas.
   - `recourse.py`: Borrower recourse protocol, evidence-quality tracking (`MISSING`, `STALE`, `DUPLICATED`, `DISPUTED`), and recalculation audit.
-  - `api/`: FastAPI REST API package exposing endpoints for applications, evidence, endorsements, assessments, scenarios, and disputes.
+  - `community.py`: Community vouching engine (KNOWN and EVIDENCE vouches, capped evidence weight, reward preview) and its in-memory seeded store.
+  - `api/`: FastAPI REST API package. `routes.py`: applications, evidence, endorsements, assessments, scenarios, disputes, users, loans, graph (uses the OR-Tools optimizer). `protocol_routes.py`: vouch requests, lender decisions, defaults. `community_routes.py`: the community platform. `registry.py`: in-memory applications and assessments shared by the routers.
 - `tests/`: Pytest unit tests for all mathematical invariants, state transitions, and ledger integrity.
 - `main.py`: End-to-end interactive CLI demonstration.
 - `requirements.txt`: Python package requirements (`pydantic`, `networkx`, `ortools`, `fastapi`, `uvicorn`, `httpx`, `pytest`).
@@ -232,7 +234,8 @@ python main.py --demo                         # Run automated walkthrough simula
 - **`TrustGraphAttackSimulator`**: Evaluates Sybil cliques, collusion rings, sponsor dilution, and temporal burst anomalies.
 - **`DecisionAuditExplorer`**: Forensic inspection of rule thresholds, graph paths, evidence, and input sensitivity.
 - **`BorrowerRecourseWorkflow`**: Dispute filing, evidence corrections, recalculation tracking, and quality auditing.
-- **`FastAPI REST API`**: Interactive OpenAPI docs available at `http://localhost:8000/docs`.
+- **`FastAPI REST API`**: Interactive OpenAPI docs available at `http://localhost:8000/docs`; shapes in `docs/API_CONTRACT.md`. Every endpoint declares a response model, so `make types` generates `frontend/src/types/api.d.ts`.
+- **`CommunityStore`**: Community asks, vouches, setbacks and consent, exposed under `/api/v1/community`.
 - **CLI**: Executed via `python main.py`.
 
 ## Config
@@ -268,6 +271,9 @@ pytest tests/test_affordability.py  # D = I - E - B, buffer floors, FOIR/DTI cap
 pytest tests/test_optimizer.py      # Google OR-Tools CP-SAT solver, MIN_COST & MAX_PRINCIPAL
 pytest tests/test_stress_tester.py  # Seeded Monte Carlo simulations, break income, shock tolerance
 pytest tests/test_explainer.py      # 4-dimension explanation engine, traceable rules
+pytest tests/test_community.py      # Community vouching known answers (same as the frontend's)
+pytest tests/test_protocol_routes.py # Vouch requests, decisions, defaults, community API (no OR-Tools needed)
+pytest tests/test_api_routes.py     # Assessment, scenario and other REST routes (needs OR-Tools)
 ```
 
 ## Notes

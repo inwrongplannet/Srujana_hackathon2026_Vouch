@@ -17,6 +17,8 @@ function score(value: number | string, dp = 1): string {
 
 const words = (code: string) => code.toLowerCase().replaceAll('_', ' ');
 
+const AFFORD_TONE: Record<string, Tone> = { SUFFICIENT: 'active', BORDERLINE: 'restricted', INSUFFICIENT: 'defaulted' };
+
 function Row({ label, children }: { label: string; children: ReactNode }) {
   return (
     <>
@@ -69,14 +71,17 @@ export function Signals({ r, detail }: { r: AssessmentResult; detail: CombinedAs
             <Row label="Outcome quality">{score(detail.vouch.quality_factor, 2)}</Row>
           </dl>
         ) : null}
-        {r.vouch_score === 0 ? <p className="mt-2 text-ink-3">Nobody has vouched yet: that is missing evidence, not risk.</p> : null}
+        {new Decimal(r.vouch_score).isZero() ? <p className="mt-2 text-ink-3">Nobody has vouched yet: that is missing evidence, not risk.</p> : null}
       </Signal>
 
-      <Signal n={3} title="Affordability" badge={<Badge tone="plain">{words(r.affordability.status)}</Badge>}>
+      <Signal n={3} title="Affordability" badge={<Badge tone={AFFORD_TONE[r.affordability.status] ?? 'plain'}>{words(r.affordability.status)}</Badge>}>
         <dl className="grid grid-cols-2 gap-y-1">
+          <Row label="Income a month">{rupees(r.affordability.gross_monthly_income)}</Row>
+          <Row label="Essentials and EMIs">{rupees(r.affordability.non_discretionary_outflows)}</Row>
+          <Row label="Cash kept aside">{rupees(r.affordability.protected_cash_buffer)}</Row>
           <Row label="Disposable a month">{rupees(r.affordability.disposable_income)}</Row>
           <Row label="Largest safe EMI">{rupees(r.affordability.max_affordable_emi)}</Row>
-          <Row label="Cash kept aside">{rupees(r.affordability.protected_cash_buffer)}</Row>
+          <Row label="Set by">{words(r.affordability.binding_rule)}</Row>
         </dl>
         {stress ? (
           <p className="mt-3 text-ink-2">

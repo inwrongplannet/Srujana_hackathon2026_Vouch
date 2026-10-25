@@ -268,10 +268,271 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/vouch-requests": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Vouch Requests
+         * @description Requests filtered by who asked, who was asked, and status (all filters optional).
+         */
+        get: operations["list_vouch_requests_api_v1_vouch_requests_get"];
+        put?: never;
+        /**
+         * Create Vouch Request
+         * @description Ask someone to vouch for you; they accept or decline later.
+         */
+        post: operations["create_vouch_request_api_v1_vouch_requests_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/vouch-requests/{request_id}/respond": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Respond Vouch Request
+         * @description Accept (creates the endorsement, weights conserved) or decline a pending request.
+         */
+        post: operations["respond_vouch_request_api_v1_vouch_requests__request_id__respond_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/applications/{app_id}/decision": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Decide Application
+         * @description The lender approves (disbursing the loan within the borrower's limit) or declines.
+         */
+        post: operations["decide_application_api_v1_applications__app_id__decision_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/loans/{loan_id}/default": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Default Loan
+         * @description Record a default and apply the damped slashing cascade (k = 0, 1, 2; nothing at k >= 3).
+         */
+        post: operations["default_loan_api_v1_loans__loan_id__default_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/community/members": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Members
+         * @description Everyone who can vouch, with their budget and smoothed track record.
+         */
+        get: operations["list_members_api_v1_community_members_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/community/asks": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Asks
+         * @description The feed. Strangers see only the verified items each borrower chose to show.
+         */
+        get: operations["list_asks_api_v1_community_asks_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/community/asks/{ask_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Ask
+         * @description One ask, as `viewer_id` sees it.
+         */
+        get: operations["get_ask_api_v1_community_asks__ask_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/community/asks/{ask_id}/vouch-preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Preview Vouch
+         * @description What a vouch would do before it is given: its weight, the score change and the reward at stake.
+         */
+        post: operations["preview_vouch_api_v1_community_asks__ask_id__vouch_preview_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/community/asks/{ask_id}/vouches": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Vouch
+         * @description Stake reputation on someone, as someone who knows them (KNOWN) or on their evidence (EVIDENCE).
+         */
+        post: operations["vouch_api_v1_community_asks__ask_id__vouches_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/community/asks/{ask_id}/setback": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Post Setback
+         * @description The borrower reports a setback; each KNOWN voucher then stands by or steps back.
+         */
+        post: operations["post_setback_api_v1_community_asks__ask_id__setback_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/community/asks/{ask_id}/setback/respond": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Respond Setback
+         * @description Stand by keeps the vouch; step back withdraws it and frees the stake.
+         */
+        post: operations["respond_setback_api_v1_community_asks__ask_id__setback_respond_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/community/asks/{ask_id}/verified/{key}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Set Shown
+         * @description The borrower's consent: show or hide one verified item from strangers.
+         */
+        post: operations["set_shown_api_v1_community_asks__ask_id__verified__key__post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /** AffordabilitySummary */
+        AffordabilitySummary: {
+            /** Gross Monthly Income */
+            gross_monthly_income: string;
+            /** Non Discretionary Outflows */
+            non_discretionary_outflows: string;
+            /** Disposable Income */
+            disposable_income: string;
+            /** Max Affordable Emi */
+            max_affordable_emi: string;
+            /** Protected Cash Buffer */
+            protected_cash_buffer: string;
+            /** Status */
+            status: string;
+            /** Binding Rule */
+            binding_rule: string;
+        };
         /** ApplicationResponse */
         ApplicationResponse: {
             /** Application Id */
@@ -286,6 +547,191 @@ export interface components {
             status: string;
             /** Created At */
             created_at: string;
+        };
+        /** AskView */
+        AskView: {
+            /** Id */
+            id: string;
+            /** Owner Id */
+            owner_id: string;
+            /** Name */
+            name: string;
+            /** Trade */
+            trade: string;
+            /** Place */
+            place: string;
+            /** Circle */
+            circle: string;
+            /** Purpose */
+            purpose: string;
+            /** Amount Band */
+            amount_band: string;
+            /** Posted Days */
+            posted_days: number;
+            /** Story */
+            story: string;
+            /**
+             * Verified
+             * @description All items for the owner; only shown ones for anyone else
+             */
+            verified: components["schemas"]["VerifiedView"][];
+            /** Thin File */
+            thin_file: boolean;
+            /**
+             * Bureau Status
+             * @enum {string}
+             */
+            bureau_status: "NO_FILE" | "AVAILABLE";
+            /** Bureau Trail */
+            bureau_trail?: number[] | null;
+            /** Expected Repay */
+            expected_repay: string;
+            /** Vouches */
+            vouches: components["schemas"]["VouchView"][];
+            score: components["schemas"]["ScoreView"];
+            setback?: components["schemas"]["SetbackView"] | null;
+            /** Known By */
+            known_by: string[];
+            /**
+             * Viewer Knows
+             * @description True when the viewer is in this person's circle
+             */
+            viewer_knows: boolean;
+        };
+        /** AssessmentResponse */
+        AssessmentResponse: {
+            /** Assessment Id */
+            assessment_id: string;
+            /** Application Id */
+            application_id: string;
+            /** Borrower Id */
+            borrower_id: string;
+            /** Verdict */
+            verdict: string;
+            /**
+             * Bureau Status
+             * @enum {string}
+             */
+            bureau_status: "AVAILABLE" | "NO_FILE" | "UNAVAILABLE" | "NOT_AUTHORIZED";
+            /** Bureau Score */
+            bureau_score?: number | null;
+            /** Vouch Score */
+            vouch_score: string;
+            affordability: components["schemas"]["AffordabilitySummary"];
+            best_plan?: components["schemas"]["PlanSummary"] | null;
+            stress_resilience?: components["schemas"]["StressSummary"] | null;
+            /** Reason Codes */
+            reason_codes: string[];
+            /** Positive Factors */
+            positive_factors: components["schemas"]["ReasonFactor"][];
+            /** Risk Factors */
+            risk_factors: components["schemas"]["ReasonFactor"][];
+            /** Missing Information */
+            missing_information: string[];
+            /** Review Flags */
+            review_flags: string[];
+        };
+        /**
+         * BureauReport
+         * @description Credit bureau signal representation (Section 8 of Master Doc v2).
+         */
+        BureauReport: {
+            /**
+             * Status
+             * @description Bureau data availability status
+             * @default NO_FILE
+             * @enum {string}
+             */
+            status: "AVAILABLE" | "NO_FILE" | "UNAVAILABLE" | "NOT_AUTHORIZED";
+            /**
+             * Score
+             * @description Official credit score (300-900), or None if NO_FILE
+             */
+            score?: number | null;
+            /**
+             * Source
+             * @description Credit bureau authority (e.g. CIBIL, Experian)
+             */
+            source?: string | null;
+            /**
+             * As Of
+             * @description Timestamp of bureau pull
+             */
+            as_of?: string | null;
+        };
+        /**
+         * CombinedAssessment
+         * @description Side-by-side combined credit assessment (Section 8 of Master Doc v2).
+         */
+        CombinedAssessment: {
+            /**
+             * Assessment Id
+             * @description Unique assessment snapshot identifier
+             */
+            assessment_id: string;
+            /**
+             * Application Id
+             * @description Associated loan application ID
+             */
+            application_id?: string | null;
+            /**
+             * Borrower Id
+             * @description Evaluated borrower user ID
+             */
+            borrower_id: string;
+            /** @description Conventional bureau signal (unblended) */
+            bureau: components["schemas"]["BureauReport"];
+            /** @description Bounded Vouch score (0-100) and confidence */
+            vouch: components["schemas"]["VouchScoreReport"];
+            /**
+             * Affordability
+             * @description Cash-flow affordability and EMI capacity metrics
+             */
+            affordability: {
+                [key: string]: unknown;
+            };
+            /**
+             * Data Quality
+             * @description Data completeness and verification grade
+             * @default MEDIUM
+             * @enum {string}
+             */
+            data_quality: "HIGH_CONFIDENCE_VERIFIED" | "MEDIUM" | "LOW";
+            /**
+             * Positive Factors
+             * @description Evidence-backed positive reason codes
+             */
+            positive_factors?: {
+                [key: string]: unknown;
+            }[];
+            /**
+             * Risk Factors
+             * @description Evidence-backed risk reason codes
+             */
+            risk_factors?: {
+                [key: string]: unknown;
+            }[];
+            /**
+             * Missing Information
+             * @description Missing or unverified fields
+             */
+            missing_information?: string[];
+            /**
+             * Review Flags
+             * @description Flags requiring human underwriter review
+             */
+            review_flags?: string[];
+            /**
+             * Algorithm Version
+             * @description Version of credit assessment rules
+             * @default vouch-v2.0
+             */
+            algorithm_version: string;
+            /**
+             * Timestamp
+             * Format: date-time
+             */
+            timestamp?: string;
         };
         /** CreateApplicationRequest */
         CreateApplicationRequest: {
@@ -370,6 +816,50 @@ export interface components {
             /** Income Volatility */
             income_volatility?: string | null;
         };
+        /** CreateVouchRequest */
+        CreateVouchRequest: {
+            /** Requester Id */
+            requester_id: string;
+            /** Voucher Id */
+            voucher_id: string;
+            /**
+             * Note
+             * @default
+             */
+            note: string;
+        };
+        /** DecisionRequest */
+        DecisionRequest: {
+            /**
+             * Decision
+             * @enum {string}
+             */
+            decision: "APPROVE" | "APPROVE_AT_LIMIT" | "DECLINE";
+        };
+        /** DecisionResponse */
+        DecisionResponse: {
+            /** Application Id */
+            application_id: string;
+            /** Status */
+            status: string;
+            loan?: components["schemas"]["LoanView"] | null;
+        };
+        /** DefaultRequest */
+        DefaultRequest: {
+            /** Delta0 */
+            delta0?: string | null;
+        };
+        /** DefaultResponse */
+        DefaultResponse: {
+            /** Loan Id */
+            loan_id: string;
+            /** Status */
+            status: string;
+            /** Delta0 */
+            delta0: string;
+            /** Penalties */
+            penalties: components["schemas"]["Penalty"][];
+        };
         /** DisputeRequest */
         DisputeRequest: {
             /** Record Id */
@@ -387,6 +877,17 @@ export interface components {
             /** Borrower Id */
             borrower_id?: string | null;
         };
+        /** DisputeResponse */
+        DisputeResponse: {
+            /** Dispute Id */
+            dispute_id: string;
+            /** Target Record Id */
+            target_record_id: string;
+            /** Status */
+            status: string;
+            /** Created At */
+            created_at: string;
+        };
         /** EndorsementResponse */
         EndorsementResponse: {
             /** Endorsement Id */
@@ -402,10 +903,168 @@ export interface components {
             /** Created At */
             created_at: string;
         };
+        /** EvidenceResponse */
+        EvidenceResponse: {
+            /** Evidence Id */
+            evidence_id: string;
+            /** Application Id */
+            application_id: string;
+            /** Status */
+            status: string;
+            /** Verified At */
+            verified_at: string;
+        };
+        /** GraphEdge */
+        GraphEdge: {
+            /** Source */
+            source: string;
+            /** Target */
+            target: string;
+            /** Weight */
+            weight: string;
+        };
+        /** GraphNode */
+        GraphNode: {
+            /** Id */
+            id: string;
+            /** Name */
+            name: string;
+            /** Reputation */
+            reputation: string;
+            /** Capacity */
+            capacity: string;
+            /** Status */
+            status: string;
+            /** Is Anchor */
+            is_anchor: boolean;
+        };
+        /** GraphResponse */
+        GraphResponse: {
+            /** Nodes */
+            nodes: components["schemas"]["GraphNode"][];
+            /** Edges */
+            edges: components["schemas"]["GraphEdge"][];
+        };
         /** HTTPValidationError */
         HTTPValidationError: {
             /** Detail */
             detail?: components["schemas"]["ValidationError"][];
+        };
+        /** HealthResponse */
+        HealthResponse: {
+            /** Status */
+            status: string;
+            /** Version */
+            version: string;
+            /** Timestamp */
+            timestamp: string;
+        };
+        /** LoanSummary */
+        LoanSummary: {
+            /** Loan Id */
+            loan_id: string;
+            /** Borrower Id */
+            borrower_id: string;
+            /** Lender Id */
+            lender_id?: string | null;
+            /** Principal */
+            principal: string;
+            /** Outstanding Balance */
+            outstanding_balance: string;
+            /** Interest Rate */
+            interest_rate: string;
+            /** Tenure Months */
+            tenure_months: number;
+            /** Status */
+            status: string;
+        };
+        /** LoanView */
+        LoanView: {
+            /** Loan Id */
+            loan_id: string;
+            /** Borrower Id */
+            borrower_id: string;
+            /** Principal */
+            principal: string;
+            /** Outstanding Balance */
+            outstanding_balance: string;
+            /** Interest Rate */
+            interest_rate: string;
+            /** Tenure Months */
+            tenure_months: number;
+            /** Status */
+            status: string;
+        };
+        /** MemberView */
+        MemberView: {
+            /** Id */
+            id: string;
+            /** Name */
+            name: string;
+            /** Line */
+            line: string;
+            /** Reputation */
+            reputation: string;
+            /** Budget */
+            budget: string;
+            /** Committed */
+            committed: string;
+            /** Free */
+            free: string;
+            /** Resolved */
+            resolved: number;
+            /** Repaid */
+            repaid: number;
+            /** Track Record */
+            track_record: string;
+        };
+        /** Penalty */
+        Penalty: {
+            /** User Id */
+            user_id: string;
+            /** Level */
+            level: number;
+            /** Reputation Before */
+            reputation_before: string;
+            /** Reputation After */
+            reputation_after: string;
+            /** Status After */
+            status_after: string;
+        };
+        /** PlanSummary */
+        PlanSummary: {
+            /** Principal */
+            principal: string;
+            /** Term Months */
+            term_months: number;
+            /** Monthly Emi */
+            monthly_emi: string;
+            /** Total Interest */
+            total_interest: string;
+        };
+        /** PreviewView */
+        PreviewView: {
+            /** Weight */
+            weight: string;
+            /** Utilisation */
+            utilisation: string;
+            /** Score Before */
+            score_before?: string | null;
+            /** Score After */
+            score_after: string;
+            /** Gain If Repaid */
+            gain_if_repaid: string;
+            /** Loss If Default */
+            loss_if_default: string;
+        };
+        /** ReasonFactor */
+        ReasonFactor: {
+            /** Code */
+            code: string;
+            /** Text */
+            text: string;
+            /** Source */
+            source: string;
         };
         /** RegisterEvidenceRequest */
         RegisterEvidenceRequest: {
@@ -439,6 +1098,30 @@ export interface components {
             /** Amount */
             amount: string;
         };
+        /** RepayResponse */
+        RepayResponse: {
+            /** Loan Id */
+            loan_id: string;
+            /** Status */
+            status: string;
+            /** Outstanding Balance */
+            outstanding_balance: string;
+        };
+        /** RespondBody */
+        RespondBody: {
+            /** Voucher Id */
+            voucher_id: string;
+            /**
+             * Choice
+             * @enum {string}
+             */
+            choice: "STAND_BY" | "STEP_BACK";
+        };
+        /** RespondVouchRequest */
+        RespondVouchRequest: {
+            /** Accept */
+            accept: boolean;
+        };
         /** RunAssessmentRequest */
         RunAssessmentRequest: {
             /**
@@ -465,6 +1148,23 @@ export interface components {
              */
             bureau_status: "AVAILABLE" | "NO_FILE" | "UNAVAILABLE" | "NOT_AUTHORIZED";
         };
+        /** ScenarioResponse */
+        ScenarioResponse: {
+            /** Base Assessment Id */
+            base_assessment_id: string;
+            /** Is Feasible */
+            is_feasible: boolean;
+            /** Monthly Emi */
+            monthly_emi: string;
+            /** Residual Cash */
+            residual_cash: string;
+            /** Income Shock Margin */
+            income_shock_margin: string;
+            /** Binding Constraint */
+            binding_constraint: string;
+            /** Summary */
+            summary: string;
+        };
         /** ScenarioSimRequest */
         ScenarioSimRequest: {
             /** Simulated Income */
@@ -475,6 +1175,77 @@ export interface components {
             simulated_principal?: string | null;
             /** Simulated Tenure */
             simulated_tenure?: number | null;
+        };
+        /** ScoreView */
+        ScoreView: {
+            /**
+             * Score
+             * @description 0-100, or null when nobody has vouched (not zero)
+             */
+            score: string | null;
+            /** Known Weight */
+            known_weight: string;
+            /** Evidence Weight */
+            evidence_weight: string;
+            /** Evidence Counted */
+            evidence_counted: string;
+            /** Total Weight */
+            total_weight: string;
+        };
+        /** SetbackBody */
+        SetbackBody: {
+            /** Text */
+            text: string;
+        };
+        /** SetbackView */
+        SetbackView: {
+            /** Posted */
+            posted: string;
+            /** Text */
+            text: string;
+            /** Responses */
+            responses: {
+                [key: string]: "PENDING" | "STAND_BY" | "STEP_BACK";
+            };
+        };
+        /** ShownBody */
+        ShownBody: {
+            /** Shown */
+            shown: boolean;
+        };
+        /** StressSummary */
+        StressSummary: {
+            /** Rating */
+            rating: string;
+            /** Shortfall Probability */
+            shortfall_probability: number;
+            /** Adverse 5Th Percentile Cash */
+            adverse_5th_percentile_cash: string;
+            /** Income Shock Tolerance Percent */
+            income_shock_tolerance_percent: number;
+        };
+        /** UserSummary */
+        UserSummary: {
+            /** User Id */
+            user_id: string;
+            /** Name */
+            name: string;
+            /** Reputation */
+            reputation: string;
+            /** Capacity */
+            capacity: string;
+            /** Status */
+            status: string;
+            /**
+             * Is Anchor
+             * @default false
+             */
+            is_anchor: boolean;
+            /**
+             * N Settled Loans
+             * @default 0
+             */
+            n_settled_loans: number;
         };
         /** ValidationError */
         ValidationError: {
@@ -489,12 +1260,117 @@ export interface components {
             /** Context */
             ctx?: Record<string, never>;
         };
+        /** VerifiedView */
+        VerifiedView: {
+            /** Key */
+            key: string;
+            /** Label */
+            label: string;
+            /** Detail */
+            detail: string;
+            /**
+             * Tone
+             * @enum {string}
+             */
+            tone: "ok" | "gap" | "warn";
+            /** Shown */
+            shown: boolean;
+        };
+        /** VouchBody */
+        VouchBody: {
+            /** Voucher Id */
+            voucher_id: string;
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "KNOWN" | "EVIDENCE";
+            /**
+             * Stake
+             * @description Reputation points, a decimal string
+             */
+            stake: string;
+            /** Relationship */
+            relationship?: ("FAMILY" | "NEIGHBOUR" | "COLLEAGUE" | "TRADE" | "COMMUNITY") | null;
+            /** Years Known */
+            years_known?: number | null;
+            /**
+             * Read Verified
+             * @description EVIDENCE only: the voucher confirms they read the summary
+             * @default false
+             */
+            read_verified: boolean;
+        };
+        /** VouchRequestResponse */
+        VouchRequestResponse: {
+            /** Request Id */
+            request_id: string;
+            /** Requester Id */
+            requester_id: string;
+            /** Voucher Id */
+            voucher_id: string;
+            /** Note */
+            note: string;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "PENDING" | "ACCEPTED" | "DECLINED";
+            /** Endorsement Id */
+            endorsement_id?: string | null;
+            /** Created At */
+            created_at: string;
+        };
+        /**
+         * VouchScoreReport
+         * @description Bounded Vouch Score (0-100) from Section 6.2 of Master Doc v2.
+         */
+        VouchScoreReport: {
+            /**
+             * Vouch Score
+             * @description Bounded score in [0, 100]
+             * @default 0.0
+             */
+            vouch_score: string;
+            /**
+             * Status
+             * @description Vouch score standing
+             * @default ACTIVE
+             * @enum {string}
+             */
+            status: "PROVISIONAL" | "ACTIVE" | "RESTRICTED";
+            /**
+             * Confidence
+             * @description Confidence rating based on data depth
+             * @default MEDIUM
+             * @enum {string}
+             */
+            confidence: "LOW" | "MEDIUM" | "HIGH";
+            /**
+             * Eligible Endorsements
+             * @description Count of active contributing endorsements
+             * @default 0
+             */
+            eligible_endorsements: number;
+            /**
+             * Raw Support
+             * @description Diminishing returns support: 1 - exp(-W/tau)
+             * @default 0.0
+             */
+            raw_support: string;
+            /**
+             * Quality Factor
+             * @description Historical outcome quality: clamp(C, 0, 1)
+             * @default 0.5
+             */
+            quality_factor: string;
+        };
         /** VouchSummaryResponse */
         VouchSummaryResponse: {
             /** User Id */
             user_id: string;
             /** Vouch Score */
-            vouch_score: number;
+            vouch_score: string;
             /** Confidence Rating */
             confidence_rating: string;
             /** Eligible Endorsement Count */
@@ -503,6 +1379,26 @@ export interface components {
             reputation_capacity: string;
             /** Active Incoming Paths */
             active_incoming_paths: number;
+        };
+        /** VouchView */
+        VouchView: {
+            /** Voucher Id */
+            voucher_id: string;
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "KNOWN" | "EVIDENCE";
+            /** Stake */
+            stake: string;
+            /** Relationship */
+            relationship?: string | null;
+            /** Years Known */
+            years_known?: number | null;
+            /** Utilisation */
+            utilisation?: string | null;
+            /** Weight */
+            weight: string;
         };
     };
     responses: never;
@@ -528,7 +1424,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["HealthResponse"];
                 };
             };
         };
@@ -587,7 +1483,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["EvidenceResponse"];
                 };
             };
             /** @description Validation Error */
@@ -686,7 +1582,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["AssessmentResponse"];
                 };
             };
             /** @description Validation Error */
@@ -717,7 +1613,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["CombinedAssessment"];
                 };
             };
             /** @description Validation Error */
@@ -752,7 +1648,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["ScenarioResponse"];
                 };
             };
             /** @description Validation Error */
@@ -782,12 +1678,12 @@ export interface operations {
         };
         responses: {
             /** @description Successful Response */
-            200: {
+            201: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["DisputeResponse"];
                 };
             };
             /** @description Validation Error */
@@ -816,7 +1712,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["UserSummary"][];
                 };
             };
         };
@@ -840,7 +1736,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["UserSummary"];
                 };
             };
             /** @description Validation Error */
@@ -869,7 +1765,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["LoanSummary"][];
                 };
             };
         };
@@ -893,7 +1789,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["RepayResponse"];
                 };
             };
             /** @description Validation Error */
@@ -922,7 +1818,438 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["GraphResponse"];
+                };
+            };
+        };
+    };
+    list_vouch_requests_api_v1_vouch_requests_get: {
+        parameters: {
+            query?: {
+                voucher_id?: string | null;
+                requester_id?: string | null;
+                status?: ("PENDING" | "ACCEPTED" | "DECLINED") | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VouchRequestResponse"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_vouch_request_api_v1_vouch_requests_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateVouchRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VouchRequestResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    respond_vouch_request_api_v1_vouch_requests__request_id__respond_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                request_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RespondVouchRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VouchRequestResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    decide_application_api_v1_applications__app_id__decision_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                app_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DecisionRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DecisionResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    default_loan_api_v1_loans__loan_id__default_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                loan_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DefaultRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DefaultResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_members_api_v1_community_members_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MemberView"][];
+                };
+            };
+        };
+    };
+    list_asks_api_v1_community_asks_get: {
+        parameters: {
+            query?: {
+                viewer_id?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AskView"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_ask_api_v1_community_asks__ask_id__get: {
+        parameters: {
+            query?: {
+                viewer_id?: string | null;
+            };
+            header?: never;
+            path: {
+                ask_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AskView"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    preview_vouch_api_v1_community_asks__ask_id__vouch_preview_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                ask_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["VouchBody"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PreviewView"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    vouch_api_v1_community_asks__ask_id__vouches_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                ask_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["VouchBody"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AskView"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    post_setback_api_v1_community_asks__ask_id__setback_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                ask_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SetbackBody"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AskView"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    respond_setback_api_v1_community_asks__ask_id__setback_respond_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                ask_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RespondBody"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AskView"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    set_shown_api_v1_community_asks__ask_id__verified__key__post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                ask_id: string;
+                key: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ShownBody"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AskView"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };

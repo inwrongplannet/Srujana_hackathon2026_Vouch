@@ -15,8 +15,10 @@ Start the app with `make dev` and open `http://127.0.0.1:5173`. The dark present
 7. Presenter bar: "Advance 30 days", then "Lakshmi repays" (credibility minted, Meena earns yield) or "Lakshmi defaults" (graph ripples: Lakshmi -1.00, Meena -0.35, three ancestors -0.25 each, Sahyog marked "hop 3, untouched").
 8. "Regional shock": three Gadag farmers default at once, the breaker trips at above 30%, the third slash is queued. Click "Restructure and resume".
 9. Anti-churn: "Reset", then sign in as Vinod (`0000 0000 0007`). The same nullifier resolves to his DEFAULTED record.
+10. Live backend (optional; start it with `cd backend && python main.py serve --port 8000`, the green dot on "Assess" turns on): open `/app/assess`. It opens on Lakshmi asking for 1,50,000 INR over 12 months; Run assessment shows bureau (no file, unknown not bad), Vouch Score 63.5 from Ramesh and Anand, affordability (8,945 INR a month to spare) and evidence apart, and offers a restructured plan. Move the what-if sliders: with nothing moved, the scenario matches the assessment.
 
 ## Fallback plan
 - No network is needed: fonts are self-hosted and the protocol runs in the browser (`frontend/src/mocks/`).
 - Jump straight to any scene with `?jump=<step>`, for example `http://127.0.0.1:5173/app/lender/p_lakshmi?jump=approve`. Steps: `request`, `vouch`, `apply`, `approve`, `advance`, `outcome`, `settled`, `defaulted`.
 - If the dev server fails, run `npm run build` then `npm run preview` in `frontend/` (serves `dist/` on port 4173).
+- Backend on another machine: start the frontend with `VITE_API_BASE_URL=http://<host>:8000`. If the backend is down, skip step 10; every other step runs without it. A stale `backend/data/store.json` from the old ALICE and BOB seed is replaced automatically on start.
