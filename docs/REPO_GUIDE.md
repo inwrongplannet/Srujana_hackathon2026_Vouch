@@ -60,6 +60,7 @@ A zone is a top-level folder with its own `AGENTS.md` (`backend/`, `frontend/`, 
 | `backend/` | API and finance logic, scaffolded by whoever the task is assigned to | Event day |
 | `backend/localdocs/VOUCH_DEVELOPER_MASTER_V2.md` | Master developer specification v2: architecture, graph math, scenarios, and acceptance criteria | Done |
 | `backend/localdocs/FORMULAS_AND_NUMBERS.md` | Master mathematical specification: formulas, processes, constants, and calibration numbers | Done |
+| `backend/localdocs/PROSPER_AND_LITERATURE_LESSONS.md` | Empirical analysis of 55k Prosper loans, cheap-talk failure modes, and literature synthesis | Done |
 | `frontend/` | User-facing app, scaffolded by whoever the task is assigned to | Event day |
 | `spikes/` | Sandbox for experiments; messy is fine, findings must be written | During event |
 | `data/` | Small sample and seed files | During event |
