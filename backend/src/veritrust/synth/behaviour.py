@@ -1,12 +1,16 @@
-"""The behaviour layer: conditions that are nobody's fault, random walks, and absurdity.
+"""What happens to a borrower each month, beyond their own rules: the world and their own luck.
 
-Rules alone make a world too tidy. This layer adds, on a separate random stream:
-- Covariate events (heatwave, flood, lockdown) that hit a whole region at once. Endorsers live in
-  the same region, so the help they can give shrinks (params COVARIATE_EVENTS `support`).
-- A persistent random walk in income and a slow drift in discipline, so people change.
-- A scarcity dip: after a shock, discipline falls for a few months, then recovers.
-- Rare events no rule predicts: windfalls, theft or fire, migration, impulse splurges (more
-  likely for present-biased people and at festival time), and technical bounces.
+All rates come from `params.py` "The world" section, each labelled SOURCED, DERIVED, DESIGN, NOISE
+or ASSUMPTION:
+- Covariate events from the borrower's world: a pandemic (State of Working India 2021 worker
+  paths and earnings changes, a lockdown, an RBI-style moratorium), floods (CWC and the Kerala
+  PDNA), heat (ILO) and droughts (IITM, Economic Survey).
+- Personal shocks: job loss and re-employment (PLFS panel), hospital stays and their
+  out-of-pocket cost (NSS 75th round).
+- Endorsers are people: a covariate event hits each one with the borrower's exposure rate, and a
+  hit endorser cannot help that month.
+- Noise that breaks patterns and claims nothing: an income walk, drifting discipline, theft at the
+  NCRB rate, unexplained one-off costs and failed auto-debits.
 Every event is logged per month, so the answer key can say what really happened.
 """
 
@@ -16,98 +20,140 @@ from dataclasses import dataclass, field
 
 from . import params as P
 from .model import Borrower, year_month
+from .world import World
+
+COVARIATE, IDIOSYNCRATIC, NOISE = "COVARIATE", "IDIOSYNCRATIC", "NOISE"
 
 
 @dataclass
 class Traits:
-    """Behaviour traits and walk state for one borrower (hidden truth)."""
+    """A borrower's draws from the world (hidden truth) and the state of their walks."""
 
-    present_bias: float                    # 0..1: how much of a windfall or surplus is spent now
-    exposed: dict[str, bool] = field(default_factory=dict)   # covariate event -> hit or spared
-    lockdown_job_loss: bool = False
-    level: float = 0.0                     # log-income random-walk state
-    scarcity: int = 0                      # months of scarcity dip left
+    world: World
+    pandemic_path: str = "UNAFFECTED"
+    delayed_at: int = 0                    # DELAYED_LOSS: months after onset the job goes
+    irrigated: bool = False                # farmers only
+    level: float = 0.0                     # NOISE: log-income walk
+    out_of_work: str = ""                  # "", "JOB_LOSS" or "PANDEMIC"
+    out_months: int = 0                    # months spent out of work in the simulation
+    moratorium_loans: set[str] = field(default_factory=set)
 
 
-def sample_traits(b: Borrower, rng: random.Random) -> Traits:
-    traits = Traits(present_bias=rng.betavariate(2.0, 3.0))
-    for event in P.COVARIATE_EVENTS:
-        in_region = event["states"] is None or b.state in event["states"]
-        touched = b.segment in event["factor"] or b.segment in event["loss"]
-        traits.exposed[event["name"]] = in_region and touched and rng.random() < event["exposure"]
-    traits.lockdown_job_loss = b.segment == "salaried_formal" and rng.random() < P.LOCKDOWN_JOB_LOSS
+def sample_traits(b: Borrower, world: World, rng: random.Random) -> Traits:
+    traits = Traits(world=world)
+    if b.segment not in P.PANDEMIC_EXEMPT:
+        paths = list(P.PANDEMIC_PATHS)
+        traits.pandemic_path = rng.choices(paths, weights=[P.PANDEMIC_PATHS[k] for k in paths])[0]
+    traits.delayed_at = rng.randint(P.PANDEMIC_LOCKDOWN_MONTHS, P.PANDEMIC_NO_RECOVERY_MONTHS - 1)
+    traits.irrigated = rng.random() < P.P_IRRIGATED
     return traits
-
-
-def active_events(b: Borrower, traits: Traits, month: int) -> list[dict]:
-    ym = year_month(month)
-    return [e for e in P.COVARIATE_EVENTS if ym in e["months"] and traits.exposed.get(e["name"])]
-
-
-def regional_events(state: str, months: range) -> list[str]:
-    """Covariate events reported in a state over `months`: public news a lender can see."""
-    found = []
-    for e in P.COVARIATE_EVENTS:
-        if (e["states"] is None or state in e["states"]) and any(year_month(m) in e["months"] for m in months):
-            found.append(e["name"])
-    return found
 
 
 @dataclass
 class MonthEffects:
     income_factor: float = 1.0
-    extra_cost: float = 0.0                # x monthly income, one-time
-    windfall: float = 0.0                  # x monthly income
-    savings_lost: float = 0.0              # share of savings lost
-    support_factor: float = 1.0            # how much endorser help survives
-    tech_bounce: bool = False
-    discipline: float = 0.0                # effective discipline this month
+    expense: int = 0                       # paise, one-time (hospital bill)
+    extra_cost: float = 0.0                # x monthly income, one-time (NOISE)
+    savings_lost: float = 0.0              # share of savings lost (theft, NOISE size)
+    endorser_hit: float = 0.0              # chance each endorser is hit by the same event this month
+    moratorium: bool = False
+    glitch: bool = False
+    personal: str = ""                     # "job_loss" or "hospital": the personal shock this month
+    discipline: float = 0.0
     events: list[tuple[str, str]] = field(default_factory=list)   # (category, name)
 
 
-def step(b: Borrower, traits: Traits, month: int, rng: random.Random, shocked_now: bool) -> MonthEffects:
-    """Advance the walks and draw this month's covariate and absurd effects."""
+def _pandemic(b: Borrower, t: Traits, phase: int, fx: MonthEffects) -> None:
+    """Worker paths, earnings change, moratorium and endorser exposure, months into a pandemic."""
+    lockdown = phase < P.PANDEMIC_LOCKDOWN_MONTHS
+    if lockdown:
+        fx.events.append((COVARIATE, "PANDEMIC_LOCKDOWN"))
+    if phase < P.MORATORIUM_MONTHS:
+        fx.moratorium = True
+    path = t.pandemic_path
+    if lockdown and path in ("LOST_RECOVERED", "NO_RECOVERY") and t.out_of_work != "PANDEMIC":
+        t.out_of_work = "PANDEMIC"
+        fx.events.append((COVARIATE, "PANDEMIC_JOB_LOSS"))
+    elif path == "LOST_RECOVERED" and phase == P.PANDEMIC_LOCKDOWN_MONTHS and t.out_of_work == "PANDEMIC":
+        t.out_of_work = ""
+    elif path == "DELAYED_LOSS" and phase == t.delayed_at and not t.out_of_work:
+        t.out_of_work = "PANDEMIC"
+        fx.events.append((COVARIATE, "PANDEMIC_JOB_LOSS"))
+    elif path == "NO_RECOVERY" and phase >= P.PANDEMIC_NO_RECOVERY_MONTHS and t.out_of_work == "PANDEMIC":
+        t.out_of_work = "JOB_LOSS"         # from here, back in work at the normal PLFS rate
+    end = P.PANDEMIC_LOCKDOWN_MONTHS + P.PANDEMIC_EARNINGS_MONTHS
+    if not lockdown and phase < end and not t.out_of_work:
+        fx.income_factor *= 1.0 + P.PANDEMIC_EARNINGS_CHANGE[b.segment]
+    # DERIVED from the same paths: share of endorsers out of work at this phase.
+    if lockdown:
+        fx.endorser_hit = max(fx.endorser_hit, P.PANDEMIC_PATHS["LOST_RECOVERED"] + P.PANDEMIC_PATHS["NO_RECOVERY"])
+    elif phase < P.PANDEMIC_NO_RECOVERY_MONTHS:
+        fx.endorser_hit = max(fx.endorser_hit, P.PANDEMIC_PATHS["NO_RECOVERY"] + P.PANDEMIC_PATHS["DELAYED_LOSS"])
+
+
+def step(b: Borrower, t: Traits, month: int, rng: random.Random, open_loans: list[str]) -> MonthEffects:
+    """Advance the walks and draw this month's world, personal and noise effects."""
     fx = MonthEffects()
-    traits.level = P.RW_RHO * traits.level + rng.gauss(0.0, P.RW_SD[b.segment])
-    fx.income_factor = math.exp(traits.level)
-    b.discipline = min(0.99, max(0.05, b.discipline + rng.gauss(0.0, P.DISCIPLINE_DRIFT_SD)))
+    year, cal = year_month(month)
 
-    first_months = []
-    for event in active_events(b, traits, month):
-        fx.income_factor *= event["factor"].get(b.segment, 1.0)
-        fx.support_factor = min(fx.support_factor, event["support"])
-        fx.events.append(("COVARIATE", event["name"]))
-        if year_month(month) == min(event["months"]):
-            first_months.append(event)
-        if event["name"] == "LOCKDOWN_NATIONAL" and traits.lockdown_job_loss:
-            fx.income_factor = 0.0
-            fx.events.append(("COVARIATE", "LOCKDOWN_JOB_LOSS"))
-    for event in first_months:
-        if b.segment in event["loss"]:
-            fx.extra_cost += rng.uniform(*event["loss"][b.segment])
-            fx.events.append(("COVARIATE", f"{event['name']}_ASSET_LOSS"))
+    t.level = P.NOISE_INCOME_RHO * t.level + rng.gauss(0.0, P.NOISE_INCOME_SD[b.segment])
+    fx.income_factor = math.exp(t.level)
+    b.discipline = min(0.99, max(0.05, b.discipline + rng.gauss(0.0, P.NOISE_DISCIPLINE_SD)))
+    fx.discipline = b.discipline
 
-    if shocked_now or first_months:
-        traits.scarcity = P.SCARCITY_MONTHS
-    fx.discipline = max(0.0, b.discipline - (P.SCARCITY_DIP if traits.scarcity > 0 else 0.0))
-    traits.scarcity = max(0, traits.scarcity - 1)
+    phase = t.world.pandemic_phase(month)
+    if phase is not None:
+        if phase == 0:
+            t.moratorium_loans = {loan_id for loan_id in open_loans if rng.random() < P.MORATORIUM_UPTAKE}
+        _pandemic(b, t, phase, fx)
+    if t.world.flood(b.state, month):
+        fx.endorser_hit = max(fx.endorser_hit, P.FLOOD_EXPOSURE)
+        if rng.random() < P.FLOOD_EXPOSURE:
+            fx.income_factor *= P.FLOOD_INCOME_FACTOR
+            fx.events.append((COVARIATE, "FLOOD"))
+    heat = P.HEAT_FACTOR.get(b.segment)
+    if heat is not None:
+        # Mean-preserving: the hot months lose, the rest make it up (base income is a yearly mean).
+        hot = len(P.HEAT_MONTHS)
+        fx.income_factor *= heat if cal in P.HEAT_MONTHS else (12 - hot * heat) / (12 - hot)
+    if b.segment == "smallholder_farmer" and cal == 10 and t.world.drought(year):
+        fx.events.append((COVARIATE, "DROUGHT"))
 
-    _, cal = year_month(month)
-    if rng.random() < P.P_WINDFALL:
-        fx.windfall = rng.uniform(*P.WINDFALL)
-        fx.events.append(("ABSURD", "WINDFALL"))
-    if rng.random() < P.P_THEFT:
-        fx.savings_lost = rng.uniform(0.3, 1.0)
-        fx.events.append(("ABSURD", "THEFT_OR_FIRE"))
-    if rng.random() < P.P_MIGRATION:
-        fx.income_factor *= 0.5
-        fx.events.append(("ABSURD", "MIGRATION"))
-    base, extra = P.P_SPLURGE
-    p_splurge = (base + extra * traits.present_bias) * (3 if cal in P.FESTIVAL_MONTHS else 1)
-    if rng.random() < p_splurge:
-        fx.extra_cost += rng.uniform(*P.SPLURGE) * (0.5 + traits.present_bias)
-        fx.events.append(("ABSURD", "SPLURGE"))
-    fx.tech_bounce = rng.random() < P.P_TECH_BOUNCE
-    if fx.tech_bounce:
-        fx.events.append(("ABSURD", "TECHNICAL_BOUNCE"))
+    # Personal job loss and return to work (PLFS); farmers have no employer to lose.
+    if not t.out_of_work and rng.random() < P.JOB_LOSS_MONTHLY[b.segment] * P.JOB_LOSS_SELECTION:
+        t.out_of_work = "JOB_LOSS"
+        fx.personal = "job_loss"
+        fx.events.append((IDIOSYNCRATIC, "JOB_LOSS"))
+    elif t.out_of_work == "JOB_LOSS" and rng.random() < P.REEMPLOY_MONTHLY:
+        t.out_of_work = ""
+    if t.out_of_work:
+        # Other earners carry on, except in a lockdown, when the household loses everything (SWI).
+        lockdown = phase is not None and phase < P.PANDEMIC_LOCKDOWN_MONTHS and t.out_of_work == "PANDEMIC"
+        fx.income_factor *= 0.0 if lockdown else P.JOB_LOSS_INCOME_KEPT
+        t.out_months += 1
+        fx.personal = fx.personal or ("job_loss" if t.out_of_work == "JOB_LOSS" else "")
+
+    if rng.random() < P.HOSPITAL_MONTHLY[b.urban]:
+        mean = P.HOSPITAL_COST_MINOR[b.urban]
+        # Lognormal with the sourced mean: median = mean / exp(sd^2 / 2).
+        fx.expense = int(mean / math.exp(P.HOSPITAL_COST_SD ** 2 / 2) * math.exp(rng.gauss(0.0, P.HOSPITAL_COST_SD)))
+        fx.personal = fx.personal or "hospital"
+        fx.events.append((IDIOSYNCRATIC, "HOSPITAL"))
+
+    if rng.random() < P.THEFT_MONTHLY:
+        fx.savings_lost = rng.uniform(*P.THEFT_LOSS)
+        fx.events.append((NOISE, "THEFT"))
+    if rng.random() < P.NOISE_LUMPY_MONTHLY:
+        fx.extra_cost = rng.uniform(*P.NOISE_LUMPY_SIZE)
+        fx.events.append((NOISE, "UNEXPLAINED_COST"))
+    if rng.random() < P.NOISE_GLITCH_MONTHLY:
+        fx.glitch = True
+        fx.events.append((NOISE, "DEBIT_GLITCH"))
     return fx
+
+
+def public_events(b: Borrower, months: range) -> list[str]:
+    """Disasters reported in the borrower's state over `months` (public news a lender can read)."""
+    if not isinstance(b.traits, Traits):
+        return []
+    return b.traits.world.public_events(b.state, months)

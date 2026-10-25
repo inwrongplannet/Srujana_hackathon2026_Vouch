@@ -32,14 +32,29 @@ def plan_shock(b: Borrower, rng: random.Random, force: bool = False) -> ShockPla
     severity = rng.choices((1, 2, 3), weights=P.SHOCK_SEVERITY)[0]
     longest, shortest = P.SHOCK_LEAD
     start = b.app_month - rng.randint(shortest, longest)
-    if kind in P.EXPENSE_SHOCKS:
-        insured = kind == "MEDICAL" and rng.random() < P.P_INSURED[b.segment]
-        cost = scale(b.base_income, P.SHOCK_EXPENSE[severity] * lognormal(rng, 1.0, 0.25))
-        if insured:
-            cost = scale(cost, 1.0 - P.INSURED_COVER)
+    insured = rng.random() < P.P_INSURED[b.urban]
+    if kind == "MEDICAL":
+        # NSS out-of-pocket cost for public, average or private care; already net of insurance.
+        cost = int(P.SHOCK_MEDICAL_MINOR[severity][b.urban] * lognormal(rng, 1.0, 0.25))
         return ShockPlan(kind=kind, severity=severity, insured=insured, start=start, months=1,
                          expense=cost, income_factor=1.0)
-    factor, months = P.SHOCK_INCOME[severity]
-    cost = scale(b.base_income, P.SHOCK_EXPENSE[severity] * P.SHOCK_INCOME_COST * lognormal(rng, 1.0, 0.25))
+    if kind == "FAMILY":
+        months_of_income = P.SHOCK_FAMILY_MONTHS * lognormal(rng, 1.0, P.SHOCK_FAMILY_SD)
+        severity = 1 if months_of_income < 3 else 2 if months_of_income < 5 else 3
+        return ShockPlan(kind=kind, severity=severity, insured=False, start=start, months=1,
+                         expense=scale(b.base_income, months_of_income), income_factor=1.0)
+    if kind == "JOB_LOSS":
+        # No pay until back in work: geometric spell at the PLFS re-employment rate.
+        months = 1
+        while rng.random() >= P.REEMPLOY_MONTHLY and months < 4 * P.PERFORMANCE_MONTHS:
+            months += 1
+        severity = 1 if months <= 3 else 2 if months <= 9 else 3
+        return ShockPlan(kind=kind, severity=severity, insured=False, start=start, months=months,
+                         expense=0, income_factor=0.0)
+    if kind == "CROP":
+        # One season at the unirrigated drought factor (Economic Survey 2017-18).
+        return ShockPlan(kind=kind, severity=severity, insured=False, start=start, months=6,
+                         expense=0, income_factor=P.DROUGHT_CROP_FACTOR[False])
+    factor, months = P.SHOCK_BUSINESS[severity]   # ASSUMPTION: no source for business disruption
     return ShockPlan(kind=kind, severity=severity, insured=False, start=start, months=months,
-                     expense=cost, income_factor=factor)
+                     expense=0, income_factor=factor)

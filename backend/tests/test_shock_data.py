@@ -211,32 +211,7 @@ def test_prosper_build_keeps_no_keys_and_labels_resolved_loans(tmp_path):
     assert check_prosper(rows)["resolved_loans"] == 2
 
 
-def test_regional_events_are_public_by_state_and_month():
-    from veritrust.synth.behaviour import regional_events
-    from veritrust.synth.model import month_index
-    flood = range(month_index(2024, 7), month_index(2024, 10))
-    assert regional_events("KA", flood) == ["FLOOD_KA_MH"]
-    assert regional_events("TN", flood) == []
-    assert "LOCKDOWN_NATIONAL" in regional_events("TN", range(month_index(2026, 3), month_index(2026, 4)))
-
-
-def test_a_regional_disaster_cuts_income_and_endorser_help():
-    import random
-
-    from veritrust.synth.behaviour import Traits, step
-    from veritrust.synth.model import month_index
-    from veritrust.synth.people import sample_borrower
-    b = sample_borrower(1, random.Random(1))
-    b.segment, b.state = "informal_daily_wage", "KA"
-    traits = Traits(present_bias=0.5, exposed={"FLOOD_KA_MH": True})
-    fx = step(b, traits, month_index(2024, 8), random.Random(2), shocked_now=False)
-    assert ("COVARIATE", "FLOOD_KA_MH") in fx.events
-    assert fx.support_factor == 0.4
-    assert fx.income_factor < 0.6          # 0.5 flood factor times a random-walk level near 1
-    assert fx.discipline < b.discipline    # scarcity dip after the first flood month
-
-
 def test_every_borrower_has_conditions_and_valid_life_events(small):
     _, table = small
     assert {r["conditions"] for r in table("truth")} <= {"NORMAL", "IDIOSYNCRATIC", "COVARIATE", "BOTH"}
-    assert {r["category"] for r in table("life_events")} <= {"IDIOSYNCRATIC", "COVARIATE", "ABSURD"}
+    assert {r["category"] for r in table("life_events")} <= {"IDIOSYNCRATIC", "COVARIATE", "NOISE"}

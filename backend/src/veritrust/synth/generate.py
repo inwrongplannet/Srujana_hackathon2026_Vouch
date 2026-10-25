@@ -14,7 +14,7 @@ from statistics import median
 
 from . import bureau
 from . import params as P
-from .behaviour import regional_events, sample_traits
+from .behaviour import NOISE, public_events, sample_traits
 from .features import build_features, shock_vouch_features
 from .model import Loan, month_label
 from .money import emi, principal_for_emi, round_to, rupees, scale
@@ -28,7 +28,7 @@ from .observe import (
 )
 from .people import lognormal, pick, sample_borrower
 from .shocks import plan_shock, stratum
-from .simulate import simulate
+from .simulate import simulate_group
 from .transactions import to_transactions
 from .vouch import (
     VoucherPool,
@@ -38,6 +38,7 @@ from .vouch import (
     score_at,
     weight_by_month,
 )
+from .world import World, build_worlds, world_index
 
 TABLES = ("applications", "monthly_cashflow", "bureau_tradelines", "gst_filings", "vouches",
           "outcomes", "truth", "features", "transactions", "bureau_snapshots", "bureau_events",
@@ -74,7 +75,7 @@ def _default_driver(b, outcome: dict, performance, true_dti: Decimal) -> str:
     if true_dti > Decimal("0.6"):
         return "STRUCTURAL"
     months = {(m.month // 12, m.month % 12 + 1) for m in performance}
-    macro = (b.macro_exposed and months & (P.RAINFALL_DEFICIT["crop_months"] | P.RAINFALL_DEFICIT["wage_months"])) \
+    macro = any(cat == "COVARIATE" for m in performance for cat, _ in m.events) \
         or (b.segment == "gig_platform" and months & P.GIG_INCENTIVE_CUT["months"])
     if any(m.shock for m in performance) or macro:
         return "SHOCK"
@@ -83,11 +84,12 @@ def _default_driver(b, outcome: dict, performance, true_dti: Decimal) -> str:
     return "LIQUIDITY"
 
 
-def _sample_weight(shocked: bool, group: str) -> str:
-    """Reweights the oversampled shocked group back to SHOCK_REAL_INCIDENCE within its stratum."""
+def _sample_weight(shocked: bool, group: str, world: World) -> str:
+    """Reweights to the real population: the oversampled shocked group back to SHOCK_REAL_INCIDENCE
+    within its stratum, times the world's weight back to the real pandemic chance."""
     real, share = Decimal(repr(P.SHOCK_REAL_INCIDENCE)), Decimal(repr(P.SHOCK_SHARE[group]))
     weight = real / share if shocked else (1 - real) / (1 - share)
-    return str(weight.quantize(Decimal("0.000001")))
+    return str((weight * Decimal(repr(world.weight))).quantize(Decimal("0.000001")))
 
 
 def _loan_performance(b, new: Loan, performance, application_id: str) -> list[dict]:
@@ -175,6 +177,7 @@ def _conditions(b, history, performance) -> tuple[str, list[dict]]:
     NORMAL: nothing unusual in the last 6 months before applying or during the loan.
     IDIOSYNCRATIC: a personal emergency (medical, job loss, family, crop, business).
     COVARIATE: a regional event that hit many people at once. BOTH: one of each.
+    NOISE events (theft, unexplained costs, failed debits) are logged but do not set the label.
     """
     window = history[-6:] + performance
     personal = any(t.shock for t in window) or (b.shock is not None and b.shock.start >= b.app_month - 6)
@@ -184,37 +187,53 @@ def _conditions(b, history, performance) -> tuple[str, list[dict]]:
     for t in history + performance:
         for cat, name in t.events:
             rows.append({"borrower_id": b.borrower_id, "month": month_label(t.month), "category": cat, "event": name,
-                         "amount_minor": t.windfall if name == "WINDFALL" else "",
                          "phase": "history" if t.month < b.app_month else "loan"})
         if t.shock:
             rows.append({"borrower_id": b.borrower_id, "month": month_label(t.month), "category": "IDIOSYNCRATIC",
-                         "event": t.shock.upper(), "amount_minor": "",
-                         "phase": "history" if t.month < b.app_month else "loan"})
+                         "event": t.shock.upper(), "phase": "history" if t.month < b.app_month else "loan"})
     return label, rows
 
 
-def generate_one(index: int, with_transactions: bool, pool: VoucherPool | None = None,
-                 cohort: str = "main") -> dict[str, list[dict]]:
-    """All rows for one borrower, keyed by table name.
-
-    `pool` holds the endorsers shared across borrowers (their staked points are a ledger); a
-    standalone call gets a fresh pool. `cohort` is "main" (the population) or "shock_study".
-    """
+def _prepare(index: int, pool: VoucherPool, cohort: str, worlds: list[World]) -> dict:
+    """Everything decided before the months are lived: the person, their loan, shock, vouches and
+    world. Runs in index order, because endorsers' staked points are a ledger across borrowers."""
     if cohort == "shock_study":
         b, rng = _study_borrower(index)
     else:
         rng = random.Random(f"{P.SEED}:{index}")
         b = sample_borrower(index, rng)
-    initial_income = b.base_income
-    new = _application_loan(b, rng)
-    group = stratum(b)
+    prep = {"index": index, "cohort": cohort, "b": b, "rng": rng, "initial_income": b.base_income}
+    prep["new"] = _application_loan(b, rng)
+    prep["group"] = stratum(b)
     b.shock = plan_shock(b, random.Random(f"{P.SEED}:{index}:shock"), force=cohort == "shock_study")
-    received, given = plan_vouches(b, pool or VoucherPool(), random.Random(f"{P.SEED}:{index}:vouch"))
+    prep["received"], prep["given"] = plan_vouches(b, pool, random.Random(f"{P.SEED}:{index}:vouch"))
     b.vouch_weight = weight_by_month(
-        received, range(b.app_month - P.HISTORY_MONTHS, b.app_month + P.PERFORMANCE_MONTHS + 1))
-    b.traits = sample_traits(b, random.Random(f"{P.SEED}:{index}:traits"))
-    discipline_start = b.discipline
-    history, performance = simulate(b, rng, new, aux=random.Random(f"{P.SEED}:{index}:aux"))
+        prep["received"], range(b.app_month - P.HISTORY_MONTHS, b.app_month + P.PERFORMANCE_MONTHS + 1))
+    world = worlds[world_index(index)]
+    b.traits = sample_traits(b, world, random.Random(f"{P.SEED}:{index}:traits"))
+    prep["discipline_start"] = b.discipline
+    prep["aux"] = random.Random(f"{P.SEED}:{index}:aux")
+    return prep
+
+
+def generate_one(index: int, with_transactions: bool, pool: VoucherPool | None = None,
+                 cohort: str = "main", worlds: list[World] | None = None) -> dict[str, list[dict]]:
+    """All rows for one borrower simulated alone (a neighbourhood group of one), keyed by table.
+
+    `pool` holds the endorsers shared across borrowers (their staked points are a ledger); a
+    standalone call gets a fresh pool. `cohort` is "main" (the population) or "shock_study".
+    """
+    prep = _prepare(index, pool or VoucherPool(), cohort, worlds or build_worlds())
+    history, performance = simulate_group([(prep["b"], prep["rng"], prep["new"], prep["aux"])])[0]
+    return _finish(prep, history, performance, with_transactions)
+
+
+def _finish(prep: dict, history, performance, with_transactions: bool) -> dict[str, list[dict]]:
+    """Turn a lived window into rows: the observed views, features, outcome and answer key."""
+    index, cohort, b, rng, new = prep["index"], prep["cohort"], prep["b"], prep["rng"], prep["new"]
+    group, received, given = prep["group"], prep["received"], prep["given"]
+    initial_income, discipline_start = prep["initial_income"], prep["discipline_start"]
+    world = b.traits.world
 
     app_label = month_label(b.app_month)
     months, statement_status = statement_months(b, rng)
@@ -254,11 +273,16 @@ def generate_one(index: int, with_transactions: bool, pool: VoucherPool | None =
     features.update(shock_vouch_features(b, snaps, vouch_rows, vouch_events, bureau_events,
                                          random.Random(f"{P.SEED}:{index}:report")))
     app["cohort"] = features["cohort"] = cohort
-    # Public news a lender can see: regional disasters reported in the borrower's state lately.
-    features["regional_events_6m"] = len(regional_events(b.state, range(b.app_month - 6, b.app_month)))
+    # Public news a lender can see: disasters reported in the borrower's state lately, and how far
+    # into a pandemic the country is.
+    features["regional_events_6m"] = len(public_events(b, range(b.app_month - 6, b.app_month)))
+    phase = world.pandemic_phase(b.app_month - 1)
+    features["pandemic_months_at_app"] = "" if phase is None else phase
     conditions, life_rows = _conditions(b, history, performance)
+    b.macro_exposed = conditions in ("COVARIATE", "BOTH")
     features["sample_weight"] = app["sample_weight"] = (
-        _sample_weight(b.shock is not None, group) if cohort == "main" else "")
+        _sample_weight(b.shock is not None, group, world) if cohort == "main" else "")
+    features["world_weight"] = app["world_weight"] = f"{world.weight:.6f}"
     settled = (new.tenure <= P.PERFORMANCE_MONTHS and not outcome["default_12m"]
                and new.dues_by(b.app_month + P.PERFORMANCE_MONTHS) >= new.tenure)
 
@@ -286,11 +310,15 @@ def generate_one(index: int, with_transactions: bool, pool: VoucherPool | None =
         "perf_vouch_support_minor": sum(m.vouch_support for m in performance),
         "support_capacity": f"{b.support_capacity:.4f}",
         "shock_planned": b.shock.kind if b.shock else "",
-        "present_bias": f"{b.traits.present_bias:.4f}",
+        "world_id": world.world_id,
+        "world_pandemic_onset": "" if world.pandemic_onset is None else month_label(world.pandemic_onset),
+        "pandemic_path": b.traits.pandemic_path if world.pandemic_onset is not None else "",
+        "irrigated": int(b.traits.irrigated) if b.segment == "smallholder_farmer" else "",
+        "months_out_of_work": b.traits.out_months,
         "discipline_end": f"{b.discipline:.4f}",
         "discipline_change": f"{b.discipline - discipline_start:.4f}",
-        "covariate_exposed": ";".join(sorted(k for k, v in b.traits.exposed.items() if v)),
-        "absurd_events": sum(1 for t in history + performance for cat, _ in t.events if cat == "ABSURD"),
+        "covariate_events": sum(1 for t in history + performance for cat, _ in t.events if cat == "COVARIATE"),
+        "noise_events": sum(1 for t in history + performance for cat, _ in t.events if cat == NOISE),
         "default_driver": _default_driver(b, outcome, performance, true_dti),
     }
 
@@ -318,6 +346,23 @@ def generate_one(index: int, with_transactions: bool, pool: VoucherPool | None =
     return rows
 
 
+def neighbourhoods(preps: list[dict]) -> list[list[dict]]:
+    """Neighbourhood groups of GROUP_SIZE: same cohort, world, state and area, in index order.
+
+    Peers share a world (one history of the country) and a place; the shock-study cohort is kept
+    apart so its forced shocks never become the main population's peers.
+    """
+    by_key: dict[tuple, list[dict]] = {}
+    for prep in preps:
+        b = prep["b"]
+        by_key.setdefault((prep["cohort"], b.traits.world.world_id, b.state, b.urban), []).append(prep)
+    groups = []
+    for key in sorted(by_key, key=str):
+        members = by_key[key]
+        groups += [members[i:i + P.GROUP_SIZE] for i in range(0, len(members), P.GROUP_SIZE)]
+    return groups
+
+
 def write_csv(path: Path, rows: list[dict]) -> None:
     """Write rows as UTF-8 CSV with \n line endings; None becomes an empty cell."""
     if not rows:
@@ -339,9 +384,17 @@ def generate(n: int, out: Path, transaction_sample: int, study: int = 0) -> dict
     out.mkdir(parents=True, exist_ok=True)
     tables: dict[str, list[dict]] = {name: [] for name in TABLES}
     pool = VoucherPool()
+    worlds = build_worlds()
     jobs = [(i, "main") for i in range(1, n + 1)] + [(P.STUDY_OFFSET + i, "shock_study") for i in range(1, study + 1)]
-    for index, cohort in jobs:
-        for name, rows in generate_one(index, index <= transaction_sample, pool, cohort).items():
+    preps = [_prepare(index, pool, cohort, worlds) for index, cohort in jobs]
+    lived = {}
+    for members in neighbourhoods(preps):
+        results = simulate_group([(m["b"], m["rng"], m["new"], m["aux"]) for m in members])
+        for m, result in zip(members, results):
+            lived[m["index"]] = result
+    for prep in preps:
+        history, performance = lived[prep["index"]]
+        for name, rows in _finish(prep, history, performance, prep["index"] <= transaction_sample).items():
             tables[name].extend(rows)
     files = {}
     for name in TABLES:

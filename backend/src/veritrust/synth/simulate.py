@@ -15,13 +15,6 @@ from .model import Borrower, Loan, year_month
 from .money import emi, round_to, rupees, scale
 from .people import clamp, lognormal, new_loan, pick
 
-SHOCK_NAMES = {
-    "salaried_formal": "job_loss",
-    "gig_platform": "platform_deactivation",
-    "kirana_msme": "illness_shop_closed",
-    "smallholder_farmer": "illness",
-    "informal_daily_wage": "illness",
-}
 # Who gets paid first when cash is short: group pressure and repossession risk come first.
 PRIORITY = {"mfi_jlg": 3.0, "two_wheeler": 2.5, "bank_personal": 2.0, "nbfc_consumer": 2.0,
             "fintech_app": 1.5, "kcc_crop": 1.0, "bnpl": 1.0, "gold_loan": 0.5}
@@ -50,7 +43,6 @@ class MonthTrue:
     disbursals: list[tuple[str, int]] = field(default_factory=list)  # (loan_id, net credited)
     informal_support: int = 0
     vouch_support: int = 0        # help mobilised by the borrower's endorsers
-    windfall: int = 0
     events: list[tuple[str, str]] = field(default_factory=list)   # (category, name) from behaviour.py
     shock: str = ""
     lumpy: str = ""
@@ -60,7 +52,6 @@ class MonthTrue:
 @dataclass
 class SimState:
     savings: int
-    shock_left: int = 0
     harvest: dict = field(default_factory=dict)
     loan_counter: int = 0
     # Separate stream for the shock and vouch mechanics, so the original draws stay reproducible.
@@ -71,14 +62,11 @@ class SimState:
 def _harvest_factor(b: Borrower, year: int, cal: int, rng: random.Random, st: SimState) -> float:
     season = ("kharif", year) if cal in (10, 11) else ("rabi", year)
     if season not in st.harvest:
-        factor = lognormal(rng, 1.0, 0.18)
-        if rng.random() < 0.06:
-            factor *= 0.5                      # idiosyncratic crop failure
-        st.harvest[season] = factor
+        st.harvest[season] = lognormal(rng, 1.0, P.NOISE_HARVEST_SD)
     factor = st.harvest[season]
-    rain = P.RAINFALL_DEFICIT
-    if b.macro_exposed and (year, cal) in rain["crop_months"]:
-        factor *= rain["crop_factor"]
+    traits = b.traits
+    if season[0] == "kharif" and traits is not None and traits.world.drought(year):
+        factor *= P.DROUGHT_CROP_FACTOR[traits.irrigated]
     return factor
 
 
@@ -105,23 +93,10 @@ def income_for(b: Borrower, month: int, rng: random.Random, st: SimState) -> tup
             amount += scale(base, 12 * share * _harvest_factor(b, year, cal, rng, st))
     else:
         days = clamp(rng.gauss(23 - (4 if cal in (7, 8) else 0), 2.5), 0, 28)
-        factor = days / 23
-        rain = P.RAINFALL_DEFICIT
-        if b.macro_exposed and (year, cal) in rain["wage_months"]:
-            factor *= rain["wage_factor"]
-        amount = scale(base, factor * (1.0 + rng.gauss(0.0, b.cv / 2)))
+        amount = scale(base, days / 23 * (1.0 + rng.gauss(0.0, b.cv / 2)))
 
+    # Personal job loss and hospital stays come from behaviour.step; here only the planned shock.
     shock = ""
-    if st.shock_left > 0:
-        st.shock_left -= 1
-        shock = SHOCK_NAMES[b.segment]
-    elif rng.random() < b.shock_prob:
-        st.shock_left = rng.randint(1, b.shock_max) - 1
-        shock = SHOCK_NAMES[b.segment]
-        if b.segment == "salaried_formal":
-            b.base_income = scale(b.base_income, 0.95)   # re-employed a little lower
-    if shock:
-        amount = scale(amount, b.shock_factor)
     plan = b.shock
     if plan and plan.active(month) and plan.income_factor < 1.0:
         amount = scale(amount, plan.income_factor)
@@ -134,10 +109,9 @@ def essentials_for(b: Borrower, month: int, rng: random.Random) -> tuple[int, st
     _, cal = year_month(month)
     amount = scale(b.base_income, b.expense_ratio * (1.0 + rng.gauss(0.0, 0.04)))
     lumpy = ""
-    if rng.random() < 0.04:
-        amount += scale(b.base_income, rng.uniform(0.5, 2.0))
-        lumpy = rng.choice(("medical", "wedding", "house_repair"))
-    elif cal == 6 and b.dependents and rng.random() < 0.5:
+    # ASSUMPTION: school fees in June for half of families with children. Medical bills and
+    # one-off costs now come from behaviour.step (NSS hospital rates and NOISE).
+    if cal == 6 and b.dependents and rng.random() < 0.5:
         amount += scale(b.base_income, 0.15 * min(b.dependents, 3))
         lumpy = "school_fees"
     return amount, lumpy
@@ -185,24 +159,26 @@ def _shock_credit(b: Borrower, month: int, shortfall: int, st: SimState) -> Loan
 
 
 def run_month(b: Borrower, month: int, rng: random.Random, st: SimState,
-              organic_credit: bool) -> MonthTrue:
-    """Simulate one month and update loans and savings in place."""
+              organic_credit: bool, peer_share: float = 0.0) -> MonthTrue:
+    """Simulate one month and update loans and savings in place.
+
+    `peer_share` is the share of the borrower's neighbourhood group behind on an EMI last month.
+    """
     plan = b.shock
-    fx = step(b, b.traits, month, st.aux, plan is not None and month == plan.start) if b.traits else \
-        MonthEffects(discipline=b.discipline)
+    open_loans = [loan.loan_id for loan in b.loans if loan.is_open(month) and not loan.written_off]
+    fx = step(b, b.traits, month, st.aux, open_loans) if b.traits else MonthEffects(discipline=b.discipline)
     disc = fx.discipline
     income, shock = income_for(b, month, rng, st)
     income = scale(income, fx.income_factor)
-    windfall = scale(b.base_income, fx.windfall)
     essentials, lumpy = essentials_for(b, month, rng)
-    essentials += scale(b.base_income, fx.extra_cost)
+    essentials += fx.expense + scale(b.base_income, fx.extra_cost)
     if fx.savings_lost:
         st.savings -= scale(st.savings, fx.savings_lost)
-    savings = st.savings + income + windfall
+    savings = st.savings + income
     if plan and month == plan.start:
-        drain = scale(st.savings, st.aux.uniform(*P.SHOCK_DRAIN_BY_SEVERITY[plan.severity]))
-        essentials += plan.expense + drain
+        essentials += plan.expense
         lumpy = plan.kind.lower()
+    shock = shock or fx.personal
 
     due = [loan for loan in b.loans if not loan.written_off and loan.is_due(month)]
     due_total = sum(loan.emi for loan in due)
@@ -215,7 +191,7 @@ def run_month(b: Borrower, month: int, rng: random.Random, st: SimState,
     savings -= essentials_paid
     record = MonthTrue(month=month, income=income, essentials=essentials_paid,
                        essentials_shortfall=essentials - essentials_paid, discretionary=0,
-                       shock=shock, lumpy=lumpy, windfall=windfall, events=fx.events)
+                       shock=shock, lumpy=lumpy, events=fx.events)
 
     if savings < due_total:
         shock_loan = _shock_credit(b, month, due_total - savings, st)
@@ -231,16 +207,19 @@ def run_month(b: Borrower, month: int, rng: random.Random, st: SimState,
             net = loan.principal - scale(loan.principal, 0.025)   # processing fee kept by lender
             savings += net
             record.disbursals.append((loan.loan_id, net))
-        elif rng.random() < 0.15:
-            record.informal_support = shortfall     # family or a moneylender; invisible to lenders
+        elif rng.random() < P.P_FAMILY_COVERS:
+            record.informal_support = shortfall     # family or friends (Findex 2021); invisible to lenders
             savings += shortfall
     # Endorsers who stake their reputation also help, but only once trouble is visible: help
     # arrives the month after an EMI bounces, covering this month's dues and the arrears. So a
-    # shock still reaches the bureau; the network decides how fast the borrower recovers. In a
-    # regional disaster the endorsers are hit too, so help shrinks by the event's support factor.
-    weight = b.vouch_weight.get(month, 0.0) * fx.support_factor
+    # shock still reaches the bureau; the network decides how fast the borrower recovers. A
+    # disaster that hit the borrower hits each endorser with the same exposure, and a hit endorser
+    # cannot help this month.
     overdue = sum(loan.emi * loan.arrears(month - 1) for loan in b.loans if not loan.written_off)
-    if st.behind and weight > 0 and savings < due_total + overdue and st.aux.random() < 1.0 - math.exp(-weight):
+    weight = 0.0
+    if st.behind and savings < due_total + overdue:
+        weight = sum(w for w in b.vouch_weight.get(month, []) if st.aux.random() >= fx.endorser_hit)
+    if weight > 0 and st.aux.random() < 1.0 - math.exp(-weight):
         help_amount = min(due_total + overdue - savings, scale(b.base_income, P.VOUCH_SUPPORT_SHARE * weight))
         record.vouch_support = help_amount
         savings += help_amount
@@ -250,13 +229,20 @@ def run_month(b: Borrower, month: int, rng: random.Random, st: SimState,
     else:
         rng.shuffle(due)
     paid_total = 0
-    tech_bounce = fx.tech_bounce
+    glitch_left = fx.glitch
+    traits = b.traits
     for loan in due:
-        willful_skip = rng.random() < (1.0 - disc) * 0.05
+        # Peers behind on their EMIs pull repayment down (Breza; PEER_PULL in params.py).
+        willful_skip = rng.random() < (1.0 - disc) * 0.05 + P.PEER_PULL * peer_share
         if loan.arrears(month - 1) >= 2 and disc < 0.5:
             willful_skip = willful_skip or rng.random() < 0.4   # disengages once behind
-        glitch = tech_bounce and savings >= loan.emi   # the bank fails the debit; money was there
-        tech_bounce = tech_bounce and not glitch
+        glitch = glitch_left and savings >= loan.emi   # NOISE: the debit fails; money was there
+        glitch_left = glitch_left and not glitch
+        if (fx.moratorium and traits is not None and loan.loan_id in traits.moratorium_loans
+                and (savings < loan.emi or willful_skip)):
+            loan.start += 1                     # deferred: the whole schedule moves a month
+            record.events.append(("COVARIATE", "MORATORIUM_DEFERRAL"))
+            continue
         if savings >= loan.emi and not willful_skip and not glitch:
             savings -= loan.emi
             loan.paid += 1
@@ -293,15 +279,15 @@ def run_month(b: Borrower, month: int, rng: random.Random, st: SimState,
 
     flow = income - essentials_paid - paid_total - record.charges
     save_rate = b.save_rate
-    target_buffer = scale(b.base_income, 1.0 + 2.0 * disc)
+    # Precautionary cash people keep before spending a surplus (ASSUMPTION, scaled by the
+    # CALIBRATED BUFFER_SCALE).
+    target_buffer = scale(b.base_income, P.BUFFER_SCALE * (1.0 + 2.0 * disc))
     if b.segment == "smallholder_farmer":
-        target_buffer = scale(b.base_income, 3.0 + 4.0 * disc)   # harvest cash must last
+        target_buffer = scale(b.base_income, P.BUFFER_SCALE * (3.0 + 4.0 * disc))   # harvest cash must last
         if income > b.base_income:
             save_rate = min(0.95, 0.55 + 0.4 * disc)
-    spend = scale(max(0, flow - windfall), 1.0 - save_rate)
+    spend = scale(max(0, flow), 1.0 - save_rate)
     spend += scale(max(0, savings - target_buffer), 0.15)
-    if windfall and b.traits:
-        spend += scale(windfall, 0.3 + 0.6 * b.traits.present_bias)   # present bias spends a windfall now
     record.discretionary = min(spend, savings)
     savings -= record.discretionary
 
@@ -323,16 +309,44 @@ def run_month(b: Borrower, month: int, rng: random.Random, st: SimState,
 
 def simulate(b: Borrower, rng: random.Random, new: Loan,
              aux: random.Random | None = None) -> tuple[list[MonthTrue], list[MonthTrue]]:
-    """Run the 24 history months, disburse the applied-for loan, then the performance months.
+    """Run one borrower alone (a neighbourhood group of one): history, then the new loan's months.
 
     Returns (history, performance). Performance covers the application month and the 12 months
     in which the new loan's first 12 EMIs fall due.
     """
-    st = SimState(savings=b.savings, loan_counter=len(b.loans) + 1,
-                  aux=aux or random.Random(f"{P.SEED}:{b.borrower_id}:aux"))
-    history = [run_month(b, m, rng, st, organic_credit=True)
-               for m in range(b.app_month - P.HISTORY_MONTHS, b.app_month)]
-    b.loans.append(new)
-    performance = [run_month(b, m, rng, st, organic_credit=False)
-                   for m in range(b.app_month, b.app_month + P.PERFORMANCE_MONTHS + 1)]
-    return history, performance
+    return simulate_group([(b, rng, new, aux)])[0]
+
+
+def _arrears(b: Borrower, month: int) -> bool:
+    return any(loan.arrears(month) > 0 for loan in b.loans if not loan.written_off and loan.is_open(month))
+
+
+def simulate_group(members: list[tuple]) -> list[tuple[list[MonthTrue], list[MonthTrue]]]:
+    """Simulate a neighbourhood group month by month, side by side.
+
+    `members` holds (borrower, rng, new loan, aux rng). Each borrower lives their own window (24
+    history months, then the new loan); in every calendar month each one sees the share of the
+    other members who were behind on an EMI the month before (Breza's peer effect). A group of one
+    reproduces the solo simulation.
+    """
+    states, spans = [], []
+    for b, _, _, aux in members:
+        states.append(SimState(savings=b.savings, loan_counter=len(b.loans) + 1,
+                               aux=aux or random.Random(f"{P.SEED}:{b.borrower_id}:aux")))
+        spans.append((b.app_month - P.HISTORY_MONTHS, b.app_month + P.PERFORMANCE_MONTHS))
+    results: list[tuple[list[MonthTrue], list[MonthTrue]]] = [([], []) for _ in members]
+    behind: dict[int, bool] = {}
+    for month in range(min(s for s, _ in spans), max(e for _, e in spans) + 1):
+        now: dict[int, bool] = {}
+        for i, ((b, rng, new, _), st, (first, last)) in enumerate(zip(members, states, spans)):
+            if not first <= month <= last:
+                continue
+            peers = [behind[j] for j in behind if j != i]
+            share = sum(peers) / len(peers) if peers else 0.0
+            if month == b.app_month:
+                b.loans.append(new)
+            record = run_month(b, month, rng, st, organic_credit=month < b.app_month, peer_share=share)
+            results[i][0 if month < b.app_month else 1].append(record)
+            now[i] = _arrears(b, month)
+        behind = now
+    return results

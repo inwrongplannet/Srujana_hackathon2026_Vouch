@@ -80,16 +80,10 @@ def sample_borrower(index: int, rng: random.Random) -> Borrower:
     expense_mean, expense_sd = seg["expense"]
     expense_ratio = clamp(rng.gauss(expense_mean + 0.02 * (dependents - 2), expense_sd), 0.35, 0.92)
     lo, hi = seg["deposit"]
-    shock_prob, shock_factor, shock_max = seg["shock"]
     inflator = rng.random() < seg["inflator"] * (1.5 if discipline < 0.55 else 0.8)
-    rain = P.RAINFALL_DEFICIT
-    exposed_state = state in rain["states"] and not urban
-    macro_exposed = exposed_state and (
-        segment == "informal_daily_wage"
-        or (segment == "smallholder_farmer" and rng.random() < rain["exposure"]))
 
     sim_start = app_month - P.HISTORY_MONTHS
-    savings = scale(base_income, seg["buffer_months"] * lognormal(rng, 1.0, 0.6) * (0.5 + discipline))
+    savings = scale(base_income, P.BUFFER_SCALE * seg["buffer_months"] * lognormal(rng, 1.0, 0.6) * (0.5 + discipline))
 
     borrower = Borrower(
         borrower_id=borrower_id, segment=segment, state=state, urban=urban, age_band=age_band,
@@ -98,7 +92,6 @@ def sample_borrower(index: int, rng: random.Random) -> Borrower:
         discipline=discipline, save_rate=clamp(rng.gauss(0.15 + 0.35 * discipline, 0.05), 0.02, 0.6),
         deposit_share=rng.uniform(lo, hi),
         margin=rng.uniform(*seg["margin"]) if "margin" in seg else 1.0,
-        shock_prob=shock_prob, shock_factor=shock_factor, shock_max=shock_max,
         stacker=rng.random() < seg["stacker"] * (1.5 if discipline < 0.6 else 0.7),
         inflator=inflator,
         window_dresser=rng.random() < P.P_WINDOW_DRESSING + (0.25 if inflator else 0.0),
@@ -106,7 +99,7 @@ def sample_borrower(index: int, rng: random.Random) -> Borrower:
         duplicate_import=rng.random() < P.P_DUPLICATE_IMPORT,
         gst_registered=segment == "kirana_msme" and rng.random() < seg["p_gst"] * (1.2 if urban else 0.7),
         gst_underreport=rng.uniform(0.75, 1.0),
-        community=rng.random() < seg["community"], macro_exposed=macro_exposed,
+        community=rng.random() < seg["community"], macro_exposed=False,
         tenure_months=max(1, int(lognormal(rng, AGE_TENURE[age_band] * (1.3 if segment == "smallholder_farmer" else 1.0), 0.5))),
         savings=savings, credit_history_start=None, prior_closed_loans=0,
         bonus=segment == "salaried_formal" and rng.random() < 0.4,

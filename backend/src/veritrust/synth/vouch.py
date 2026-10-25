@@ -219,9 +219,10 @@ def score_at(edges: list[Edge], month: int) -> dict:
     }
 
 
-def weight_by_month(edges: list[Edge], months: range) -> dict[int, float]:
-    """Total weight W per month as a plain number, used only for the support probability."""
-    return {m: float(sum((edge_weight(e) for e in edges if e.active(m)), Decimal(0))) for m in months}
+def weight_by_month(edges: list[Edge], months: range) -> dict[int, list[float]]:
+    """Each active endorsement's weight per month, as plain numbers, used only for the support
+    probability: each endorser can be hit by the same disaster as the borrower (simulate.py)."""
+    return {m: [float(edge_weight(e)) for e in edges if e.active(m)] for m in months}
 
 
 def event_rows(b: Borrower, received: list[Edge], given: list[Edge]) -> list[dict]:

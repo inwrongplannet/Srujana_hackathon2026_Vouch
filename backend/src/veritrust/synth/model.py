@@ -81,9 +81,6 @@ class Borrower:
     save_rate: float          # share of surplus kept as savings
     deposit_share: float      # share of income and spending that passes through the bank
     margin: float             # kirana: net income / turnover; 1.0 for everyone else
-    shock_prob: float
-    shock_factor: float
-    shock_max: int
     stacker: bool             # rolls shortfalls into new small digital loans
     inflator: bool            # overstates income on the application
     window_dresser: bool
@@ -92,7 +89,7 @@ class Borrower:
     gst_registered: bool
     gst_underreport: float
     community: bool
-    macro_exposed: bool
+    macro_exposed: bool       # set after the simulation: lived through a covariate event
     tenure_months: int        # months in current occupation
     savings: int              # liquid money at the start of the simulation, paise
     credit_history_start: int | None   # month of first bureau-reported credit, if any
@@ -103,8 +100,8 @@ class Borrower:
     support_capacity: float = 0.0
     enquiries: list[int] = field(default_factory=list)   # months a lender pulled the bureau file
     shock: "ShockPlan | None" = None
-    vouch_weight: dict[int, float] = field(default_factory=dict)   # month -> total endorsement weight W
-    traits: object | None = None   # behaviour.Traits: present bias, event exposure, walk state
+    vouch_weight: dict[int, list[float]] = field(default_factory=dict)   # month -> weight w of each active endorsement
+    traits: object | None = None   # behaviour.Traits: world, pandemic path, walks, work status
 
 
 @dataclass

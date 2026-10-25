@@ -45,7 +45,9 @@ B1_CATEGORICAL = SHOCK_CATEGORICAL + ["vouch_score_status"]
 VOUCH_BLOCK = [c for c in B1_NUMERIC if c.startswith("vouch_")] + ["vouch_score_status"]
 BANNED = {"vouch_held", "delta_reputation", "y", "default_driver", "support_mobilised_minor",
           "support_before_application_minor", "perf_vouch_support_minor", "support_capacity", "discipline",
-          "shock_planned", "default_12m", "default_month", "max_dpd_12m", "paid_minor", "dpd_days"}
+          "shock_planned", "default_12m", "default_month", "max_dpd_12m", "paid_minor", "dpd_days",
+          "world_id", "world_pandemic_onset", "pandemic_path", "irrigated", "months_out_of_work",
+          "covariate_events", "noise_events", "conditions"}
 
 
 def _rate(rows: list[dict]) -> float:

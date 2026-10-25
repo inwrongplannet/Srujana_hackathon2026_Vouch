@@ -168,9 +168,11 @@ Each writes CSVs plus `manifest.json`; nothing they produce is committed.
 
 ```bash
 # In the backend directory. Simulated world: 20,000 borrowers plus a 15,000-borrower shock-study
-# cohort, stdlib only, about 20 minutes. Then the general checks and the shock-question gates.
+# cohort, stdlib only, about 20 minutes. Then the general checks, the real-world checks and the
+# shock-question gates.
 PYTHONPATH=src python -m veritrust.synth --n 20000 --study 15000 --out ../data/synth --transactions 300
 PYTHONPATH=src python -m veritrust.synth.validate --data ../data/synth
+PYTHONPATH=src python -m veritrust.synth.validate_world --data ../data/synth
 PYTHONPATH=src python -m veritrust.synth.shock_validate --data ../data/synth
 
 # Anchored (real + synthetic): needs requirements-data.txt and network for the download.
@@ -218,7 +220,7 @@ PYTHONPATH=src python -m veritrust.combine
   - `config.py`: Dynamic configuration loaded from environment or `.env` (`K`, `ALPHA`, `BETA`, `HOP_DECAY`, `GAMMA`, etc.).
   - `scoring.py`: Credibility path enumeration, hop decay, cycle absorption, and dual-axis underwriting.
   - `lending.py`: In-memory loan lifecycle, repayments, 4-level slashing cascade, and settlement yields.
-  - `synth/`: simulated credit world: `params.py` (every assumption), `people.py`, `simulate.py` (monthly cash flow, default emerges), `observe.py` (what a lender sees, reason-coded gaps), `transactions.py` (statement lines and the extractor), `features.py` (model row from observed data only), `shocks.py` (planned pre-application shocks), `bureau.py` (monthly bureau-style score and the events behind it), `vouch.py` (time-stamped vouch graph, Vouch Score replay, reputation updates), `generate.py`, `validate.py`, `shock_validate.py` (gates for the shock question).
+  - `synth/`: simulated credit world: `params.py` (every parameter, labelled sourced, derived, design, calibrated, assumption or noise), `world.py` (alternate histories: pandemics, floods, droughts, importance weights), `behaviour.py` (world, personal and noise effects each month), `people.py`, `simulate.py` (monthly cash flow, default emerges; neighbourhood groups simulated together), `observe.py` (what a lender sees, reason-coded gaps), `transactions.py` (statement lines and the extractor), `features.py` (model row from observed data only), `shocks.py` (planned pre-application shocks), `bureau.py` (monthly bureau-style score and the events behind it), `vouch.py` (time-stamped vouch graph, Vouch Score replay, reputation updates), `generate.py`, `validate.py`, `validate_world.py` (checks against published repayment outcomes), `shock_validate.py` (gates for the shock question).
   - `combine.py`: stacks the simulated, anchored and Prosper datasets into one (`source`, `label_definition`, `recommended_use` columns).
   - `anchor/`: hybrid dataset on real Home Credit applicants: `download.py`, `berka.py` (calibration on real Berka accounts, writes `berka_calibration.json`), `build.py`, `trajectory.py` (month-by-month delinquency from the real grids, no score), `validate.py`, `prosper.py` (real Prosper loans with endorsements and the real-data check).
 - `tests/`: Pytest unit tests for all mathematical invariants, state transitions, and ledger integrity.
