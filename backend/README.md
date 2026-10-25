@@ -12,6 +12,12 @@ Web-of-trust credit engine, dual-axis underwriting, and lending simulations.
   - **Monte Carlo stress tester:** Simulates thousands of stochastic financial scenarios (income volatility, payment delays, emergency expense shocks) using reproducible seeded pseudo-random sampling (no ML). Measures shortfall frequency, 5th-percentile adverse residual cash, and the exact income shock tolerance boundary.
   - **Explanation and evidence engine:** Generates traceable, auditable natural language explanations from the exact rules that fired, evaluating Financial Capacity, Evidence Reliability, Graph Reputation, and Stress-Test Resilience as four separate dimensions.
 - **Test Suite Complete:** 152 pytest tests covering domain models, vouch conservation, propagation, slashing, cryptographic ledger integrity, affordability rules, OR-Tools optimization, Monte Carlo stress testing, explanation synthesis, explainable ML models, conformal prediction coverage, the community engine and every API router.
+- **Empirical Benchmarks & Metrics Complete:** (Full specification in `localdocs/BENCHMARKS_AND_METRICS.md`):
+  - Option A Shock Cohort (Model D): **0.8892 AUC**, **0.9191 PR-AUC**, Brier loss **0.1190**, KS **0.6655**, **91.01%** conformal coverage.
+  - Simulated Micro-Borrower Cohort: **0.9087 AUC**, **0.7141 PR-AUC**, Brier loss **0.0717**, KS **0.6697**, **90.56%** conformal coverage.
+  - Graph-Only Cold Start (Zero Bureau History): **0.8678 AUC**, **0.9002 PR-AUC**, Brier loss **0.1306**, KS **0.6098**.
+  - Invisible Primes Rescued: **26 borrowers** (4.18% of conventional rejections) approved with a **38.46%** default rate ($-26.25$ pp vs population).
+  - Real-World Prosper Evidence (55,305 loans): Capital-backed endorsements reduce defaults to **23.71%** (vs **32.81%** for unbacked cheap talk).
 - **Demo seed:** the story cast (Sahyog Microfinance anchoring Meena, Ramesh and Anand; borrowers Lakshmi, Suresh and Imran), in `data/store.json` (store version 2.0; an older store is reseeded on load).
 
 ## Run
@@ -201,7 +207,7 @@ python main.py --demo                         # Run automated walkthrough simula
 | `reset` | Reset state to clean demo seed data |
 
 ## Structure
-- `localdocs/`: Architectural briefings, master mathematical framework specifications (`FORMULAS_AND_NUMBERS.md`), implementation specifications, and empirical literature studies (`PROSPER_AND_LITERATURE_LESSONS.md`).
+- `localdocs/`: Architectural briefings, master mathematical framework specifications (`FORMULAS_AND_NUMBERS.md`), implementation specifications, empirical literature studies (`PROSPER_AND_LITERATURE_LESSONS.md`), and benchmark reference (`BENCHMARKS_AND_METRICS.md`).
 - `ml/`: Explainable ML pipeline and ablation harness.
   - `models.py`: EBM, XGBoost GPU, PyTorch GPU with MC Dropout, LightGBM, Scorecard, and `GeneralizedCreditModel`.
   - `conformal.py`: Split and Mondrian conformal prediction sets ($\ge 90\%$ coverage guarantee).

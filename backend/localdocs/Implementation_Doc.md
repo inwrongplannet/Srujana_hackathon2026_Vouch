@@ -316,6 +316,7 @@ backend/
 ├── localdocs/                                   # Technical briefings & implementation documentation
 │   ├── Implementation_Doc.md                    # This master implementation document
 │   ├── Init_Arch.md                             # Initial POC briefing & architecture evolution
+│   ├── BENCHMARKS_AND_METRICS.md                # Empirical model metrics, benchmarks & ablation reference
 │   ├── VOUCH_DEVELOPER_MASTER_V2.md             # Developer master specification v2
 │   ├── VERITRUST_SYSTEM_FLOW.md                 # End-to-end system flow & walkthrough
 │   ├── FORMULAS_AND_NUMBERS.md                  # Comprehensive formulas, process & numbers spec
@@ -401,3 +402,14 @@ All acceptance criteria across all stages are demonstrably met and verified:
 - **Explainable ML & GPU parallel training:** Multi-paradigm models (EBM, XGBoost GPU, PyTorch GPU, LightGBM, Scorecard) trained concurrently on CUDA.
 - **Conformal prediction guarantees:** Finite-sample $\ge 90\%$ and $\ge 95\%$ coverage mathematically verified across data completeness tiers.
 - **Ablation & literature validation:** Demonstrated $+0.0049$ AUC lift from VeriTrust over raw degree centrality, rescuing 26 Invisible Primes with $26.25$ pp lower default risk.
+
+### Top-Line Benchmark & Metric Results
+
+| Evaluation Cohort | Evaluated Model | Test AUC | PR-AUC | Brier Loss | KS Stat | 90% Conformal Coverage | Key Empirical Finding |
+|---|---|---|---|---|---|---|---|
+| **Option A Shock (Model D)** | GeneralizedCreditModel | **0.8892** | **0.9191** | **0.1190** | **0.6655** | **91.01%** | Highest discrimination under realistic noise |
+| **Simulated Underwriting** | GeneralizedCreditModel | **0.9087** | **0.7141** | **0.0717** | **0.6697** | **90.56%** | High precision across 35,000 micro-borrowers |
+| **Graph-Only Cold Start** | GeneralizedCreditModel | **0.8678** | **0.9002** | **0.1306** | **0.6098** | **91.00%** | Robust scoring with zero traditional bureau data |
+| **Real-Anchored Cohort** | GeneralizedCreditModel | **0.6582** | **0.1466** | **0.0755** | **0.2461** | **89.50%** | Calibrated against empirical default distributions |
+| **Invisible Primes Rescued** | Model D vs Model A | — | — | — | — | — | **26 borrowers** approved with **38.46%** default rate (-26.25 pp vs pop) |
+| **Prosper Staked vs Unbacked** | 55,305 loans | — | — | — | — | — | Staked endorsements drop default to **23.71%** vs **32.81%** cheap talk |
