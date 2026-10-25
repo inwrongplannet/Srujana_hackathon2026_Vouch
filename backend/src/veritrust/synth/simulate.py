@@ -10,6 +10,7 @@ import random
 from dataclasses import dataclass, field
 
 from . import params as P
+from .behaviour import MonthEffects, step
 from .model import Borrower, Loan, year_month
 from .money import emi, round_to, rupees, scale
 from .people import clamp, lognormal, new_loan, pick
@@ -49,6 +50,8 @@ class MonthTrue:
     disbursals: list[tuple[str, int]] = field(default_factory=list)  # (loan_id, net credited)
     informal_support: int = 0
     vouch_support: int = 0        # help mobilised by the borrower's endorsers
+    windfall: int = 0
+    events: list[tuple[str, str]] = field(default_factory=list)   # (category, name) from behaviour.py
     shock: str = ""
     lumpy: str = ""
     savings_end: int = 0
@@ -184,12 +187,20 @@ def _shock_credit(b: Borrower, month: int, shortfall: int, st: SimState) -> Loan
 def run_month(b: Borrower, month: int, rng: random.Random, st: SimState,
               organic_credit: bool) -> MonthTrue:
     """Simulate one month and update loans and savings in place."""
-    income, shock = income_for(b, month, rng, st)
-    essentials, lumpy = essentials_for(b, month, rng)
     plan = b.shock
-    savings = st.savings + income
+    fx = step(b, b.traits, month, st.aux, plan is not None and month == plan.start) if b.traits else \
+        MonthEffects(discipline=b.discipline)
+    disc = fx.discipline
+    income, shock = income_for(b, month, rng, st)
+    income = scale(income, fx.income_factor)
+    windfall = scale(b.base_income, fx.windfall)
+    essentials, lumpy = essentials_for(b, month, rng)
+    essentials += scale(b.base_income, fx.extra_cost)
+    if fx.savings_lost:
+        st.savings -= scale(st.savings, fx.savings_lost)
+    savings = st.savings + income + windfall
     if plan and month == plan.start:
-        drain = scale(st.savings, st.aux.uniform(*P.SHOCK_BUFFER_DRAIN))
+        drain = scale(st.savings, st.aux.uniform(*P.SHOCK_DRAIN_BY_SEVERITY[plan.severity]))
         essentials += plan.expense + drain
         lumpy = plan.kind.lower()
 
@@ -198,13 +209,13 @@ def run_month(b: Borrower, month: int, rng: random.Random, st: SimState,
 
     # Disciplined borrowers trim essentials to protect their EMIs.
     if savings < essentials + due_total:
-        trim = min(scale(essentials, 0.12 * b.discipline), essentials + due_total - savings)
+        trim = min(scale(essentials, 0.12 * disc), essentials + due_total - savings)
         essentials -= trim
     essentials_paid = min(essentials, savings)
     savings -= essentials_paid
     record = MonthTrue(month=month, income=income, essentials=essentials_paid,
                        essentials_shortfall=essentials - essentials_paid, discretionary=0,
-                       shock=shock, lumpy=lumpy)
+                       shock=shock, lumpy=lumpy, windfall=windfall, events=fx.events)
 
     if savings < due_total:
         shock_loan = _shock_credit(b, month, due_total - savings, st)
@@ -225,24 +236,28 @@ def run_month(b: Borrower, month: int, rng: random.Random, st: SimState,
             savings += shortfall
     # Endorsers who stake their reputation also help, but only once trouble is visible: help
     # arrives the month after an EMI bounces, covering this month's dues and the arrears. So a
-    # shock still reaches the bureau; the network decides how fast the borrower recovers.
-    weight = b.vouch_weight.get(month, 0.0)
+    # shock still reaches the bureau; the network decides how fast the borrower recovers. In a
+    # regional disaster the endorsers are hit too, so help shrinks by the event's support factor.
+    weight = b.vouch_weight.get(month, 0.0) * fx.support_factor
     overdue = sum(loan.emi * loan.arrears(month - 1) for loan in b.loans if not loan.written_off)
-    if st.behind and weight > 0 and savings < due_total + overdue             and st.aux.random() < 1.0 - math.exp(-weight):
+    if st.behind and weight > 0 and savings < due_total + overdue and st.aux.random() < 1.0 - math.exp(-weight):
         help_amount = min(due_total + overdue - savings, scale(b.base_income, P.VOUCH_SUPPORT_SHARE * weight))
         record.vouch_support = help_amount
         savings += help_amount
 
-    if b.discipline > 0.5:
+    if disc > 0.5:
         due.sort(key=lambda loan: (-(NEW_LOAN_PRIORITY if loan.is_new else PRIORITY[loan.kind]), loan.loan_id))
     else:
         rng.shuffle(due)
     paid_total = 0
+    tech_bounce = fx.tech_bounce
     for loan in due:
-        willful_skip = rng.random() < (1.0 - b.discipline) * 0.05
-        if loan.arrears(month - 1) >= 2 and b.discipline < 0.5:
+        willful_skip = rng.random() < (1.0 - disc) * 0.05
+        if loan.arrears(month - 1) >= 2 and disc < 0.5:
             willful_skip = willful_skip or rng.random() < 0.4   # disengages once behind
-        if savings >= loan.emi and not willful_skip:
+        glitch = tech_bounce and savings >= loan.emi   # the bank fails the debit; money was there
+        tech_bounce = tech_bounce and not glitch
+        if savings >= loan.emi and not willful_skip and not glitch:
             savings -= loan.emi
             loan.paid += 1
             paid_total += loan.emi
@@ -257,7 +272,7 @@ def run_month(b: Borrower, month: int, rng: random.Random, st: SimState,
     for loan in sorted(b.loans, key=lambda loan: loan.loan_id):
         if loan.written_off or loan.arrears(month) == 0:
             continue
-        if savings >= loan.emi + cushion and rng.random() < 0.3 + 0.6 * b.discipline:
+        if savings >= loan.emi + cushion and rng.random() < 0.3 + 0.6 * disc:
             savings -= loan.emi
             loan.paid += 1
             paid_total += loan.emi
@@ -278,13 +293,15 @@ def run_month(b: Borrower, month: int, rng: random.Random, st: SimState,
 
     flow = income - essentials_paid - paid_total - record.charges
     save_rate = b.save_rate
-    target_buffer = scale(b.base_income, 1.0 + 2.0 * b.discipline)
+    target_buffer = scale(b.base_income, 1.0 + 2.0 * disc)
     if b.segment == "smallholder_farmer":
-        target_buffer = scale(b.base_income, 3.0 + 4.0 * b.discipline)   # harvest cash must last
+        target_buffer = scale(b.base_income, 3.0 + 4.0 * disc)   # harvest cash must last
         if income > b.base_income:
-            save_rate = min(0.95, 0.55 + 0.4 * b.discipline)
-    spend = scale(max(0, flow), 1.0 - save_rate)
+            save_rate = min(0.95, 0.55 + 0.4 * disc)
+    spend = scale(max(0, flow - windfall), 1.0 - save_rate)
     spend += scale(max(0, savings - target_buffer), 0.15)
+    if windfall and b.traits:
+        spend += scale(windfall, 0.3 + 0.6 * b.traits.present_bias)   # present bias spends a windfall now
     record.discretionary = min(spend, savings)
     savings -= record.discretionary
 

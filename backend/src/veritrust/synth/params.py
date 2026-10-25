@@ -256,3 +256,47 @@ VOUCH_EXPECTED_REPAY = Decimal("0.92")  # p in the reputation update
 P_DISPUTE = 0.08
 VOUCH_ALGORITHM = "vouch-v0.2"
 SCORE_ALGORITHM = "bureau-sim-v1"
+
+# --- Conditions, random walks and absurdity (behaviour layer, see behaviour.py) ---
+
+# Regional events that hit many borrowers at once ("acts of god"). All hypothetical. `factor` is
+# the income multiplier by segment while the event lasts for an exposed borrower; `loss` is a
+# one-time asset or stock loss, x monthly income, in the first month; `exposure` is the share of
+# borrowers in the affected states who are hit. Endorsers live in the same region, so their help
+# shrinks to `support` of normal: informal risk-sharing absorbs individual shocks far better than
+# shared ones (Townsend 1994, "Risk and Insurance in Village India", Econometrica).
+COVARIATE_EVENTS = (
+    {"name": "HEATWAVE_NORTH", "months": {(2024, 5), (2024, 6)}, "states": {"UP", "BR", "RJ", "MP"},
+     "factor": {"informal_daily_wage": 0.75, "gig_platform": 0.85, "smallholder_farmer": 0.9},
+     "loss": {}, "exposure": 0.6, "support": 0.7},
+    {"name": "FLOOD_KA_MH", "months": {(2024, 8), (2024, 9)}, "states": {"KA", "MH"},
+     "factor": {"informal_daily_wage": 0.5, "kirana_msme": 0.55, "smallholder_farmer": 0.5, "gig_platform": 0.7},
+     "loss": {"kirana_msme": (0.5, 1.5), "smallholder_farmer": (0.5, 2.0), "informal_daily_wage": (0.2, 0.6)},
+     "exposure": 0.45, "support": 0.4},
+    {"name": "LOCKDOWN_NATIONAL", "months": {(2026, 3), (2026, 4)}, "states": None,
+     "factor": {"informal_daily_wage": 0.45, "gig_platform": 0.5, "kirana_msme": 0.65, "smallholder_farmer": 0.9,
+                "salaried_formal": 0.97},
+     "loss": {}, "exposure": 0.6, "support": 0.35},
+)
+LOCKDOWN_JOB_LOSS = 0.05                # salaried borrowers who lose all pay during the lockdown
+
+# Random walks: income has a persistent component (log-level AR(1) with RW_RHO), not only
+# month-to-month noise, and discipline drifts. Shocks cause a temporary "scarcity" dip in
+# discipline (Mullainathan and Shafir, "Scarcity", 2013: financial stress lowers bandwidth).
+RW_RHO = 0.95
+RW_SD = {"salaried_formal": 0.015, "gig_platform": 0.04, "kirana_msme": 0.035,
+         "smallholder_farmer": 0.03, "informal_daily_wage": 0.035}
+DISCIPLINE_DRIFT_SD = 0.015
+SCARCITY_DIP = 0.12
+SCARCITY_MONTHS = 3
+
+# Absurdity: rare events that no rule predicts. Monthly probabilities; amounts x monthly income.
+P_WINDFALL = 0.002                      # inheritance, chit-fund prize, a lottery
+WINDFALL = (1.0, 6.0)
+P_THEFT = 0.0015                        # theft or fire takes savings or stock
+P_MIGRATION = 0.002                     # moves city; income halves that month
+P_TECH_BOUNCE = 0.004                   # per EMI: the auto-debit fails although money is there
+P_SPLURGE = (0.002, 0.008)              # (base, extra at full present bias); x3 in festival months
+SPLURGE = (0.2, 0.8)
+FESTIVAL_MONTHS = {10, 11}
+SHOCK_DRAIN_BY_SEVERITY = {1: (0.30, 0.50), 2: (0.60, 0.85), 3: (0.90, 1.00)}

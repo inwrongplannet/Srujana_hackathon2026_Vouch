@@ -38,6 +38,7 @@ Money is integer paise (`*_minor`) with `currency` INR. Ratios are 4-dp decimal 
 | `vouch_scores` | borrower-month, 24 per borrower (simulated) | Vouch Score 0-100 replayed from the events; `NO_RECORD`, `PROVISIONAL` or `ESTABLISHED` |
 | `vouch_outcomes` | endorsement active when the loan was taken (simulated) | loan status, `y`, expected rate, reputation change, dispute status |
 | `loan_performance` | month of the applied-for loan, 12 per borrower (simulated) | due, paid, DPD, status, shock active, support received |
+| `life_events` | logged event (simulated) | month, category (`IDIOSYNCRATIC`, `COVARIATE`, `ABSURD`), event (e.g. `FLOOD_KA_MH`, `WINDFALL`, `TECHNICAL_BOUNCE`), phase (history or loan); answer-key grade, never a model input |
 | `shock_events` | shocked borrower (simulated) | type, severity, insured, bureau drop, pre/post bureau and vouch scores, `vouch_held`, support mobilised (answer-key grade: never a model input) |
 | `bureau_trajectory` | borrower-month (anchored) | real worst DPD, reporting lines, rolling 30+ months, new lines, delinquency spike; `NO_SCORE_AVAILABLE` |
 | `prosper_loans` | loan (Prosper) | credit score band, score change since last loan, delinquencies, endorsements, outcome (`bad`) |

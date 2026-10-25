@@ -13,7 +13,7 @@ It also answers one question end to end: *when a borrower's bureau score falls a
 | | `real_anchored` | `simulated` (main) | `simulated` (shock study) | `real_prosper` |
 |---|---|---|---|---|
 | Rows | 30,000 applicants | 20,000 applicants | 15,000 applicants | 113,937 loans |
-| Default rate | 8.19% | 6.7% | 11.4% | 30.8% of 54,715 resolved |
+| Default rate | 8.19% | 9.9% (9.2% weighted) | 13.5% | 30.8% of 54,715 resolved |
 | Label | Home Credit `TARGET` | 90+ days past due within 12 EMIs | same | charged off, defaulted or 120+ days past due (`bad`) |
 | Use it to | train and calibrate | evaluate, stress-test, measure the vouch | answer the shock question | check endorsements on real outcomes |
 | Monthly bureau and vouch trajectories | real delinquency trajectory, no score | yes | yes | score at listing, change since last loan |
@@ -40,6 +40,7 @@ Every row in every table carries `source`. Borrower ids never collide: `H` + Hom
 | Bank statements, GST, declared EMIs | Synthetic, from the person's real columns, never from the label | Simulated | Not present |
 | Endorsements | None | Time-stamped vouch graph with stakes, renewals and withdrawals | Real recommendations and friend investments |
 | Shocks | None recorded | Planned shocks (medical, job loss, crop, business, family) | Not recorded |
+| Life conditions | None recorded | Regional disasters, income and discipline random walks, rare absurd events (`life_events`) | Not recorded |
 
 How the real Home Credit rows got their statements: income from the applicant's real income with Berka-calibrated volatility; EMIs from real annuities and instalments; a bounce only in months the person's real records show a late or short payment.
 
@@ -50,18 +51,19 @@ How the real Home Credit rows got their statements: income from the applicant's 
 | `features.csv` | applicant (the model row, as of the application month) | 65,000 |
 | `outcomes.csv` | applicant | 65,000 |
 | `answer_key.csv` | applicant (hidden truth; never a model input) | 65,000 |
-| `monthly_cashflow.csv` | statement month | 428,490 |
-| `bureau_tradelines.csv` | credit line | 224,389 |
+| `monthly_cashflow.csv` | statement month | 430,278 |
+| `bureau_tradelines.csv` | credit line | 223,259 |
 | `gst_filings.csv` | GST month of a registered business | 69,732 |
 | `vouches.csv` | vouch active at application (simulated) | 75,642 |
-| `transactions.csv` | bank statement line (sample of 300 applicants per source) | 115,377 |
+| `transactions.csv` | bank statement line (sample of 300 applicants per source) | 115,867 |
 | `bureau_snapshots.csv` | simulated borrower-month (24 each) | 840,000 |
-| `bureau_events.csv` | event that moved a simulated score | 91,797 |
+| `bureau_events.csv` | event that moved a simulated score | 89,670 |
 | `vouch_events.csv` | endorsement event | 252,317 |
 | `vouch_scores.csv` | simulated borrower-month (24 each) | 840,000 |
 | `vouch_outcomes.csv` | endorsement active when the loan was taken | 71,235 |
 | `loan_performance.csv` | month of the applied-for loan (12 each) | 420,000 |
 | `shock_events.csv` | shocked simulated borrower | 18,062 |
+| `life_events.csv` | logged event in a simulated borrower's life | 93,425 |
 | `bureau_trajectory.csv` | real borrower-month (24 each, applicants with a file) | 616,824 |
 | `prosper_loans.csv` | Prosper loan | 113,937 |
 | `manifest.json` | the folder | row counts, SHA-256 of every file, label definitions |
@@ -69,18 +71,30 @@ How the real Home Credit rows got their statements: income from the applicant's 
 Units: money is integer minor units in every `*_minor` column (paise, or US cents in `prosper_loans.csv`, which carries `currency`). Real Home Credit amounts are rescaled by 0.17 so the median applicant earns about 25,000 INR a month. Ratios are 4-decimal strings. Months are `YYYY-MM`. An empty cell is missing, and the matching `*_status` column says why.
 
 ## The shock question
-**Answer, in the simulated world: yes.** When the bureau score fell 50+ points after a shock and the vouch held, default was 12.1 points lower, holding the pre-shock score band and shock severity fixed (95% CI 10.2 to 14.0). The real Prosper data points the same way, on far fewer cases.
+**Answer, in the simulated world: yes.** When the bureau score fell 50+ points after a shock and the vouch held, default was 10.9 points lower, holding the pre-shock score band and shock severity fixed (95% CI 7.9 to 13.7). The real Prosper data points the same way, on far fewer cases.
 
-| Bureau-shocked borrowers (5,695) | Borrowers | Default | Help from endorsers (median) |
+| Bureau-shocked borrowers (4,977) | Borrowers | Default | Help from endorsers (median, among those helped) |
 |---|---|---|---|
-| Vouch held (score stayed within 5 points and at least 50) | 476 | 3.6% | ₹5,616; 72% got some |
-| Had vouches, but they did not hold | 2,215 | 12.0% | ₹3,063; 63% got some |
-| No vouches | 3,004 | 17.6% | none |
+| Vouch held (score stayed within 5 points and at least 50) | 436 | 8.7% | ₹15,818; 79% got some |
+| Had vouches, but they did not hold | 1,979 | 16.0% | ₹8,826; 65% got some |
+| No vouches at the shock | 2,562 | 21.9% | 1% got some (from vouches made later) |
 
 **Why the vouch holds when the bureau score falls.** These are the generator's causal rules, so every arrow can be inspected:
 1. The bureau score moves only on recorded events: a missed EMI (`DPD_30`), new enquiries and new lines taken to bridge the gap, and higher utilisation. Every point lost cites a `bureau_events` row.
 2. The vouch score moves only when endorsers act. They know the borrower's real reliability, which no bureau sees. After a shock, each endorser walks away with probability 0.55 × (1 − discipline)², so reliable borrowers keep their endorsers and unreliable ones lose them (`WITHDRAWN` events).
-3. Endorsers also help, but only once trouble is visible: the month after an EMI bounces, the network covers dues and arrears with probability 1 − e^(−W). So the shock still reaches the bureau, and the network decides how fast the borrower recovers. `loan_performance.support_received_minor` records the help.
+3. Endorsers also help, but only once trouble is visible: the month after an EMI bounces, the network covers dues and arrears with probability 1 − e^(−W). So the shock still reaches the bureau, and the network decides how fast the borrower recovers. `loan_performance.support_received_minor` records the help. In a regional disaster that help shrinks by the event's support factor.
+4. Rules alone make the world too tidy, so a behaviour layer adds what no rule predicts: a persistent random walk in income and a drift in discipline, a scarcity dip in discipline for 3 months after any shock (Mullainathan and Shafir 2013), and rare windfalls, theft or fire, migration, impulse splurges (three times as likely at festival time and for present-biased people) and technical auto-debit bounces when the money was there. Severity sets how much of the savings buffer a shock drains. Every event is in `life_events.csv`.
+
+**Normal times and emergencies.** Every simulated borrower is labelled by what they lived through in the 6 months before applying and during the loan (`answer_key.conditions`): `NORMAL`, `IDIOSYNCRATIC` (a personal emergency: illness, job loss, family, crop, business), `COVARIATE` (a regional disaster that hit many people at once) or `BOTH`. Default, all 35,000 simulated borrowers:
+
+| Conditions | Borrowers | Default | Established vouch | No vouch | Gap |
+|---|---|---|---|---|---|
+| `NORMAL` | 8,782 | 5.1% | 2.8% | 6.4% | 3.6 points |
+| `IDIOSYNCRATIC` | 15,632 | 12.0% | 7.5% | 14.5% | 7.0 points |
+| `COVARIATE` | 4,223 | 10.8% | 7.2% | 13.4% | 6.2 points |
+| `BOTH` | 6,363 | 19.1% | 13.5% | 22.5% | 9.1 points |
+
+The vouch matters most when things go wrong, and less in a regional disaster than in a personal one, because the endorsers are hit too (their help shrinks to 35-70% of normal; Townsend 1994). Not a gate: these groups are not matched on anything else.
 
 **In real data (Prosper, 54,715 resolved loans, aggregates in `prosper_check.json`):**
 - Within the same credit-score band, endorsed borrowers default 4.4 points less, in line with Freedman and Jin's published 4.1.
@@ -88,7 +102,7 @@ Units: money is integer minor units in every `*_minor` column (paise, or US cent
 - Where it fell 50+ points, the rates were 22.7% (66 loans) against 36.4% (1,231): suggestive, but too few loans to rely on.
 - These endorsements carried no stake, so they are a lower bound for a staked vouch.
 
-**What may not be claimed:** that the effect is causal in the real world, that the simulated 12 points is a real-world size, that a Vouch Score is a probability of repayment, or anything about real Indian borrowers (real rows have no vouches).
+**What may not be claimed:** that the effect is causal in the real world, that the simulated 11 points is a real-world size, that a Vouch Score is a probability of repayment, or anything about real Indian borrowers (real rows have no vouches).
 
 ## Columns
 
@@ -148,7 +162,10 @@ Derived month by month from the real 24-cell grids: `worst_dpd_reported`, `repor
 `listing_month`, `term_months`, `loan_amount_minor` (US cents), `currency` `USD`, `credit_score_lower`/`upper`, `score_change_since_last_loan` and its status, `current_delinquencies`, `delinquencies_last_7y`, `bankcard_utilisation`, `debt_to_income`, `stated_monthly_income_minor`, `income_verifiable`, `employment_status`, `prior_prosper_loans`, `prior_on_time_payments`, `recommendations`, `friends_invested_count`, `friends_invested_minor`, `in_group`, `endorsed`, `loan_status`, `resolved`, `bad`. No Prosper keys or free text are kept.
 
 ### Other tables
-`outcomes.csv` (`default_12m`, `default_month`, `max_dpd_12m`, `label_definition`), `monthly_cashflow.csv`, `transactions.csv`, `bureau_tradelines.csv` (`dpd_grid`: 24 cells oldest first, `000`/`030`/... days past due, `XXX` not reported, `---` not open), `gst_filings.csv`, `vouches.csv` and `answer_key.csv` keep the shapes described in `data/README.md`. The simulated answer key adds `perf_vouch_support_minor`, `support_capacity` and `shock_planned`.
+`outcomes.csv` (`default_12m`, `default_month`, `max_dpd_12m`, `label_definition`), `monthly_cashflow.csv`, `transactions.csv`, `bureau_tradelines.csv` (`dpd_grid`: 24 cells oldest first, `000`/`030`/... days past due, `XXX` not reported, `---` not open), `gst_filings.csv`, `vouches.csv` and `answer_key.csv` keep the shapes described in `data/README.md`. The simulated answer key adds `perf_vouch_support_minor`, `support_capacity`, `shock_planned`, `present_bias`, `discipline_end`, `discipline_change`, `covariate_exposed`, `absurd_events` and `conditions`. `features.csv` adds `regional_events_6m`: disasters reported in the borrower's state in the 6 months before applying, public news a lender can see.
+
+### `life_events.csv` (simulated)
+`borrower_id`, `month`, `category` (`IDIOSYNCRATIC`, `COVARIATE`, `ABSURD`), `event` (for example `ILLNESS`, `JOB_LOSS`, `HEATWAVE_NORTH`, `FLOOD_KA_MH`, `FLOOD_KA_MH_ASSET_LOSS`, `LOCKDOWN_NATIONAL`, `LOCKDOWN_JOB_LOSS`, `WINDFALL`, `THEFT_OR_FIRE`, `MIGRATION`, `SPLURGE`, `TECHNICAL_BOUNCE`), `amount_minor` (windfalls only), `phase` (`history` or `loan`). Answer-key grade: never a model input. The three regional events (a 2024 north-India heatwave, a 2024 Karnataka-Maharashtra flood, a 2026 national lockdown) are hypothetical; their dates, reach and size are assumptions in `params.py` (`COVARIATE_EVENTS`), not history.
 
 ## Missing values and reason codes
 | Code | Meaning | Example |
@@ -162,10 +179,10 @@ Derived month by month from the real 24-cell grids: `worst_dpd_reported`, `repor
 
 | Gap | `real_anchored` | `simulated` main |
 |---|---|---|
-| No bureau file | 4,299 (14.3%) | 5,785 (28.9%) |
-| Bank statement `NOT_PROVIDED` / `PARTIAL` | 9,606 / 6,081 | 7,812 / 3,650 |
-| Income `WITHHELD` | 0 | 1,712 |
-| Occupation tenure `NOT_PROVIDED` | 0 | 2,367 |
+| No bureau file | 4,299 (14.3%) | 5,784 (28.9%) |
+| Bank statement `NOT_PROVIDED` / `PARTIAL` | 9,606 / 6,081 | 7,774 / 3,668 |
+| Income `WITHHELD` | 0 | 1,731 |
+| Occupation tenure `NOT_PROVIDED` | 0 | 2,392 |
 | No vouch at application | all | 9,012 (45.1%) |
 
 ## Key numbers
@@ -173,21 +190,21 @@ Default rate (applicants in brackets).
 
 | Group | `real_anchored` | `simulated` main |
 |---|---|---|
-| Bureau file | 7.8% (25,701) | 6.7% (14,215) |
-| No bureau file | 10.6% (4,299) | 6.6% (5,785) |
-| Completeness tier 0 / 1 / 2 / 3 | 9.4% / 8.8% / 7.6% / 7.6% | 6.8% / 7.4% / 6.0% / 3.9% |
-| Bureau-only policy approves / rejects | 7.4% / 9.6% | 4.7% / 9.4% |
+| Bureau file | 7.8% (25,701) | 9.6% (14,216) |
+| No bureau file | 10.6% (4,299) | 10.6% (5,784) |
+| Completeness tier 0 / 1 / 2 / 3 | 9.4% / 8.8% / 7.6% / 7.6% | 11.3% / 10.7% / 8.8% / 4.7% |
+| Bureau-only policy approves / rejects | 7.4% / 9.6% | 7.1% / 13.7% |
 | Real delinquency spike before applying | 10.5% (1,720) vs 7.6% without | |
 
 | Occupation (`simulated` main) | Applicants | Default |
 |---|---|---|
-| `salaried_formal` | 4,781 | 2.5% |
-| `kirana_msme` | 3,640 | 3.1% |
-| `smallholder_farmer` | 2,972 | 6.1% |
-| `informal_daily_wage` | 5,221 | 9.9% |
-| `gig_platform` | 3,386 | 12.0% |
+| `salaried_formal` | 4,781 | 2.8% |
+| `kirana_msme` | 3,640 | 5.5% |
+| `smallholder_farmer` | 2,972 | 8.2% |
+| `informal_daily_wage` | 5,221 | 15.5% |
+| `gig_platform` | 3,386 | 17.4% |
 
-Simulated main cohort: bureau score quartiles 732 / 741 / 763; vouch score quartiles among vouched 24 / 37 / 50. Shocks: 18,062 (medical 7,907, job loss 4,994, family 3,411, business 1,267, crop 483), of which 5,695 became bureau shocks (median drop 76 points).
+Simulated main cohort: bureau score quartiles 732 / 741 / 763; vouch score quartiles among vouched 24 / 37 / 50. Shocks: 18,062 (medical 7,907, job loss 4,994, family 3,411, business 1,267, crop 483), of which 4,977 became bureau shocks (median drop 78 points). Unweighted main default is 9.9%; weighted back to a 5% shock incidence it is 9.2%.
 
 ## Validation
 From `backend/`: `python -m veritrust.synth.validate`, `python -m veritrust.synth.shock_validate`, `python -m veritrust.anchor.validate`, `python -m veritrust.anchor.prosper`. They fit throwaway logistic regressions only to test the data.
@@ -195,25 +212,25 @@ From `backend/`: `python -m veritrust.synth.validate`, `python -m veritrust.synt
 | Check | Result |
 |---|---|
 | Real: AUC on real features, then with synthetic statements added | 0.662 → 0.663 (+0.0005): no leakage |
-| Simulated: AUC on observed features / on hidden truth | 0.830 / 0.859 (leak alarm at 0.90) |
-| Simulated: bureau-only policy rejects everyone without a file | 5,785 rejected; 93.4% of them repaid (real: 4,299 rejected, 89.4% repaid) |
+| Simulated: AUC on observed features / on hidden truth | 0.827 / 0.862 (leak alarm at 0.90) |
+| Simulated: bureau-only policy rejects everyone without a file | 5,784 rejected; 89.4% of them repaid (real: 4,299 rejected, 89.4% repaid) |
 | Duplicate-row / hidden-loan / window-dressing detectors (real) | precision 1.00 / 0.38 / 0.27, recall 0.98 / 0.84 / 0.98 |
 
 Shock-question gates (`shock_validation.json`):
 
 | # | Gate | Result |
 |---|---|---|
-| 1 | Every bureau shock is a 50+ point drop explained by an event | PASS: 5,695 of 5,695 |
-| 2 | Bureau and vouch scores carry different information before the shock (abs corr < 0.5) | PASS: r = −0.02 |
-| 3 | Held vs not held, within pre-score band × severity: ≤ −4 points, CI excludes 0 | PASS: −12.1 (−14.0 to −10.2); −8.7 among vouched only |
-| 4 | Default falls across vouch-score quartiles | PASS: 17.5% → 11.7% → 8.3% → 5.2% (no vouch 17.5%) |
-| 5 | The vouch adds ≥ 0.02 AUC beyond bureau, cash flow and the reported shock (5-fold CV, paired) | **FAIL: +0.013** (CI +0.010 to +0.017); AUC 0.820 → 0.826 with the reported shock → 0.840 with the vouch. A real increment, but below the bar: do not claim 0.02 |
-| 6 | Placebo: shuffling the vouch features adds nothing | PASS: −0.0015 |
+| 1 | Every bureau shock is a 50+ point drop explained by an event | PASS: 4,977 of 4,977 |
+| 2 | Bureau and vouch scores carry different information before the shock (abs corr < 0.5) | PASS: r = 0.01 |
+| 3 | Held vs not held, within pre-score band × severity: ≤ −4 points, CI excludes 0 | PASS: −10.9 (−13.7 to −7.9); −7.1 among vouched only |
+| 4 | Default falls across vouch-score quartiles | PASS: 21.2% → 15.0% → 12.6% → 9.6% (no vouch 22.1%) |
+| 5 | The vouch adds ≥ 0.02 AUC beyond bureau, cash flow and the reported shock (5-fold CV, paired) | **FAIL: +0.012** (CI +0.010 to +0.014); AUC 0.815 → 0.819 with the reported shock → 0.831 with the vouch. A real increment, but below the bar: do not claim 0.02 |
+| 6 | Placebo: shuffling the vouch features adds nothing | PASS: −0.0017 |
 | 7 | No banned column (vouch_held, outcomes, support, truth) in features or models | PASS |
-| 8 | Reason codes cite a bureau event of that reason | PASS: 92.6% of 126,311 |
-| 9 | No endorser over budget; utilisation in 0..1; ring-only borrowers score ≤ 10 | PASS: 0 over budget, ring-only max 6 (395 borrowers with ring edges) |
+| 8 | Reason codes cite a bureau event of that reason | PASS: 91.6% of 120,737 |
+| 9 | No endorser over budget; utilisation in 0..1; ring-only borrowers score ≤ 10 | PASS: 0 over budget, ring-only max 6 (362 ring-only rows) |
 | 10 | Two runs are byte-identical | PASS (tests/test_shock_data.py) |
-| 11 | Predicted vs observed default within ±2 points per decile, bureau-shocked borrowers | **FAIL**: up to +10.3 points under-predicted in the riskiest deciles. One model fitted on everyone is miscalibrated for this subgroup: recalibrate before quoting probabilities |
+| 11 | Predicted vs observed default within ±2 points per decile, bureau-shocked borrowers | **FAIL**: up to +16.0 points under-predicted in the riskiest deciles. One model fitted on everyone is miscalibrated for this subgroup: recalibrate before quoting probabilities |
 | 12 | Open or upheld disputes never move reputation | PASS: 0 violations |
 
 ## Known limitations
@@ -222,6 +239,7 @@ Shock-question gates (`shock_validation.json`):
 - Real Home Credit applicants are not Indian; amounts are rescaled and application months are assigned by the builder. Prosper is US data from 2005 to 2014 with cheap-talk endorsements.
 - Synthetic statements show that the pipeline works; they cannot prove that bank-statement data improves prediction.
 - Berka (Czech, 1993 to 1998) sets volatility shapes only.
+- The behaviour layer's event rates and sizes are assumptions chosen for plausibility, not estimates; it makes the world messier, it does not make it more real.
 
 ## Regenerate
 From `backend/`, about 40 minutes including downloads (network and `requirements-data.txt`):

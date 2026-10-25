@@ -37,7 +37,7 @@ SOURCES = {
 }
 TABLES = ("applications", "features", "outcomes", "monthly_cashflow", "bureau_tradelines", "gst_filings",
           "vouches", "transactions", "bureau_snapshots", "bureau_events", "vouch_events", "vouch_scores",
-          "vouch_outcomes", "loan_performance", "shock_events", "bureau_trajectory", "prosper_loans")
+          "vouch_outcomes", "loan_performance", "shock_events", "life_events", "bureau_trajectory", "prosper_loans")
 
 
 def _read(path: Path) -> list[dict]:

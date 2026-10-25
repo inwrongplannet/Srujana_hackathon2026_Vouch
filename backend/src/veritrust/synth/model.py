@@ -104,6 +104,7 @@ class Borrower:
     enquiries: list[int] = field(default_factory=list)   # months a lender pulled the bureau file
     shock: "ShockPlan | None" = None
     vouch_weight: dict[int, float] = field(default_factory=dict)   # month -> total endorsement weight W
+    traits: object | None = None   # behaviour.Traits: present bias, event exposure, walk state
 
 
 @dataclass

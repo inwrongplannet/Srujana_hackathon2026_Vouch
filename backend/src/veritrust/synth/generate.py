@@ -12,21 +12,36 @@ from decimal import Decimal
 from pathlib import Path
 from statistics import median
 
-from . import params as P
 from . import bureau
+from . import params as P
+from .behaviour import regional_events, sample_traits
 from .features import build_features, shock_vouch_features
 from .model import Loan, month_label
 from .money import emi, principal_for_emi, round_to, rupees, scale
-from .observe import bank_view, bureau_view, declared_view, existing_emi_true, gst_view, statement_months
+from .observe import (
+    bank_view,
+    bureau_view,
+    declared_view,
+    existing_emi_true,
+    gst_view,
+    statement_months,
+)
 from .people import lognormal, pick, sample_borrower
 from .shocks import plan_shock, stratum
 from .simulate import simulate
 from .transactions import to_transactions
-from .vouch import VoucherPool, event_rows, outcome_rows, plan_vouches, score_at, weight_by_month
+from .vouch import (
+    VoucherPool,
+    event_rows,
+    outcome_rows,
+    plan_vouches,
+    score_at,
+    weight_by_month,
+)
 
 TABLES = ("applications", "monthly_cashflow", "bureau_tradelines", "gst_filings", "vouches",
           "outcomes", "truth", "features", "transactions", "bureau_snapshots", "bureau_events",
-          "vouch_events", "vouch_scores", "vouch_outcomes", "loan_performance", "shock_events")
+          "vouch_events", "vouch_scores", "vouch_outcomes", "loan_performance", "shock_events", "life_events")
 
 
 def _application_loan(b, rng: random.Random) -> Loan:
@@ -154,6 +169,30 @@ def _study_borrower(index: int):
     raise RuntimeError(f"no borrower with live credit after {P.STUDY_MAX_DRAWS} draws for {index}")
 
 
+def _conditions(b, history, performance) -> tuple[str, list[dict]]:
+    """Label what the borrower lived through around the loan, and list every logged event.
+
+    NORMAL: nothing unusual in the last 6 months before applying or during the loan.
+    IDIOSYNCRATIC: a personal emergency (medical, job loss, family, crop, business).
+    COVARIATE: a regional event that hit many people at once. BOTH: one of each.
+    """
+    window = history[-6:] + performance
+    personal = any(t.shock for t in window) or (b.shock is not None and b.shock.start >= b.app_month - 6)
+    regional = any(cat == "COVARIATE" for t in window for cat, _ in t.events)
+    label = "BOTH" if personal and regional else "IDIOSYNCRATIC" if personal else "COVARIATE" if regional else "NORMAL"
+    rows = []
+    for t in history + performance:
+        for cat, name in t.events:
+            rows.append({"borrower_id": b.borrower_id, "month": month_label(t.month), "category": cat, "event": name,
+                         "amount_minor": t.windfall if name == "WINDFALL" else "",
+                         "phase": "history" if t.month < b.app_month else "loan"})
+        if t.shock:
+            rows.append({"borrower_id": b.borrower_id, "month": month_label(t.month), "category": "IDIOSYNCRATIC",
+                         "event": t.shock.upper(), "amount_minor": "",
+                         "phase": "history" if t.month < b.app_month else "loan"})
+    return label, rows
+
+
 def generate_one(index: int, with_transactions: bool, pool: VoucherPool | None = None,
                  cohort: str = "main") -> dict[str, list[dict]]:
     """All rows for one borrower, keyed by table name.
@@ -173,6 +212,8 @@ def generate_one(index: int, with_transactions: bool, pool: VoucherPool | None =
     received, given = plan_vouches(b, pool or VoucherPool(), random.Random(f"{P.SEED}:{index}:vouch"))
     b.vouch_weight = weight_by_month(
         received, range(b.app_month - P.HISTORY_MONTHS, b.app_month + P.PERFORMANCE_MONTHS + 1))
+    b.traits = sample_traits(b, random.Random(f"{P.SEED}:{index}:traits"))
+    discipline_start = b.discipline
     history, performance = simulate(b, rng, new, aux=random.Random(f"{P.SEED}:{index}:aux"))
 
     app_label = month_label(b.app_month)
@@ -213,6 +254,9 @@ def generate_one(index: int, with_transactions: bool, pool: VoucherPool | None =
     features.update(shock_vouch_features(b, snaps, vouch_rows, vouch_events, bureau_events,
                                          random.Random(f"{P.SEED}:{index}:report")))
     app["cohort"] = features["cohort"] = cohort
+    # Public news a lender can see: regional disasters reported in the borrower's state lately.
+    features["regional_events_6m"] = len(regional_events(b.state, range(b.app_month - 6, b.app_month)))
+    conditions, life_rows = _conditions(b, history, performance)
     features["sample_weight"] = app["sample_weight"] = (
         _sample_weight(b.shock is not None, group) if cohort == "main" else "")
     settled = (new.tenure <= P.PERFORMANCE_MONTHS and not outcome["default_12m"]
@@ -226,7 +270,7 @@ def generate_one(index: int, with_transactions: bool, pool: VoucherPool | None =
                   if not loan.is_new and not loan.declared and not loan.written_off and loan.is_open(b.app_month - 1)]
     truth = {
         "borrower_id": b.borrower_id, "base_income_minor": initial_income, "true_income_median_12m_minor": true_income,
-        "income_cv": f"{b.cv:.4f}", "expense_ratio": f"{b.expense_ratio:.4f}", "discipline": f"{b.discipline:.4f}",
+        "income_cv": f"{b.cv:.4f}", "expense_ratio": f"{b.expense_ratio:.4f}", "discipline": f"{discipline_start:.4f}",
         "save_rate": f"{b.save_rate:.4f}", "deposit_share": f"{b.deposit_share:.4f}", "margin": f"{b.margin:.4f}",
         "stacker": int(b.stacker), "inflator": int(b.inflator), "window_dresser": int(b.window_dresser),
         "round_tripper": int(b.round_tripper and bool(bank)), "duplicate_import": int(b.duplicate_import and bool(bank)),
@@ -242,6 +286,11 @@ def generate_one(index: int, with_transactions: bool, pool: VoucherPool | None =
         "perf_vouch_support_minor": sum(m.vouch_support for m in performance),
         "support_capacity": f"{b.support_capacity:.4f}",
         "shock_planned": b.shock.kind if b.shock else "",
+        "present_bias": f"{b.traits.present_bias:.4f}",
+        "discipline_end": f"{b.discipline:.4f}",
+        "discipline_change": f"{b.discipline - discipline_start:.4f}",
+        "covariate_exposed": ";".join(sorted(k for k, v in b.traits.exposed.items() if v)),
+        "absurd_events": sum(1 for t in history + performance for cat, _ in t.events if cat == "ABSURD"),
         "default_driver": _default_driver(b, outcome, performance, true_dti),
     }
 
@@ -257,7 +306,9 @@ def generate_one(index: int, with_transactions: bool, pool: VoucherPool | None =
                                        outcome["default_month"], random.Random(f"{P.SEED}:{index}:dispute")),
         "loan_performance": _loan_performance(b, new, performance, application_id),
         "shock_events": [_shock_row(b, group, snaps, vouch_rows, bureau_events, history, performance)] if b.shock else [],
+        "life_events": life_rows,
     }
+    rows["truth"][0]["conditions"] = conditions
     if with_transactions and bank:
         loans = {loan.loan_id: loan for loan in b.loans}
         counter = [0]

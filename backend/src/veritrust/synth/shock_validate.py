@@ -239,6 +239,21 @@ def run(data: Path) -> dict:
     gates["10_determinism"] = {"sha256": {k: v["sha256"][:16] for k, v in manifest["files"].items()},
                                "pass": True, "note": "tests/test_shock_data.py regenerates and compares"}
 
+    # Scenario report (not a gate): default by what borrowers lived through, with and without an
+    # established vouch, and the held-vouch gap for bureau shocks by kind of conditions.
+    truth = {r["borrower_id"]: r for r in read(data / "truth.csv")}
+    scenarios = {}
+    for label in ("NORMAL", "IDIOSYNCRATIC", "COVARIATE", "BOTH"):
+        group = [r for r in features if truth[r["borrower_id"]]["conditions"] == label]
+        est = [r for r in group if r["vouch_score_status"] == "ESTABLISHED"]
+        none = [r for r in group if r["vouch_score_status"] == "NO_RECORD"]
+        scenarios[label] = {"n": len(group), "default": _rate(group), "established_vouch": _rate(est),
+                            "no_vouch": _rate(none), "gap": _rate(none) - _rate(est) if est and none else None}
+        shocked = [s for s in bs if truth[s["borrower_id"]]["conditions"] == label]
+        if shocked and any(held(s) for s in shocked) and any(not held(s) for s in shocked):
+            scenarios[label]["bureau_shock_held_minus_not"] = _rate([s for s in shocked if held(s)]) - _rate([s for s in shocked if not held(s)])
+    gates["scenarios"] = {**scenarios, "pass": True, "note": "report only"}
+
     # Gate 12: an open or overturned dispute never moves reputation.
     unsafe = [r for r in read(data / "vouch_outcomes.csv")
               if r["dispute_status"] in ("OPEN", "UPHELD") and float(r["delta_reputation"]) != 0]
