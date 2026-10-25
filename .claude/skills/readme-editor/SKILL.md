@@ -17,7 +17,7 @@ Any change to README.md.
 3. Section rules:
    - **overview**: one or two sentences: the pain, the user, how we help. Source: `docs/PROBLEM.md`.
    - **quickstart**: exact commands that work from a fresh clone; verify every command against the Makefile and `.env.example`. No unverified instructions.
-   - **features**: generated from `docs/features/*.md`. Run `make readme` (wraps `scripts/update_readme.py`); do not hand-type the table.
+   - **features**: generated from `docs/frontend-features/*.md`. Run `make readme` (wraps `scripts/update_readme.py`); do not hand-type the table.
    - **architecture**: short paragraph, diagram and link to `docs/ARCHITECTURE.md`.
    - **team**: names and roles. **demo**: link and a 3-line summary of the script in `docs/DEMO.md`.
 4. Write for a judge skimming for 60 seconds: concrete, no filler, no `TODO` left in sections that are ready.

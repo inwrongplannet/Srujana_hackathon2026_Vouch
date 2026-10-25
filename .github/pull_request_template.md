@@ -16,4 +16,4 @@ List the docs you updated (zone README, contract, feature manifest, `AGENTS.md`,
 - [ ] Only the files my task lists changed
 - [ ] New dependency logged in docs/DECISIONS.md
 - [ ] No secrets, no stray debug code
-- [ ] docs/features/<feature>.md updated (if a feature changed)
+- [ ] docs/frontend-features/<feature>.md updated (if a feature changed)

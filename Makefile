@@ -36,7 +36,7 @@ docs:  ## docs gates: agent files, style and nomenclature, docs-sync
 	$(PYTHON) scripts/check_docs_style.py
 	$(PYTHON) scripts/check_docs.py
 
-readme: ## regenerate the README features table from docs/features/*.md
+readme: ## regenerate the README features table from docs/frontend-features/*.md
 	$(PYTHON) scripts/update_readme.py
 
 check: structure docs lint test  ## what CI and /review-pr run

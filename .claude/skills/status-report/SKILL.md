@@ -1,6 +1,6 @@
 ---
 name: status-report
-description: Summarize git log, PRs, TASKS.md and docs/features statuses
+description: Summarize git log, PRs, TASKS.md and docs/frontend-features statuses
 ---
 # status-report
 
@@ -12,7 +12,7 @@ description: Summarize git log, PRs, TASKS.md and docs/features statuses
 Abhishek wants a snapshot of progress. Read-only: never modify files or state.
 
 ## Steps
-1. Gather: `git log --since="12 hours ago" --oneline --all` (adjust window to the event), `gh pr list --state open --json number,title,author,isDraft,reviewDecision,statusCheckRollup`, `docs/TASKS.md` (Backlog / In progress / Done), `docs/features/*.md` statuses.
+1. Gather: `git log --since="12 hours ago" --oneline --all` (adjust window to the event), `gh pr list --state open --json number,title,author,isDraft,reviewDecision,statusCheckRollup`, `docs/TASKS.md` (Backlog / In progress / Done), `docs/frontend-features/*.md` statuses.
    Optionally run `make check` on `main` (or the PR branch) to include current gate status.
 2. Report in this order, tersely:
    - **Headline**: percent of tasks done, time used vs remaining if known, and whether the feature-freeze (~70%) is on track.
