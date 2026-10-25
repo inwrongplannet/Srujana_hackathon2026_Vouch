@@ -22,5 +22,13 @@ Applies to any agent working in `backend/`, on top of the root `AGENTS.md`. Near
 - **DEMO_MODE**: when `DEMO_MODE=true` env var is set, all external API calls (Account Aggregator, EVM RPC) are short-circuited to `data/` seed reads. No live API calls on the demo path.
 - **Money**: `Decimal` end to end. Store amounts as integer minor units (paise for INR) in the DB; serialise as decimal strings with ISO 4217 code in the API. Never float columns.
 
-## Stack notes (filled by the scaffold-zone skill)
-TODO(scaffold): framework and version, run one test, run lint, folder layout, error-shape helper.
+## Stack notes
+- **Framework & Runtime**: Python 3.11+, FastAPI (REST API), NetworkX (Web-of-Trust graph), Google OR-Tools CP-SAT (constrained loan optimization), Pydantic v2 (validation & schemas), SQLite + JSONL (tamper-evident audit ledger).
+- **Run tests**: `pytest` or `pytest tests/` (full test suite: 99 tests passing). Run one test: `pytest tests/test_vouch_score_v2.py`.
+- **Run server**: `python main.py serve --port 8000` or `uvicorn veritrust.api.app:app --port 8000`. OpenAPI interactive docs at `http://localhost:8000/docs`.
+- **Folder layout**:
+  - `src/veritrust/`: Core graph engine (`engine.py`), v2 scoring & heuristics (`scoring.py`), loan lifecycle (`lending.py`), cryptographic audit ledger (`ledger.py`), OR-Tools optimizer (`optimizer.py`), Monte Carlo stress tester (`stress_tester.py`), and FastAPI REST endpoints (`api/`).
+  - `tests/`: Pytest unit tests for all domain logic and endpoints.
+  - `localdocs/`: Specification documents and developer master v2 documentation.
+  - `ml/`: Credit-default modeling, conformal prediction sets, and explainability.
+- **Error shape helper**: API endpoints return standard `{ "detail": "<message>" }` or validation errors with HTTP status codes matching `docs/API_CONTRACT.md`.
