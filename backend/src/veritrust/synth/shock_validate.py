@@ -34,12 +34,14 @@ B0_NUMERIC = [
 ]
 B0_CATEGORICAL = ["occupation", "age_band", "product", "bank_statement_status", "bureau_score_status",
                   "bureau_top_reason_code"]
-B1_NUMERIC = B0_NUMERIC + [
-    "shock_reported_severity", "shock_reported_insured", "vouch_score", "vouch_score_change_6m",
+SHOCK_NUMERIC = B0_NUMERIC + ["shock_reported_severity", "shock_reported_insured"]
+SHOCK_CATEGORICAL = B0_CATEGORICAL + ["shock_reported_status", "shock_reported_type"]
+B1_NUMERIC = SHOCK_NUMERIC + [
+    "vouch_score", "vouch_score_change_6m",
     "vouch_eligible_incoming", "vouch_total_weight", "vouch_distinct_anchors", "vouch_max_contributor_share",
     "vouch_reciprocal_edges", "vouch_cluster_concentration", "vouch_mean_reliability", "vouch_withdrawn_6m",
 ]
-B1_CATEGORICAL = B0_CATEGORICAL + ["shock_reported_status", "shock_reported_type", "vouch_score_status"]
+B1_CATEGORICAL = SHOCK_CATEGORICAL + ["vouch_score_status"]
 VOUCH_BLOCK = [c for c in B1_NUMERIC if c.startswith("vouch_")] + ["vouch_score_status"]
 BANNED = {"vouch_held", "delta_reputation", "y", "default_driver", "support_mobilised_minor",
           "support_before_application_minor", "perf_vouch_support_minor", "support_capacity", "discipline",
@@ -107,6 +109,7 @@ def paired_delta_ci(p0: list[float], p1: list[float], y: list[int], boots: int =
 
 def run(data: Path) -> dict:
     features = read(data / "features.csv")
+    feature_columns = set(features[0])
     outcomes = {r["borrower_id"]: r for r in read(data / "outcomes.csv")}
     shocks = read(data / "shock_events.csv")
     for r in features:
@@ -158,18 +161,22 @@ def run(data: Path) -> dict:
                                 "quartile_rates": rates, "quartile_floor": [int(q[0]["post_vouch_score"]) for q in quarters],
                                 "pass": all(a >= b for a, b in zip(rates, rates[1:]))}
 
-    # Gates 5, 6 and 11: B0 vs B1, 5-fold CV over every simulated row, paired on identical rows.
+    # Gates 5, 6 and 11: 5-fold CV over every simulated row, paired on identical rows. B0 is the
+    # conventional lender, BS adds the shock as the applicant reports it, B1 adds the vouch graph.
+    # The vouch claim is B1 against BS, so the reported shock is not credited to the vouch.
     y = [int(r["default_12m"]) for r in features]
     p0 = cv_predictions(features, B0_NUMERIC, B0_CATEGORICAL)
+    ps = cv_predictions(features, SHOCK_NUMERIC, SHOCK_CATEGORICAL)
     p1 = cv_predictions(features, B1_NUMERIC, B1_CATEGORICAL)
-    delta = auc(p1, y) - auc(p0, y)
-    lo, hi = paired_delta_ci(p0, p1, y)
+    delta = auc(p1, y) - auc(ps, y)
+    lo, hi = paired_delta_ci(ps, p1, y)
     ids = {s["borrower_id"] for s in bs}
     sub = [i for i, r in enumerate(features) if r["borrower_id"] in ids]
     ys = [y[i] for i in sub]
-    delta_shocked = auc([p1[i] for i in sub], ys) - auc([p0[i] for i in sub], ys)
-    gates["5_model_increment"] = {"auc_b0": auc(p0, y), "auc_b1": auc(p1, y), "delta": delta, "ci95": [lo, hi],
-                                  "delta_bureau_shocked": delta_shocked, "pass": delta >= 0.02 and lo > 0}
+    delta_shocked = auc([p1[i] for i in sub], ys) - auc([ps[i] for i in sub], ys)
+    gates["5_model_increment"] = {"auc_b0": auc(p0, y), "auc_bureau_plus_shock": auc(ps, y), "auc_b1": auc(p1, y),
+                                  "vouch_delta": delta, "ci95": [lo, hi], "vouch_delta_bureau_shocked": delta_shocked,
+                                  "pass": delta >= 0.02 and lo > 0}
 
     rng = random.Random(23)
     shuffled = [dict(r) for r in features]
@@ -179,7 +186,7 @@ def run(data: Path) -> dict:
         for c in VOUCH_BLOCK:
             r[c] = features[d][c]
     pp = cv_predictions(shuffled, B1_NUMERIC, B1_CATEGORICAL)
-    placebo = auc(pp, y) - auc(p0, y)
+    placebo = auc(pp, y) - auc(ps, y)
     gates["6_placebo"] = {"delta_with_vouch_shuffled": placebo, "pass": abs(placebo) < 0.005}
 
     pairs = sorted((p1[i], y[i]) for i in sub)
@@ -193,8 +200,8 @@ def run(data: Path) -> dict:
     # Gate 7: no banned column reaches a model.
     used = set(B1_NUMERIC + B1_CATEGORICAL)
     gates["7_leakage"] = {"banned_in_models": sorted(used & BANNED),
-                          "banned_in_features_table": sorted(set(features[0]) & BANNED),
-                          "pass": not (used & BANNED) and not (set(features[0]) & BANNED)}
+                          "banned_in_features_table": sorted(feature_columns & BANNED),
+                          "pass": not (used & BANNED) and not (feature_columns & BANNED)}
 
     # Gate 8: every reason code on a falling score cites a bureau event of that reason.
     cited = total = 0

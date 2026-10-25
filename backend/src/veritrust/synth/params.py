@@ -234,7 +234,7 @@ VOUCH_TAU = Decimal(3)
 VOUCH_LAMBDA = Decimal(1)
 VOUCH_COVERAGE = {"salaried_formal": 0.45, "gig_platform": 0.45, "kirana_msme": 0.65,
                   "smallholder_farmer": 0.70, "informal_daily_wage": 0.60}
-VOUCHERS_PER_STATE = 4000
+VOUCHERS_PER_STATE = 12000                 # about one endorsement per endorser at 35,000 borrowers; most people vouch for one or two others
 P_INSTITUTION = 0.08                    # employer or SHG federation rather than a person
 VOUCH_BUDGET = (60, 100)                # reputation budget, points
 VOUCH_STAKE = (8, 25)                   # points staked on one endorsement

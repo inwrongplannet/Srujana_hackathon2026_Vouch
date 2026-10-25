@@ -1,70 +1,94 @@
 # Combined credit-assessment dataset
 
-Fifty thousand loan applicants in one set of tables for F-04: 30,000 real Home Credit applicants with synthetic bank statements, and 20,000 simulated Indian borrowers whose hidden truth is known.
+Sixty-five thousand loan applicants and 113,937 real peer-to-peer loans in one set of tables for F-04:
+- 30,000 real Home Credit applicants with synthetic bank statements.
+- 35,000 simulated Indian borrowers whose hidden truth is known: a 20,000 population plus a 15,000 shock-study cohort.
+- 113,937 real Prosper loans with credit scores, endorsements and outcomes.
 
-> Illustrative data, not financial advice. The `real_anchored` rows are real, anonymised Home Credit applicants. This folder is git-ignored: only this README is committed. Never commit the CSVs, share them outside the team, or paste rows into a prompt.
+It also answers one question end to end: *when a borrower's bureau score falls after a shock but their vouch score holds, does the vouch still predict repayment, and why?*
+
+> Illustrative data, not financial advice. The `real_anchored` and `real_prosper` rows are real, anonymised records. This folder is git-ignored: only this README is committed. Never commit the CSVs, share them outside the team, or paste rows into a prompt.
 
 ## At a glance
-| | `real_anchored` | `simulated` | All |
-|---|---|---|---|
-| Applicants | 30,000 | 20,000 | 50,000 |
-| Default rate | 8.19% | 6.98% | |
-| Label | Home Credit `TARGET` | 90+ days past due within 12 EMIs | |
-| Use it to | train and calibrate | evaluate and stress-test | |
-| Application months | 2024-07 to 2025-06 | 2024-07 to 2025-06 | |
-| Bank statement months | 199,215 | 118,803 | 318,018 |
-| Bureau tradelines | 141,666 | 32,269 | 173,935 |
-| Statement lines (sample of 300 applicants each) | 60,933 | 55,742 | 116,675 |
+| | `real_anchored` | `simulated` (main) | `simulated` (shock study) | `real_prosper` |
+|---|---|---|---|---|
+| Rows | 30,000 applicants | 20,000 applicants | 15,000 applicants | 113,937 loans |
+| Default rate | 8.19% | 6.7% | 11.4% | 30.8% of 54,715 resolved |
+| Label | Home Credit `TARGET` | 90+ days past due within 12 EMIs | same | charged off, defaulted or 120+ days past due (`bad`) |
+| Use it to | train and calibrate | evaluate, stress-test, measure the vouch | answer the shock question | check endorsements on real outcomes |
+| Monthly bureau and vouch trajectories | real delinquency trajectory, no score | yes | yes | score at listing, change since last loan |
+| Vouches | none | yes | yes | real endorsements (no stake) |
 
-Every row in every table carries `source` (`real_anchored` or `simulated`). Borrower ids never collide: `H` + Home Credit id for real rows, `B` + six digits for simulated rows.
+Every row in every table carries `source`. Borrower ids never collide: `H` + Home Credit id, `B` + six digits for simulated rows (`B5xxxxx` for the shock study), `P` + six digits for Prosper loans.
 
 ## Recommended use
 1. Fit models and calibrate conformal prediction on `real_anchored` rows only.
-2. Evaluate, stress-test and check fairness on `simulated` rows, where the truth is known.
-3. Never pool the two labels in one fit: they define default differently (see Labels). The `recommended_use` column on `applications` and `features` says which role a row plays.
-4. Use only `features.csv` (or the observed tables) as model input. `answer_key.csv` is the hidden truth and must never reach a model.
-5. Split by borrower, not by row: `monthly_cashflow`, `bureau_tradelines` and `transactions` have many rows per borrower.
+2. Evaluate, stress-test and check fairness on the simulated `main` cohort; weight by `sample_weight` when you report population rates.
+3. Answer the shock question on the `shock_study` cohort (a designed sample, no weights) and check it against `prosper_loans.csv`.
+4. Never pool labels from different sources in one fit: each source defines default differently.
+5. Use only `features.csv` (or the observed tables) as model input. `answer_key.csv` and the hidden columns of `shock_events.csv` (`vouch_held`, `support_*`) must never reach a model.
+6. Split by borrower, not by row.
 
 ## What is real and what is synthetic
-| Part | `real_anchored` | `simulated` |
-|---|---|---|
-| Applicant, income, employment, loan asked for | Real (Home Credit) | Simulated |
-| Bureau tradelines and 24-month payment grids | Real | Simulated |
-| Repayment history with the lender (`hc_*`) | Real | Not present |
-| Missing values (no bureau file, no history, tenure) | Real | Simulated with causes |
-| Default label | Real | Emerges from simulated cash flow |
-| Bank statements | Synthetic, generated from the person's real columns, never from the label | Simulated |
-| GST filings, declared EMIs, statement sharing | Synthetic | Simulated |
-| Planted test cases (hidden loan, window dressing, round-tripping, duplicate rows) | Injected, listed in `answer_key.csv` | Simulated, listed in `answer_key.csv` |
-| Vouches | None | Simulated |
+| Part | `real_anchored` | `simulated` | `real_prosper` |
+|---|---|---|---|
+| Applicant, income, loan asked for | Real | Simulated | Real (US) |
+| Bureau tradelines and 24-month payment grids | Real | Simulated | Not present |
+| Month-by-month bureau state | Real delinquency trajectory (`bureau_trajectory`), no score | Illustrative 300-900 score with events (`bureau_snapshots`, `bureau_events`) | Score band at listing and change since the previous Prosper loan |
+| Repayment history with the lender (`hc_*`) | Real | Not present | Prior Prosper loans and on-time payments |
+| Default label | Real | Emerges from simulated cash flow | Real |
+| Bank statements, GST, declared EMIs | Synthetic, from the person's real columns, never from the label | Simulated | Not present |
+| Endorsements | None | Time-stamped vouch graph with stakes, renewals and withdrawals | Real recommendations and friend investments |
+| Shocks | None recorded | Planned shocks (medical, job loss, crop, business, family) | Not recorded |
 
-How the real rows got their statements:
-- Income comes from the applicant's real income, with month-to-month volatility drawn from real Berka bank accounts of the same income style (salary-like transfers, pension, or cash).
-- EMI debits come from the applicant's real bureau annuities and real instalments, in the months each loan was actually open.
-- A bounce appears in a month only if that person's real records show a late or short payment that month.
-- Balance buffers and zero-income months are also drawn from real Berka accounts.
-
-Not carried at all: Home Credit's `EXT_SOURCE_1..3` (opaque external scores) and protected attributes (gender, family status, education).
+How the real Home Credit rows got their statements: income from the applicant's real income with Berka-calibrated volatility; EMIs from real annuities and instalments; a bounce only in months the person's real records show a late or short payment.
 
 ## Tables
 | File | One row per | Rows |
 |---|---|---|
-| `applications.csv` | applicant | 50,000 |
-| `features.csv` | applicant (the model row) | 50,000 |
-| `outcomes.csv` | applicant | 50,000 |
-| `answer_key.csv` | applicant (hidden truth; never a model input) | 50,000 |
-| `monthly_cashflow.csv` | statement month | 318,018 |
-| `bureau_tradelines.csv` | credit line | 173,935 |
-| `gst_filings.csv` | GST month of a registered business | 56,748 |
-| `vouches.csv` | community vouch (simulated only) | 10,803 |
-| `transactions.csv` | bank statement line (sample) | 116,675 |
+| `applications.csv` | applicant | 65,000 |
+| `features.csv` | applicant (the model row, as of the application month) | 65,000 |
+| `outcomes.csv` | applicant | 65,000 |
+| `answer_key.csv` | applicant (hidden truth; never a model input) | 65,000 |
+| `monthly_cashflow.csv` | statement month | 428,490 |
+| `bureau_tradelines.csv` | credit line | 224,389 |
+| `gst_filings.csv` | GST month of a registered business | 69,732 |
+| `vouches.csv` | vouch active at application (simulated) | 75,642 |
+| `transactions.csv` | bank statement line (sample of 300 applicants per source) | 115,377 |
+| `bureau_snapshots.csv` | simulated borrower-month (24 each) | 840,000 |
+| `bureau_events.csv` | event that moved a simulated score | 91,797 |
+| `vouch_events.csv` | endorsement event | 252,317 |
+| `vouch_scores.csv` | simulated borrower-month (24 each) | 840,000 |
+| `vouch_outcomes.csv` | endorsement active when the loan was taken | 71,235 |
+| `loan_performance.csv` | month of the applied-for loan (12 each) | 420,000 |
+| `shock_events.csv` | shocked simulated borrower | 18,062 |
+| `bureau_trajectory.csv` | real borrower-month (24 each, applicants with a file) | 616,824 |
+| `prosper_loans.csv` | Prosper loan | 113,937 |
 | `manifest.json` | the folder | row counts, SHA-256 of every file, label definitions |
 
-Units everywhere:
-- Money is integer paise (INR minor units) in every `*_minor` column. Divide by 100 for rupees. Real Home Credit amounts are rescaled by 0.17, so the median applicant earns about 25,000 INR a month; every ratio is unchanged.
-- Ratios are decimal strings with 4 places.
-- Months are `YYYY-MM`; dates are `YYYY-MM-DD`.
-- An empty cell is missing, and the matching `*_status` column says why.
+Units: money is integer minor units in every `*_minor` column (paise, or US cents in `prosper_loans.csv`, which carries `currency`). Real Home Credit amounts are rescaled by 0.17 so the median applicant earns about 25,000 INR a month. Ratios are 4-decimal strings. Months are `YYYY-MM`. An empty cell is missing, and the matching `*_status` column says why.
+
+## The shock question
+**Answer, in the simulated world: yes.** When the bureau score fell 50+ points after a shock and the vouch held, default was 12.1 points lower, holding the pre-shock score band and shock severity fixed (95% CI 10.2 to 14.0). The real Prosper data points the same way, on far fewer cases.
+
+| Bureau-shocked borrowers (5,695) | Borrowers | Default | Help from endorsers (median) |
+|---|---|---|---|
+| Vouch held (score stayed within 5 points and at least 50) | 476 | 3.6% | ₹5,616; 72% got some |
+| Had vouches, but they did not hold | 2,215 | 12.0% | ₹3,063; 63% got some |
+| No vouches | 3,004 | 17.6% | none |
+
+**Why the vouch holds when the bureau score falls.** These are the generator's causal rules, so every arrow can be inspected:
+1. The bureau score moves only on recorded events: a missed EMI (`DPD_30`), new enquiries and new lines taken to bridge the gap, and higher utilisation. Every point lost cites a `bureau_events` row.
+2. The vouch score moves only when endorsers act. They know the borrower's real reliability, which no bureau sees. After a shock, each endorser walks away with probability 0.55 × (1 − discipline)², so reliable borrowers keep their endorsers and unreliable ones lose them (`WITHDRAWN` events).
+3. Endorsers also help, but only once trouble is visible: the month after an EMI bounces, the network covers dues and arrears with probability 1 − e^(−W). So the shock still reaches the bureau, and the network decides how fast the borrower recovers. `loan_performance.support_received_minor` records the help.
+
+**In real data (Prosper, 54,715 resolved loans, aggregates in `prosper_check.json`):**
+- Within the same credit-score band, endorsed borrowers default 4.4 points less, in line with Freedman and Jin's published 4.1.
+- Where the score had already fallen 20+ points, endorsed borrowers defaulted at 21.5% (261 loans) against 30.5% (3,069).
+- Where it fell 50+ points, the rates were 22.7% (66 loans) against 36.4% (1,231): suggestive, but too few loans to rely on.
+- These endorsements carried no stake, so they are a lower bound for a staked vouch.
+
+**What may not be claimed:** that the effect is causal in the real world, that the simulated 12 points is a real-world size, that a Vouch Score is a probability of repayment, or anything about real Indian borrowers (real rows have no vouches).
 
 ## Columns
 
@@ -73,186 +97,154 @@ Units everywhere:
 |---|---|
 | `source`, `borrower_id` | Row origin and applicant id |
 | `application_month` | Month the loan was applied for |
-| `occupation` | Simulated: `salaried_formal`, `gig_platform`, `kirana_msme`, `smallholder_farmer`, `informal_daily_wage`. Real: Home Credit income type (`working`, `commercial_associate`, `pensioner`, `state_servant`, ...) |
+| `occupation` | Simulated: `salaried_formal`, `gig_platform`, `kirana_msme`, `smallholder_farmer`, `informal_daily_wage`. Real: Home Credit income type |
 | `occupation_type` | Real only: Home Credit job title (missing for about 31%) |
 | `state`, `urban` | Simulated: Indian state code. Real: no state; `urban` is 1 for the best-rated region |
 | `age_band`, `dependents` | Age band; number of dependents (children for real rows) |
-| `product` | Loan applied for (`personal_loan`, `working_capital`, `agri_term`, `micro_loan`; real: `cash_loans`, `revolving_loans`) |
-| `requested_amount_minor`, `tenure_months`, `rate_annual`, `new_emi_minor` | The loan asked for. Real rows: no rate, tenure estimated as amount / EMI |
-| `currency` | Always `INR` |
+| `product`, `requested_amount_minor`, `tenure_months`, `rate_annual`, `new_emi_minor`, `currency` | The loan asked for. Real rows: no rate, tenure estimated as amount / EMI |
 | `declared_income_minor`, `declared_income_status` | Monthly income stated on the form; `WITHHELD` when left blank |
 | `declared_emi_minor`, `declared_emi_status` | Existing EMIs the applicant listed (can understate) |
 | `occupation_tenure_months`, `occupation_tenure_status` | Months in the current occupation |
 | `bank_statement_status` | `OBSERVED` (12 months shared), `PARTIAL` (3 or 6), `NOT_PROVIDED` |
-| `legacy_decision`, `legacy_reason` | What a bureau-only lender would decide, and why (`NO_BUREAU_HISTORY`, `BUREAU_DELINQUENCY`, `INCOME_NOT_STATED`, `DTI_ABOVE_CAP`) |
+| `legacy_decision`, `legacy_reason` | What a bureau-only lender would decide, and why |
+| `cohort`, `sample_weight` | Simulated: `main` or `shock_study`; weight that undoes shock oversampling (main only) |
 | `recommended_use` | `train_and_calibrate` or `evaluate_and_stress_test` |
 
 ### `features.csv` (the model row)
-Built only from the observed tables, never from `answer_key.csv`. The same code builds a demo persona's row.
+Built only from the observed tables as of the application month, never from `answer_key.csv` or any outcome.
 
 | Group | Columns | Meaning |
 |---|---|---|
-| Application | `application_month`, `occupation`, `occupation_type`, `state`, `urban`, `age_band`, `dependents`, `product`, `requested_amount_minor`, `tenure_months`, `rate_annual`, `new_emi_minor`, `declared_income_minor`, `declared_income_status`, `declared_emi_minor`, `occupation_tenure_months`, `occupation_tenure_status` | As in `applications.csv` |
-| Source status | `bank_statement_status`, `bank_statement_months`, `bureau_status`, `gst_status`, `vouch_status`, `hc_history_status` | Which evidence exists, with reason codes |
-| Completeness | `completeness_tier` | Independent verified sources (bank statement of 6+ months, bureau file of 6+ months, GST), 0 to 3 |
-| Affordability | `income_basis`, `income_est_minor`, `existing_emi_est_minor`, `dti_est`, `amount_to_income` | Income estimate (`BANK`, `DECLARED`, the lower of both, or `NONE`); existing EMIs (largest of declared, bank and bureau); DTI = (existing + new EMI) / income |
-| Consistency | `declared_to_bank_income`, `undeclared_emi_to_income`, `bank_unreconciled_months`, `bank_last_month_spike` | Declared vs observed income; EMIs in the statement but not on the form; months whose balance does not reconcile; last month's credits vs the median |
-| Bank statement | `bank_income_median_minor`, `bank_income_cv`, `bank_zero_income_months`, `bank_worst3_to_median`, `bank_emi_recent_minor`, `bank_bounces`, `bank_bounces_3m`, `bank_low_balance_months`, `bank_loan_disbursals_6m`, `bank_surplus_median_minor` | Income level and stability, worst months, recent EMI debits, bounced auto-debits, near-empty months, new loans credited, monthly surplus before EMIs |
-| Bureau | `bureau_tradelines`, `bureau_active`, `bureau_history_months`, `bureau_max_dpd_24m`, `bureau_months_30plus_24m`, `bureau_reporting_gaps`, `bureau_new_6m`, `bureau_written_off`, `bureau_emi_minor`, `bureau_outstanding_to_sanctioned` | Credit lines, history length, worst days past due, months 30+ overdue, unreported months, new lines in 6 months, write-offs, EMIs, utilisation |
-| Bureau (real only) | `bureau_enquiries_12m`, `bureau_current_overdue_max` | Bureau enquiries in the last year; current days overdue |
-| Lender history (real only) | `hc_prev_applications`, `hc_prev_refused`, `hc_instalments_12m`, `hc_late_share_12m`, `hc_short_share_12m`, `hc_max_days_late_12m`, `hc_late_share_all` | Real instalment-level repayment record with Home Credit |
-| Assets (real only) | `owns_realty`, `region_rating` | Owns property; Home Credit region rating 1 to 3 |
-| GST | `gst_turnover_median_minor`, `gst_missed_filings`, `gst_to_bank_credits` | Filed turnover, missed months, GST turnover vs bank credits |
-| Vouches (simulated only) | `vouch_count`, `vouch_mean_voucher_on_time` | Number of vouches; vouchers' own on-time record |
-| Baseline | `legacy_decision`, `legacy_reason` | Bureau-only decision, for comparison |
-| Role | `recommended_use` | See Recommended use |
+| Application and source status | as in `applications.csv`, plus `bank_statement_months`, `bureau_status`, `gst_status`, `vouch_status`, `hc_history_status`, `completeness_tier` | Which evidence exists, with reason codes |
+| Affordability | `income_basis`, `income_est_minor`, `existing_emi_est_minor`, `dti_est`, `amount_to_income` | DTI = (existing + new EMI) / income |
+| Consistency | `declared_to_bank_income`, `undeclared_emi_to_income`, `bank_unreconciled_months`, `bank_last_month_spike` | Declared vs observed |
+| Bank statement | `bank_income_median_minor`, `bank_income_cv`, `bank_zero_income_months`, `bank_worst3_to_median`, `bank_emi_recent_minor`, `bank_bounces`, `bank_bounces_3m`, `bank_low_balance_months`, `bank_loan_disbursals_6m`, `bank_surplus_median_minor` | Income level and stability, bounces, near-empty months |
+| Bureau grid | `bureau_tradelines`, `bureau_active`, `bureau_history_months`, `bureau_max_dpd_24m`, `bureau_months_30plus_24m`, `bureau_reporting_gaps`, `bureau_new_6m`, `bureau_written_off`, `bureau_emi_minor`, `bureau_outstanding_to_sanctioned` | From the tradelines |
+| Bureau score (simulated) | `bureau_score_status`, `bureau_score`, `bureau_score_band`, `bureau_score_change_3m`, `bureau_score_change_6m`, `bureau_worst_change_3m_6m`, `bureau_utilisation`, `bureau_enquiries_6m_at_app`, `bureau_events_3m`, `bureau_top_reason_code` | The month before applying |
+| Vouch graph (simulated) | `vouch_score`, `vouch_score_status`, `vouch_score_change_6m`, `vouch_eligible_incoming`, `vouch_total_weight`, `vouch_distinct_anchors`, `vouch_max_contributor_share`, `vouch_reciprocal_edges`, `vouch_cluster_concentration`, `vouch_mean_reliability`, `vouch_withdrawn_6m`, `vouch_count`, `vouch_mean_voucher_on_time` | Replayed from `vouch_events` up to the month before applying |
+| Reported shock (simulated) | `shock_reported_status`, `shock_reported_type`, `shock_reported_severity`, `shock_reported_insured` | What the applicant tells the lender (85% of shocked applicants report it); the reported purpose is not verified |
+| Real only | `bureau_enquiries_12m`, `bureau_current_overdue_max`, `hc_*`, `owns_realty`, `region_rating` | Home Credit fields |
+| Baseline and role | `legacy_decision`, `legacy_reason`, `recommended_use`, `cohort`, `sample_weight` | |
 
-### `outcomes.csv`
-| Column | Meaning |
-|---|---|
-| `default_12m` | 1 = default (definition in `label_definition`) |
-| `default_month`, `max_dpd_12m` | Simulated only: first month 90+ days past due; worst days past due |
-| `label_definition` | The label's definition for this row's source |
+### `bureau_snapshots.csv` (simulated)
+`snapshot_month`; `bureau_score` (illustrative 300-900 scorecard, `algorithm_version` `bureau-sim-v1`, never a real bureau value); `score_band` (`POOR` < 550, `FAIR` < 650, `GOOD` < 700, `VERY_GOOD` < 750, `EXCELLENT`); `score_change_3m`; `max_dpd_24m`; `months_30plus_24m`; `active_tradelines`; `total_outstanding_minor`; `utilisation`; `enquiries_6m`; `new_tradelines_6m`; `written_off`; `snapshot_status` (`OBSERVED`, `THIN_FILE` under 6 months of history, `NO_FILE`); `top_reason_codes` (up to three of `BUREAU_DELINQUENCY`, `WRITE_OFF`, `UTILISATION_SPIKE`, `NEW_CREDIT_SEEKING`, `OBLIGATION_INCREASE`). Scorecard points are in `backend/src/veritrust/synth/params.py` (`SCORE_*`).
 
-### `monthly_cashflow.csv`
-| Column | Meaning |
-|---|---|
-| `month` | Statement month |
-| `credits_minor`, `debits_minor` | All money in and out |
-| `emi_debits_minor` | Loan instalments paid (auto-debit and manual overdue payments) |
-| `emi_bounces`, `bounce_charges_minor` | Auto-debits returned for insufficient funds, and the charges |
-| `disbursal_credits_minor`, `disbursal_count` | New loans credited to the account |
-| `opening_balance_minor`, `closing_balance_minor` | Balances. Opening + credits - debits differs from closing only when the statement has duplicated rows |
+### `bureau_events.csv` (simulated)
+`event_id`, `event_month`, `event_type` (`DPD_30`, `DPD_60`, `DPD_90`, `WRITE_OFF`, `NEW_ENQUIRY`, `NEW_TRADELINE`, `UTILISATION_JUMP`), `magnitude_points`, `linked_tradeline_id`, `reason_code`, `evidence_ref`, `verified`. The only legitimate source for "why the score moved".
 
-### `transactions.csv`
-| Column | Meaning |
-|---|---|
-| `txn_id`, `date`, `narration` | Line id, date and Indian-statement-style narration (`NEFT CR SAL`, `UPI DR`, `NACH DR`, `NACH RTN`, `ATM WDL`). All names are fictional |
-| `txn_type` | `CREDIT`, `DEBIT`, or `RETURN` (a bounced auto-debit; does not move the balance) |
-| `amount_minor`, `balance_minor` | Amount and running balance (never negative) |
+### `vouch_events.csv`, `vouch_scores.csv`, `vouch_outcomes.csv` (simulated)
+- Events: `vouch_event_id`, `vouch_id`, `action` (`CREATED`, `RENEWED`, `WITHDRAWN`, `EXPIRED`), `event_month`, `expires_month`, `voucher_id` (`V...` endorsers; `R...` ring accounts), `recipient_id`, `relationship`, `months_known`, `voucher_kind` (`PERSON` or `INSTITUTION`), `commitment_points`, `voucher_budget_points`, `utilisation_at_stake`, `consented`. State at any month is a replay of the events. Stakes are reputation points, never money.
+- Scores: per month, `vouch_score` = 100 × (1 − e^(−W/3)) with edge weight w = R/100 × h × e^(−U) × g (Vouch scoring proposal); `vouch_status` (`NO_RECORD`, `PROVISIONAL`, `ESTABLISHED`); `eligible_incoming`, `total_weight`, `distinct_anchors`, `max_contributor_share`, `reciprocal_edges` (a reciprocal edge keeps 10% of its quality: the ring penalty), `cluster_concentration`, `mean_voucher_reliability`.
+- Outcomes: `loan_status` (`SETTLED`, `DEFAULTED`, `ONGOING`), `y`, `p_expected` (0.92), `edge_weight`, `delta_reputation` = 0.10 × w × (y − p), `dispute_status` (`NONE`, `OPEN`, `UPHELD`, `REJECTED`). Open or upheld disputes and ongoing loans never move reputation.
 
-Reading these lines back with the extractor in `backend/src/veritrust/synth/transactions.py` reproduces `monthly_cashflow.csv` to the paisa (tested).
+### `loan_performance.csv` and `shock_events.csv` (simulated)
+- Performance: `application_id`, `month` 1..12, `calendar_month`, `due_minor`, `paid_minor`, `dpd_days`, `status` (`ON_TIME`, `LATE`, `MISSED`, `SETTLED`, `CHARGED_OFF`), `shock_active`, `support_received_minor`, `vouch_support_minor`.
+- Shocks (answer-key grade): `shock_month`, `stratum`, `shock_type`, `severity` 1-3, `insured`, `expense_minor`, `income_factor`, `shock_months`, `drop_month`, `pre_bureau_score` (month before the shock), `post_bureau_score` (lowest within 3 months), `bureau_drop_points`, `bureau_shock` (drop of 50+ explained by an event), `bureau_score_at_application`, `pre_vouch_score`, `post_vouch_score`, `vouch_held` (post ≥ pre − 5 and ≥ 50), `support_mobilised_minor`, `support_before_application_minor`.
 
-### `bureau_tradelines.csv`
-| Column | Meaning |
-|---|---|
-| `tradeline_id`, `lender_type`, `loan_kind` | Credit line and lender type (`BANK`, `NBFC`, `MFI`, `FINTECH`) |
-| `opened_month`, `sanctioned_minor`, `tenure_months` | When it opened, its size and term |
-| `status`, `outstanding_minor`, `emi_minor` | `ACTIVE`, `CLOSED` or `WRITTEN_OFF`; balance owed; instalment |
-| `dpd_grid` | 24 monthly cells, oldest first, separated by `\|`: `000`, `030`, `060`, ... days past due; `XXX` not reported; `---` not open |
-| `emi_basis`, `current_overdue_days` | Real only: whether the EMI was reported or estimated from debt and term; days overdue now |
+### `bureau_trajectory.csv` (real)
+Derived month by month from the real 24-cell grids: `worst_dpd_reported`, `reporting_tradelines`, `not_reported_cells`, `months_30plus_rolling`, `new_tradelines_6m`, `delinquency_spike` (worst DPD rises to 30+ from below within 3 months), `score_status` always `NO_SCORE_AVAILABLE`. No score is invented.
 
-### `gst_filings.csv` and `vouches.csv`
-| Column | Meaning |
-|---|---|
-| `month`, `status`, `turnover_minor` | GST month, `FILED` or `MISSED`, turnover filed |
-| `vouch_id`, `relationship`, `months_known`, `voucher_on_time_share` | Who vouched, for how long they have known the applicant, and the voucher's own repayment record |
+### `prosper_loans.csv` (real)
+`listing_month`, `term_months`, `loan_amount_minor` (US cents), `currency` `USD`, `credit_score_lower`/`upper`, `score_change_since_last_loan` and its status, `current_delinquencies`, `delinquencies_last_7y`, `bankcard_utilisation`, `debt_to_income`, `stated_monthly_income_minor`, `income_verifiable`, `employment_status`, `prior_prosper_loans`, `prior_on_time_payments`, `recommendations`, `friends_invested_count`, `friends_invested_minor`, `in_group`, `endorsed`, `loan_status`, `resolved`, `bad`. No Prosper keys or free text are kept.
 
-### `answer_key.csv` (never a model input)
-| Source | Columns | Meaning |
-|---|---|---|
-| `simulated` | `base_income_minor`, `true_income_median_12m_minor`, `income_cv`, `expense_ratio`, `discipline`, `save_rate`, `deposit_share`, `margin` | Hidden traits behind each borrower |
-| `simulated` | `stacker`, `inflator`, `window_dresser`, `round_tripper`, `duplicate_import`, `macro_exposed`, `community` | Hidden behaviours and exposures (1/0) |
-| `simulated` | `existing_emi_true_minor`, `undeclared_emi_minor`, `unreported_open_loans`, `true_dti_with_new` | True debt load, including what was hidden |
-| `simulated` | `perf_shocks`, `perf_lumpy_costs`, `perf_informal_support_minor`, `perf_new_digital_loans`, `default_driver` | What happened after approval; why a default happened (`STRUCTURAL`, `SHOCK`, `STACKING`, `LIQUIDITY`) |
-| `real_anchored` | `style`, `statement_months`, `income_cv`, `deposit_share` | How the synthetic statement was generated |
-| `real_anchored` | `hidden_loan_emi_minor`, `forgot_loan_emi_minor`, `window_dressing`, `round_trip`, `duplicate_import`, `true_existing_emi_minor` | Planted test cases and the true EMI load |
+### Other tables
+`outcomes.csv` (`default_12m`, `default_month`, `max_dpd_12m`, `label_definition`), `monthly_cashflow.csv`, `transactions.csv`, `bureau_tradelines.csv` (`dpd_grid`: 24 cells oldest first, `000`/`030`/... days past due, `XXX` not reported, `---` not open), `gst_filings.csv`, `vouches.csv` and `answer_key.csv` keep the shapes described in `data/README.md`. The simulated answer key adds `perf_vouch_support_minor`, `support_capacity` and `shock_planned`.
 
 ## Missing values and reason codes
 | Code | Meaning | Example |
 |---|---|---|
 | `OBSERVED` | Present | |
 | `PARTIAL` | Shared, but incomplete | 3 of 12 statement months |
-| `NO_RECORD` | Does not exist | Never borrowed, so no bureau file |
-| `NOT_PROVIDED` | Exists, but was not shared | Did not link a bank account |
-| `NOT_APPLICABLE` | Does not apply | GST for a salaried person; occupation tenure for a pensioner |
+| `NO_RECORD` | Does not exist | Never borrowed, so no bureau file; no vouches |
+| `NOT_PROVIDED` | Exists, but was not shared | Did not link a bank account; shock not reported |
+| `NOT_APPLICABLE` | Does not apply | GST for a salaried person |
 | `WITHHELD` | Left blank on purpose; missing not at random | Income blank when income is erratic |
 
-| Gap | `real_anchored` | `simulated` |
+| Gap | `real_anchored` | `simulated` main |
 |---|---|---|
-| No bureau file (`NO_RECORD`) | 4,299 (14.3%) | 5,785 (28.9%) |
-| No lender history (`hc_history_status` `NO_RECORD`) | 1,567 (5.2%) | not present |
-| Bank statement `NOT_PROVIDED` / `PARTIAL` | 9,606 / 6,081 | 7,825 / 3,646 |
-| Income `WITHHELD` | 0 | 1,714 |
-| Occupation tenure `NOT_APPLICABLE` / `NOT_PROVIDED` | 5,377 / 0 | 0 / 2,345 |
-| No vouches | all | 15,285 |
-
-## Labels
-| Source | `default_12m = 1` means | Rate |
-|---|---|---|
-| `real_anchored` | Home Credit `TARGET`: payment difficulties on the loan's early instalments | 8.19% |
-| `simulated` | 90+ days past due (three unpaid EMIs, the RBI NPA threshold) within the first 12 EMIs; it emerges from simulated cash flow, never from a rule | 6.98% |
+| No bureau file | 4,299 (14.3%) | 5,785 (28.9%) |
+| Bank statement `NOT_PROVIDED` / `PARTIAL` | 9,606 / 6,081 | 7,812 / 3,650 |
+| Income `WITHHELD` | 0 | 1,712 |
+| Occupation tenure `NOT_PROVIDED` | 0 | 2,367 |
+| No vouch at application | all | 9,012 (45.1%) |
 
 ## Key numbers
-Default rate by group (applicants in brackets).
+Default rate (applicants in brackets).
 
-| Group | `real_anchored` | `simulated` |
+| Group | `real_anchored` | `simulated` main |
 |---|---|---|
-| Bureau file | 7.8% (25,701) | 7.0% (14,215) |
-| No bureau file | 10.6% (4,299) | 7.0% (5,785) |
-| Completeness tier 0 / 1 / 2 / 3 | 9.4% / 8.8% / 7.6% / 7.6% | 7.2% / 7.9% / 6.1% / 3.7% |
-| Bureau-only policy approves / rejects | 7.4% / 9.6% | 5.0% / 9.7% |
+| Bureau file | 7.8% (25,701) | 6.7% (14,215) |
+| No bureau file | 10.6% (4,299) | 6.6% (5,785) |
+| Completeness tier 0 / 1 / 2 / 3 | 9.4% / 8.8% / 7.6% / 7.6% | 6.8% / 7.4% / 6.0% / 3.9% |
+| Bureau-only policy approves / rejects | 7.4% / 9.6% | 4.7% / 9.4% |
+| Real delinquency spike before applying | 10.5% (1,720) vs 7.6% without | |
 
-| Occupation (`simulated`) | Applicants | Default |
+| Occupation (`simulated` main) | Applicants | Default |
 |---|---|---|
-| `salaried_formal` | 4,781 | 2.1% |
+| `salaried_formal` | 4,781 | 2.5% |
 | `kirana_msme` | 3,640 | 3.1% |
-| `smallholder_farmer` | 2,972 | 5.8% |
-| `gig_platform` | 3,386 | 11.5% |
-| `informal_daily_wage` | 5,221 | 12.0% |
+| `smallholder_farmer` | 2,972 | 6.1% |
+| `informal_daily_wage` | 5,221 | 9.9% |
+| `gig_platform` | 3,386 | 12.0% |
 
-| Occupation (`real_anchored`) | Applicants | Default |
-|---|---|---|
-| `working` | 15,599 | 9.9% |
-| `commercial_associate` | 6,885 | 7.3% |
-| `pensioner` | 5,377 | 5.7% |
-| `state_servant` | 2,134 | 5.2% |
+Simulated main cohort: bureau score quartiles 732 / 741 / 763; vouch score quartiles among vouched 24 / 37 / 50. Shocks: 18,062 (medical 7,907, job loss 4,994, family 3,411, business 1,267, crop 483), of which 5,695 became bureau shocks (median drop 76 points).
 
 ## Validation
-Each check runs from `backend/` with `python -m veritrust.synth.validate` or `python -m veritrust.anchor.validate`. They use a throwaway logistic regression only to test the data; no model is saved.
+From `backend/`: `python -m veritrust.synth.validate`, `python -m veritrust.synth.shock_validate`, `python -m veritrust.anchor.validate`, `python -m veritrust.anchor.prosper`. They fit throwaway logistic regressions only to test the data.
 
-| Check | Result | What it shows |
+| Check | Result |
+|---|---|
+| Real: AUC on real features, then with synthetic statements added | 0.662 → 0.663 (+0.0005): no leakage |
+| Simulated: AUC on observed features / on hidden truth | 0.830 / 0.859 (leak alarm at 0.90) |
+| Simulated: bureau-only policy rejects everyone without a file | 5,785 rejected; 93.4% of them repaid (real: 4,299 rejected, 89.4% repaid) |
+| Duplicate-row / hidden-loan / window-dressing detectors (real) | precision 1.00 / 0.38 / 0.27, recall 0.98 / 0.84 / 0.98 |
+
+Shock-question gates (`shock_validation.json`):
+
+| # | Gate | Result |
 |---|---|---|
-| AUC, real features only | 0.662 | Baseline difficulty of the real data |
-| AUC, real plus synthetic statement features | 0.663 (+0.0005) | The synthetic statements carry no hidden label: no leakage |
-| AUC on simulated observed features | 0.829 | Realistic difficulty (leak alarm at 0.90) |
-| AUC on simulated hidden truth (oracle) | 0.920 | Even perfect knowledge cannot predict future shocks: real, irreducible uncertainty |
-| Simulated: at the same true risk, default with no bureau file vs a file | 0.0% vs 0.1%, 0.1% vs 0.7%, 0.8% vs 1.5%, 3.3% vs 5.0%, 24.7% vs 30.7% (risk quintiles 1 to 5) | Absence of history is not inability to repay |
-| Real: bureau-only policy rejects everyone without a file | 4,299 rejected; 89.4% of them repaid | The cost of treating absence as risk |
-| Simulated: same policy | 5,785 rejected; 93.0% of them repaid | Same, where the truth is known |
-| Real Berka loans: negative-balance penalties in the 12 months before the loan | 32.9% of 76 bad loans vs 0.5% of 606 good loans | Distress is visible in statements before default |
-| Duplicate-row detector (`bank_unreconciled_months > 0`) | precision 1.00, recall 0.98 | |
-| Hidden-loan detector (`undeclared_emi_to_income > 0.01`) | precision 0.38, recall 0.84 | Recently closed loans also trigger it; needs review, not auto-reject |
-| Window-dressing detector (`bank_last_month_spike > 1.8`) | precision 0.27, recall 0.98 | Erratic cash incomes also spike |
-| Determinism | Two runs are byte-identical | |
-
-In the real data, applicants without a bureau file do default more (10.6% vs 7.8%). That is selection, not proof: lenders could not screen them before. So the model should widen its uncertainty for them, not reject them.
+| 1 | Every bureau shock is a 50+ point drop explained by an event | PASS: 5,695 of 5,695 |
+| 2 | Bureau and vouch scores carry different information before the shock (abs corr < 0.5) | PASS: r = −0.02 |
+| 3 | Held vs not held, within pre-score band × severity: ≤ −4 points, CI excludes 0 | PASS: −12.1 (−14.0 to −10.2); −8.7 among vouched only |
+| 4 | Default falls across vouch-score quartiles | PASS: 17.5% → 11.7% → 8.3% → 5.2% (no vouch 17.5%) |
+| 5 | The vouch adds ≥ 0.02 AUC beyond bureau, cash flow and the reported shock (5-fold CV, paired) | **FAIL: +0.013** (CI +0.010 to +0.017); AUC 0.820 → 0.826 with the reported shock → 0.840 with the vouch. A real increment, but below the bar: do not claim 0.02 |
+| 6 | Placebo: shuffling the vouch features adds nothing | PASS: −0.0015 |
+| 7 | No banned column (vouch_held, outcomes, support, truth) in features or models | PASS |
+| 8 | Reason codes cite a bureau event of that reason | PASS: 92.6% of 126,311 |
+| 9 | No endorser over budget; utilisation in 0..1; ring-only borrowers score ≤ 10 | PASS: 0 over budget, ring-only max 6 (395 borrowers with ring edges) |
+| 10 | Two runs are byte-identical | PASS (tests/test_shock_data.py) |
+| 11 | Predicted vs observed default within ±2 points per decile, bureau-shocked borrowers | **FAIL**: up to +10.3 points under-predicted in the riskiest deciles. One model fitted on everyone is miscalibrated for this subgroup: recalibrate before quoting probabilities |
+| 12 | Open or upheld disputes never move reputation | PASS: 0 violations |
 
 ## Known limitations
-- The real applicants come from Home Credit's book (not India). Amounts are rescaled to INR magnitudes and ratios are preserved, but the population is not Indian. The simulated rows are India-shaped.
-- Real application months are assigned by the builder: Home Credit publishes no dates. Use the simulated rows for drift tests. Their later cohorts meet a simulated rainfall deficit (Maharashtra, Karnataka and Telangana, harvest of 2025-10 and 2025-11) and a simulated cut in platform incentives (2025-03 to 2025-08). Both events are hypothetical.
-- Synthetic statements show that the pipeline works. They cannot prove that bank-statement data improves prediction; only a real Account Aggregator partner dataset can.
-- Real bureau EMIs are often missing in the source; some are estimated from debt and term (`emi_basis`).
-- Berka is Czech data from 1993 to 1998. It sets the volatility shapes only, never the amounts.
+- The simulated vouch effect is a mechanism we wrote, calibrated to the direction of real evidence, not a measured real-world effect size. Prosper supports the direction on real loans; only a staked-vouch pilot could measure the size.
+- The shock-study cohort is a designed sample (live credit, one shock each). Use it for within-cohort comparisons, not population rates. The main cohort's shock rate is oversampled; `sample_weight` assumes a 5% real six-month incidence of a score-denting shock (an assumption anchored on NSS and PLFS rates, see `docs/DECISIONS.md`).
+- Real Home Credit applicants are not Indian; amounts are rescaled and application months are assigned by the builder. Prosper is US data from 2005 to 2014 with cheap-talk endorsements.
+- Synthetic statements show that the pipeline works; they cannot prove that bank-statement data improves prediction.
+- Berka (Czech, 1993 to 1998) sets volatility shapes only.
 
 ## Regenerate
-From `backend/`, about 15 minutes including downloads (needs network and `requirements-data.txt`):
+From `backend/`, about 40 minutes including downloads (network and `requirements-data.txt`):
 
 ```bash
-PYTHONPATH=src python -m veritrust.synth --n 20000 --out ../data/synth --transactions 300
+PYTHONPATH=src python -m veritrust.synth --n 20000 --study 15000 --out ../data/synth --transactions 300
+PYTHONPATH=src python -m veritrust.synth.shock_validate --data ../data/synth
 PYTHONPATH=src python -m veritrust.anchor.download
 PYTHONPATH=src python -m veritrust.anchor.berka
 PYTHONPATH=src python -m veritrust.anchor.build --n 30000
+PYTHONPATH=src python -m veritrust.anchor.prosper
 PYTHONPATH=src python -m veritrust.combine
 ```
 
-Fixed seed 42. The Home Credit mirror revision is pinned in `backend/src/veritrust/anchor/download.py`, so a rebuild matches `manifest.json`.
+Fixed seed 42. The Home Credit mirror revision and the Prosper file's SHA-256 are pinned in `backend/src/veritrust/anchor/download.py`.
 
 ## Sources and licences
 | Source | Used for | Terms |
 |---|---|---|
-| Home Credit Default Risk (Kaggle competition, 2018), via a Hugging Face parquet mirror | Real applicants, bureau, repayment history, labels | Kaggle competition rules apply. The mirror's Apache-2.0 tag cannot relicense the original. Check the rules before any use beyond this prototype |
-| Berka / PKDD'99 financial dataset, CTU relational repository | Volatility, buffers and the early-warning check (aggregates only, in `berka_calibration.json`) | Public research data |
+| Home Credit Default Risk (Kaggle, 2018), via a Hugging Face parquet mirror | Real applicants, bureau, repayment history, labels | Kaggle competition rules apply; the mirror's tag cannot relicense the original. Check before use beyond this prototype |
+| Prosper loan data (113,937 loans, 2005-2014), public mirror | Real endorsements, scores and outcomes | Check Prosper's data terms before use beyond this prototype |
+| Berka / PKDD'99, CTU relational repository | Volatility and buffers (aggregates in `berka_calibration.json`) | Public research data |
+| Freedman and Jin (NBER w19820); Lin, Prabhala and Viswanathan (Management Science 2013); NSS 75th and 77th rounds; PLFS | Calibration of direction and incidence | Cited, no data copied |
 | Simulation | All `simulated` rows | Generated by this repo; no real people |
 
-Design and decisions: `docs/DECISIONS.md` (2026-10-25 entries). Generator code: `backend/src/veritrust/synth/`, `backend/src/veritrust/anchor/`, `backend/src/veritrust/combine.py`.
+Design and decisions: `docs/DECISIONS.md` (2026-10-25 entries). Code: `backend/src/veritrust/synth/`, `backend/src/veritrust/anchor/`, `backend/src/veritrust/combine.py`.
