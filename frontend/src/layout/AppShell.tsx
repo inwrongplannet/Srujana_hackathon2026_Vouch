@@ -60,7 +60,13 @@ export function AppShell() {
             className="shadow-[inset_0_0_0_1px_#DDD7CB]"
           />
 
-          <div className="flex justify-end">
+          <div className="flex items-center justify-end gap-2">
+            <Link
+              to="/community"
+              className="inline-flex h-9 items-center rounded-[8px] border border-rule-2 bg-surface px-3 text-[13px] font-medium text-ink-2 transition-colors hover:border-ink-3 hover:text-ink"
+            >
+              Community
+            </Link>
             <button
               type="button"
               onClick={openLedger}
