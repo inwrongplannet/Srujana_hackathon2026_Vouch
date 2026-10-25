@@ -1,6 +1,6 @@
 ---
 name: feature-manifest
-description: Create and update docs/features/<name>.md manifests and keep the README features table in sync
+description: Create and update docs/frontend-features/<name>.md manifests and keep the README features table in sync
 ---
 # feature-manifest
 
@@ -12,7 +12,7 @@ description: Create and update docs/features/<name>.md manifests and keep the RE
 A feature starts, changes status, or is cut.
 
 ## Steps
-1. Copy `docs/templates/feature-manifest.md` to `docs/features/<kebab-name>.md`. Heading must be `# Feature: <Display Name>`.
+1. Copy `docs/templates/feature-manifest.md` to `docs/frontend-features/<kebab-name>.md`. Heading must be `# Feature: <Display Name>`.
 2. Fill the fields exactly in this form (the parser in `scripts/update_readme.py` reads these lines):
    - `- **Assignee:**` Abhishek, Reehan or Abhijit
    - `- **Status:**` one of `planned`, `in-progress`, `done` (use `cut` only if the team agrees to drop it, and say why in `docs/DECISIONS.md`)

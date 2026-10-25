@@ -53,7 +53,7 @@ These drift when everyone edits them, so each has one sanctioned way. Claude use
 - **`docs/DECISIONS.md`** (`/decide`): add one dated entry at the top of the list (below `<!-- ENTRIES -->`): Decision, Why, Alternatives, Consequences. Do not edit old entries.
 
 ## Features and spikes
-- One manifest per feature in `docs/features/<name>.md` (copy `docs/templates/feature-manifest.md`). Update its status in the same PR as the feature. Then run `make readme`.
+- One manifest per feature in `docs/frontend-features/<name>.md` (copy `docs/templates/feature-manifest.md`). Update its status in the same PR as the feature. Then run `make readme`.
 - A spike lives in `spikes/<name>/` with a README from `docs/templates/spike-readme.md`. Time-box it, write the findings, and anything useful is promoted through a task.
 
 ## Scaffolding backend/ or frontend/

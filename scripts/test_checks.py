@@ -17,7 +17,7 @@ class DocsSyncTests(unittest.TestCase):
         self.assertEqual(run([("M", "backend/app/main.py"), ("M", "backend/README.md")]), [])
 
     def test_feature_manifest_satisfies_frontend(self):
-        self.assertEqual(run([("M", "frontend/src/App.tsx"), ("M", "docs/features/portfolio.md")]), [])
+        self.assertEqual(run([("M", "frontend/src/App.tsx"), ("M", "docs/frontend-features/portfolio.md")]), [])
 
     def test_tests_and_lockfiles_need_no_docs(self):
         self.assertEqual(run([("M", "backend/tests/test_api.py"), ("M", "frontend/pnpm-lock.yaml")]), [])
@@ -61,8 +61,8 @@ class StyleTests(unittest.TestCase):
     def test_naming(self):
         self.assertIsNone(style.naming_error("docs/API_CONTRACT.md"))
         self.assertIsNotNone(style.naming_error("docs/api-contract.md"))
-        self.assertIsNone(style.naming_error("docs/features/portfolio-view.md"))
-        self.assertIsNotNone(style.naming_error("docs/features/PortfolioView.md"))
+        self.assertIsNone(style.naming_error("docs/frontend-features/portfolio-view.md"))
+        self.assertIsNotNone(style.naming_error("docs/frontend-features/PortfolioView.md"))
 
 
 if __name__ == "__main__":
