@@ -14,6 +14,15 @@ export class ApiError extends Error {
   }
 }
 
+/**
+ * The backend gave a business answer (a 4xx such as "over the limit" or "already decided"), as
+ * opposed to an outage (no answer, a timeout or a 5xx). Outages fall back to demo data; business
+ * answers are shown as they are.
+ */
+export function isRefusal(e: unknown): e is ApiError {
+  return e instanceof ApiError && e.status >= 400 && e.status < 500;
+}
+
 function detailOf(body: unknown, fallback: string): string {
   if (body && typeof body === 'object' && 'detail' in body) {
     const detail = (body as { detail: unknown }).detail;

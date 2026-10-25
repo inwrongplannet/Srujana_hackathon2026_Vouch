@@ -11,6 +11,7 @@ import { dayDate, fmt, formatMoney, inr } from '@/lib/format';
 import { BandChip } from '@/features/score/BandChip';
 import { BreakerBanner } from '@/features/lender/BreakerBanner';
 import { TrustGraph } from '@/features/graph/TrustGraph';
+import { LiveBook } from '@/features/lender/LiveBook';
 
 const loanTone = { APPLIED: 'neel', DISBURSED: 'plain', SETTLED: 'active', DEFAULTED: 'defaulted', DECLINED: 'plain' } as const;
 const loanLabel = { APPLIED: 'Awaiting decision', DISBURSED: 'Disbursed', SETTLED: 'Repaid', DEFAULTED: 'Defaulted', DECLINED: 'Declined' };
@@ -51,6 +52,8 @@ export function LenderPage() {
           ))}
         </dl>
       </div>
+
+      <LiveBook />
 
       <BreakerBanner s={s} />
 
