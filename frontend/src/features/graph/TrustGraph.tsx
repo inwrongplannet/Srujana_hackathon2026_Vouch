@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react';
 import { motion } from 'motion/react';
 import type { ApiCascade, ApiNode, Snapshot } from '@/api/types';
 import { fmt, fmtSigned, geom, initials } from '@/lib/format';
-import { edgePath, layoutDag } from './layout';
+import { edgePath, layoutDag, placeEdgeLabels } from './layout';
 
 const STATE_FILL: Record<string, string> = {
   active: '#2E7A4D',
@@ -54,6 +54,25 @@ export function TrustGraph({
   const lay = useMemo(() => layoutDag(nodeIds, edges), [nodeIds, edges]);
   const pos = useMemo(() => new Map(lay.nodes.map((n) => [n.id, n])), [lay]);
   const maxW = Math.max(0.01, ...edges.map((e) => geom(e.weight)));
+  const labelAt = useMemo(() => {
+    const twoWay = (a: string, b: string) => lay.edges.some((x) => x.from === b && x.to === a);
+    const items = lay.edges
+      .filter((e) => geom(edges.find((x) => x.from === e.from && x.to === e.to)!.weight) !== 0)
+      .map((e) => {
+        const from = pos.get(e.from)!;
+        const to = pos.get(e.to)!;
+        const len = Math.hypot(to.x - from.x, to.y - from.y) || 1;
+        const bend = twoWay(e.from, e.to) ? (e.from < e.to ? 12 : -12) : 0;
+        return {
+          key: `${e.from}>${e.to}`,
+          pts: [from, ...e.points.slice(1, -1), to],
+          shift: { x: (-(to.y - from.y) / len) * bend * 1.6, y: ((to.x - from.x) / len) * bend * 1.6 },
+        };
+      });
+    // A node blocks its circle and the name and R value printed under it.
+    const nodes = lay.nodes.map((n) => ({ x: n.x, y: n.y + 7, w: 64, h: 2 * R + 30 }));
+    return placeEdgeLabels(items, nodes);
+  }, [lay, pos, edges]);
 
   const hot = new Set<string>();
   for (const path of highlight) for (let i = 0; i < path.length - 1; i += 1) hot.add(`${path[i]}>${path[i + 1]}`);
@@ -95,9 +114,6 @@ export function TrustGraph({
           const twoWay = lay.edges.some((x) => x.from === e.to && x.to === e.from);
           const bend = twoWay ? (e.from < e.to ? 12 : -12) : 0;
           const d = edgePath(e.points, from, to, R + 2, bend);
-          const base = e.points[Math.floor(e.points.length / 2)] ?? { x: (from.x + to.x) / 2, y: (from.y + to.y) / 2 };
-          const len = Math.hypot(to.x - from.x, to.y - from.y) || 1;
-          const mid = bend ? { x: base.x + (-(to.y - from.y) / len) * bend * 2.4, y: base.y + ((to.x - from.x) / len) * bend * 2.4 } : base;
           const dim = hover && hover !== e.from && hover !== e.to;
           return (
             <g key={`${e.from}>${e.to}`} opacity={dim ? 0.25 : 1} style={{ transition: 'opacity 160ms' }}>
@@ -110,14 +126,23 @@ export function TrustGraph({
                 markerEnd={`url(#${isHot ? 'arr-hot' : intoDefault ? 'arr-bad' : 'arr'})`}
               />
               {isHot ? <path d={d} fill="none" stroke="#FBFAF6" strokeWidth={1.3} strokeDasharray="3 8" className="tg-flow" /> : null}
-              {w === 0 ? null : (
-                <g transform={`translate(${mid.x} ${mid.y})`}>
-                  <rect x={-17} y={-8.5} width={34} height={17} rx={4} fill="#F4F1EA" stroke={isHot ? '#C9D0EC' : 'none'} />
-                  <text textAnchor="middle" y={3.8} fontSize="10.5" fontFamily="IBM Plex Mono" fill={isHot ? '#24368F' : '#6A6D76'}>
-                    {fmt(data.weight)}
-                  </text>
-                </g>
-              )}
+            </g>
+          );
+        })}
+
+        {/* edge weights, drawn above every line so no edge crosses a label */}
+        {lay.edges.map((e) => {
+          const at = labelAt.get(`${e.from}>${e.to}`);
+          if (!at) return null;
+          const data = edges.find((x) => x.from === e.from && x.to === e.to)!;
+          const isHot = hot.has(`${e.from}>${e.to}`);
+          const dim = hover && hover !== e.from && hover !== e.to;
+          return (
+            <g key={`w-${e.from}>${e.to}`} transform={`translate(${at.x} ${at.y})`} opacity={dim ? 0.25 : 1} style={{ transition: 'opacity 160ms' }}>
+              <rect x={-17} y={-8.5} width={34} height={17} rx={4} fill="#F4F1EA" stroke={isHot ? '#C9D0EC' : '#E3DDCF'} />
+              <text textAnchor="middle" y={3.8} fontSize="10.5" fontFamily="IBM Plex Mono" fill={isHot ? '#24368F' : '#6A6D76'}>
+                {fmt(data.weight)}
+              </text>
             </g>
           );
         })}

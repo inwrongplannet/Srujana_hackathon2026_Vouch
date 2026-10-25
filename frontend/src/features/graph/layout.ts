@@ -80,3 +80,48 @@ export function edgePath(
   d += ` L${end.x} ${end.y}`;
   return d;
 }
+
+type Pt = { x: number; y: number };
+type Box = { x: number; y: number; w: number; h: number };
+
+const overlaps = (a: Box, b: Box) => Math.abs(a.x - b.x) * 2 < a.w + b.w && Math.abs(a.y - b.y) * 2 < a.h + b.h;
+
+/** Point at fraction t of a polyline's length. */
+function along(pts: Pt[], t: number): Pt {
+  const seg = pts.slice(1).map((p, i) => Math.hypot(p.x - pts[i]!.x, p.y - pts[i]!.y));
+  let left = seg.reduce((a, b) => a + b, 0) * t;
+  for (let i = 0; i < seg.length; i += 1) {
+    if (left <= seg[i]! || i === seg.length - 1) {
+      const k = seg[i]! ? Math.min(1, left / seg[i]!) : 0;
+      return { x: pts[i]!.x + (pts[i + 1]!.x - pts[i]!.x) * k, y: pts[i]!.y + (pts[i + 1]!.y - pts[i]!.y) * k };
+    }
+    left -= seg[i]!;
+  }
+  return pts[0]!;
+}
+
+/**
+ * Where each edge's weight label goes: the first spot along the edge, from the middle outwards,
+ * that clears every label already placed and every node with its name. Converging edges otherwise
+ * stack their labels on one point and become unreadable.
+ */
+export function placeEdgeLabels(edges: { key: string; pts: Pt[]; shift?: Pt }[], obstacles: Box[], size = { w: 36, h: 19 }): Map<string, Pt> {
+  const placed: Box[] = [];
+  const out = new Map<string, Pt>();
+  for (const e of edges) {
+    let pick: Pt | null = null;
+    for (const t of [0.5, 0.42, 0.58, 0.34, 0.66, 0.26, 0.74]) {
+      const p = along(e.pts, t);
+      const at = { x: p.x + (e.shift?.x ?? 0), y: p.y + (e.shift?.y ?? 0) };
+      const box = { ...at, ...size };
+      if (!placed.some((b) => overlaps(b, box)) && !obstacles.some((b) => overlaps(b, box))) {
+        pick = at;
+        break;
+      }
+    }
+    pick ??= along(e.pts, 0.5);
+    placed.push({ ...pick, ...size });
+    out.set(e.key, pick);
+  }
+  return out;
+}

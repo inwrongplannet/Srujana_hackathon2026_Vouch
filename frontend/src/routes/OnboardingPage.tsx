@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router';
+import { Link, useNavigate } from 'react-router';
 import { AnimatePresence, motion } from 'motion/react';
 import { api } from '@/api/client';
 import type { DemoIdentity, RegisterResponse } from '@/api/types';
@@ -114,7 +114,9 @@ export function OnboardingPage() {
       <aside className="relative hidden overflow-hidden border-r border-rule bg-paper-2 lg:flex lg:flex-col">
         <Noise opacity={0.035} fps={0} blendMode="multiply" dust={0} scratches={0} scanlines={0} flicker={0} />
         <div className="relative z-10 flex items-center justify-between px-10 pt-9">
-          <Logo />
+          <Link to="/" aria-label="Vouch home">
+            <Logo />
+          </Link>
           <Badge tone="plain">Simulated identity anchor</Badge>
         </div>
         <div className="relative z-10 flex flex-1 items-center justify-center px-10">
@@ -139,9 +141,9 @@ export function OnboardingPage() {
       {/* ------- Form panel ------- */}
       <main className="flex flex-col px-4 py-6 sm:px-10 lg:px-16 lg:py-9">
         <div className="flex items-center justify-between gap-4">
-          <div className="lg:hidden">
-            <Logo size={22} />
-          </div>
+          <Link to="/" aria-label="Vouch home" className="lg:hidden">
+            <Logo size={22} word="" />
+          </Link>
           <StepRail steps={STEPS.map((s) => s.label)} current={step} />
           <button
             type="button"
@@ -264,7 +266,7 @@ export function OnboardingPage() {
                     </span>
                     <div>
                       <p className="eyebrow">DigiLocker · simulated consent</p>
-                      <h1 className="display text-[30px] leading-tight">VeriTrust is asking for</h1>
+                      <h1 className="display text-[30px] leading-tight">Vouch is asking for</h1>
                     </div>
                   </div>
                   <ul className="ruled mt-7 rounded-[10px] border border-rule bg-surface">

@@ -11,30 +11,36 @@ import { CommunityShell } from '@/layout/CommunityShell';
 import { CommunityPage } from '@/routes/CommunityPage';
 import { AskProfilePage } from '@/routes/AskProfilePage';
 import { MyAskPage } from '@/routes/MyAskPage';
+import { RootLayout } from '@/layout/RootLayout';
 
 export const router = createBrowserRouter([
-  { path: '/', element: <LandingPage /> },
-  { path: '/login', element: <OnboardingPage /> },
   {
-    path: '/app',
-    element: <AppShell />,
+    element: <RootLayout />,
     children: [
-      { index: true, element: <Navigate to="borrower" replace /> },
-      { path: 'borrower', element: <BorrowerPage /> },
-      { path: 'voucher', element: <VoucherPage /> },
-      { path: 'lender', element: <LenderPage /> },
-      { path: 'lender/:nodeId', element: <ApplicantPage /> },
-      { path: 'assess', element: <AssessPage /> },
+      { path: '/', element: <LandingPage /> },
+      { path: '/login', element: <OnboardingPage /> },
+      {
+        path: '/app',
+        element: <AppShell />,
+        children: [
+          { index: true, element: <Navigate to="borrower" replace /> },
+          { path: 'borrower', element: <BorrowerPage /> },
+          { path: 'voucher', element: <VoucherPage /> },
+          { path: 'lender', element: <LenderPage /> },
+          { path: 'lender/:nodeId', element: <ApplicantPage /> },
+          { path: 'assess', element: <AssessPage /> },
+        ],
+      },
+      {
+        path: '/community',
+        element: <CommunityShell />,
+        children: [
+          { index: true, element: <CommunityPage /> },
+          { path: 'p/:id', element: <AskProfilePage /> },
+          { path: 'me', element: <MyAskPage /> },
+        ],
+      },
+      { path: '*', element: <Navigate to="/" replace /> },
     ],
   },
-  {
-    path: '/community',
-    element: <CommunityShell />,
-    children: [
-      { index: true, element: <CommunityPage /> },
-      { path: 'p/:id', element: <AskProfilePage /> },
-      { path: 'me', element: <MyAskPage /> },
-    ],
-  },
-  { path: '*', element: <Navigate to="/" replace /> },
 ]);

@@ -14,11 +14,11 @@ const FILTERS = [
 export function CommunityPage() {
   const { asks, members } = useCommunity();
   const [filter, setFilter] = useState<(typeof FILTERS)[number]['value']>('all');
-  const shown = asks
-    .filter((a) => a.ownerId !== VIEWER_ID)
-    .filter((a) =>
-      filter === 'circle' ? a.knownBy.includes(VIEWER_ID) : filter === 'thin' ? a.thinFile : filter === 'setback' ? !!a.setback : true,
-    )
+  const others = asks.filter((a) => a.ownerId !== VIEWER_ID);
+  const matches = (f: typeof filter) => (a: (typeof asks)[number]) =>
+    f === 'circle' ? a.knownBy.includes(VIEWER_ID) : f === 'thin' ? a.thinFile : f === 'setback' ? !!a.setback : true;
+  const shown = others
+    .filter(matches(filter))
     // Strongest verified evidence first; never by how urgent or needy a post sounds.
     .sort((a, b) => b.verified.filter((x) => x.shown && x.tone === 'ok').length - a.verified.filter((x) => x.shown && x.tone === 'ok').length);
 
@@ -34,16 +34,26 @@ export function CommunityPage() {
           money, and you earn the most for backing people others overlook.
         </p>
       </div>
-      <div className="mt-8">
+      <div className="-mx-4 mt-8 overflow-x-auto px-4 pb-1 sm:mx-0 sm:px-0">
         <RubberSegment
           value={filter}
           onChange={(v) => setFilter(v as typeof filter)}
-          items={FILTERS.map((f) => ({ value: f.value, label: f.label }))}
+          items={FILTERS.map((f) => ({
+            value: f.value,
+            label: (
+              <span className="flex items-baseline gap-1.5 whitespace-nowrap">
+                {f.label}
+                <span className="num text-[11.5px] opacity-60">{others.filter(matches(f.value)).length}</span>
+              </span>
+            ),
+          }))}
           trackColor="#E3DDCF"
           thumbColor="#FBFAF6"
-          textColor="#6A6D76"
+          textColor="#464955"
           activeTextColor="#16181F"
           radius={10}
+          equalSlots={false}
+          className="w-max"
           aria-label="Filter asks"
         />
       </div>

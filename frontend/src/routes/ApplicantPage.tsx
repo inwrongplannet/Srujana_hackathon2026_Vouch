@@ -46,8 +46,8 @@ export function ApplicantPage() {
       </Link>
       <PersonHeader node={node} seat="Applicant file" />
 
-      <div className="grid gap-5 xl:grid-cols-12">
-        <Card className="p-6 xl:col-span-7">
+      <div className="grid gap-5 xl:grid-cols-12 xl:items-start">
+        <Card className={`p-6 xl:col-span-7 ${cascade ? '' : 'xl:sticky xl:top-[120px]'}`}>
           <CardHead
             eyebrow={cascade ? 'Default cascade' : 'Trust paths into this file'}
             title={cascade ? 'Penalties stop at two hops' : 'Where the trust comes from'}

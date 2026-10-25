@@ -41,9 +41,10 @@ function Bar({ year, value, tone }: { year: string; value: number; tone: string 
   );
 }
 
-export function CreditGap() {
+/** The headline figure, under the section title. */
+export function GapHeadline() {
   return (
-    <div className="mt-12 grid gap-12 lg:grid-cols-[1.1fr_1fr]">
+    <div className="mt-10">
       <Reveal>
         <p className="display num text-[clamp(64px,9vw,128px)] leading-[0.85] tracking-[-0.04em] text-neel-700">
           {GAP.headline.value}
@@ -55,7 +56,14 @@ export function CreditGap() {
         </p>
         <SourceLink source={GAP.source} className="mt-5" />
       </Reveal>
+    </div>
+  );
+}
 
+/** The supporting figures and the 2017-2026 trend, in the right-hand column. */
+export function GapFacts() {
+  return (
+    <div className="lg:pt-8">
       <Reveal delay={0.1}>
         <div className="divide-y divide-rule border-y border-rule">
           {GAP.facts.map((f) => (

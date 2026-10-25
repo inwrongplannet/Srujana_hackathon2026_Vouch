@@ -11,11 +11,11 @@ export function LogoMark({ size = 28, tone = 'ink' }: { size?: number; tone?: 'i
   );
 }
 
-export function Logo({ tone = 'ink', size = 26, word = 'VeriTrust' }: { tone?: 'ink' | 'paper'; size?: number; word?: string }) {
+export function Logo({ tone = 'ink', size = 26, word = 'Vouch' }: { tone?: 'ink' | 'paper'; size?: number; word?: string }) {
   return (
     <span className={`inline-flex items-center gap-2.5 ${tone === 'ink' ? 'text-ink' : 'text-paper'}`}>
       <LogoMark size={size} tone={tone} />
-      <span className="display text-[21px] leading-none tracking-[-0.01em]">{word}</span>
+      {word ? <span className="display text-[21px] leading-none tracking-[-0.01em]">{word}</span> : null}
     </span>
   );
 }

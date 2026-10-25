@@ -94,7 +94,7 @@ export function DirectorBar() {
                   </li>
                 ))}
               </ol>
-              <span className="font-mono text-[11px] text-paper/50">
+              <span className="hidden font-mono text-[11px] text-paper/50 sm:inline">
                 Day {s.day} · {dayDate(s.day)}
               </span>
               <button type="button" onClick={() => setOpen(false)} className="rounded p-1 text-paper/60 hover:bg-paper/10 hover:text-paper" aria-label="Hide director">
@@ -103,7 +103,7 @@ export function DirectorBar() {
             </div>
 
             <div className="flex flex-wrap items-center gap-3 px-4 pt-2.5 pb-3.5">
-              <p className="min-w-[240px] flex-1 text-[14px] text-paper/90">{cue.text}</p>
+              <p className="basis-full text-[13.5px] text-paper/90 sm:min-w-[240px] sm:flex-1 sm:basis-auto sm:text-[14px]">{cue.text}</p>
 
               {cue.go && pathname !== cue.go.path ? (
                 <DirectorButton primary onClick={() => navigate(cue.go!.path)} icon={<IconArrowRight size={15} />}>
@@ -131,14 +131,24 @@ export function DirectorBar() {
               <span className="mx-1 hidden h-6 w-px bg-paper/15 sm:block" />
 
               {!shockUsed ? (
-                <DirectorButton busy={busy === 'shock'} onClick={() => run('shock', async () => { await api.regionalShock(); navigate('/app/lender'); })} icon={<IconStorm size={15} />}>
-                  Regional shock
+                <DirectorButton
+                  label="Regional shock"
+                  busy={busy === 'shock'}
+                  onClick={() => run('shock', async () => { await api.regionalShock(); navigate('/app/lender'); })}
+                  icon={<IconStorm size={15} />}
+                >
+                  <span className="hidden sm:inline">Regional shock</span>
                 </DirectorButton>
               ) : gadag?.tripped ? (
                 <span className="text-[12px] text-restricted">Gadag breaker open</span>
               ) : null}
-              <DirectorButton busy={busy === 'reset'} onClick={() => run('reset', async () => { await api.reset(); navigate('/login'); })} icon={<IconReset size={15} />}>
-                Reset
+              <DirectorButton
+                label="Reset"
+                busy={busy === 'reset'}
+                onClick={() => run('reset', async () => { await api.reset(); navigate('/login'); })}
+                icon={<IconReset size={15} />}
+              >
+                <span className="hidden sm:inline">Reset</span>
               </DirectorButton>
             </div>
           </motion.div>
@@ -167,8 +177,11 @@ function DirectorButton({
   primary,
   danger,
   busy,
+  label,
 }: {
   children: React.ReactNode;
+  /** Accessible name when the visible text is hidden on small screens. */
+  label?: string;
   onClick: () => void;
   icon?: React.ReactNode;
   primary?: boolean;
@@ -185,6 +198,8 @@ function DirectorButton({
       type="button"
       disabled={busy}
       onClick={onClick}
+      aria-label={label}
+      title={label}
       className={`inline-flex h-9 items-center gap-1.5 rounded-[8px] px-3.5 text-[13px] font-medium transition-colors disabled:opacity-60 ${tone}`}
     >
       {icon}

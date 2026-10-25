@@ -22,15 +22,43 @@ export function Reveal({ children, delay = 0, className = '' }: { children: Reac
   );
 }
 
-export function Section({ id, kicker, title, children }: { id?: string; kicker: string; title: ReactNode; children: ReactNode }) {
+export function Section({
+  id,
+  kicker,
+  title,
+  children,
+  aside,
+}: {
+  id?: string;
+  kicker: string;
+  title: ReactNode;
+  children: ReactNode;
+  /** Right-hand column, level with the heading on wide screens. */
+  aside?: ReactNode;
+}) {
+  const head = (
+    <Reveal>
+      <p className="font-mono text-[11.5px] tracking-[0.16em] text-neel-700">{kicker.toUpperCase()}</p>
+      <h2 className="display mt-3 max-w-[24ch] text-[clamp(32px,4.2vw,56px)] leading-[1] tracking-[-0.025em] text-balance">{title}</h2>
+    </Reveal>
+  );
   return (
-    <section id={id} className="border-t border-rule">
+    <section id={id} className="scroll-mt-16 border-t border-rule">
       <div className="mx-auto max-w-[1180px] px-4 py-20 sm:px-8 lg:py-24">
-        <Reveal>
-          <p className="font-mono text-[11.5px] tracking-[0.16em] text-neel-700">{kicker.toUpperCase()}</p>
-          <h2 className="display mt-3 max-w-[24ch] text-[clamp(32px,4.2vw,56px)] leading-[1] tracking-[-0.025em] text-balance">{title}</h2>
-        </Reveal>
-        {children}
+        {aside ? (
+          <div className="grid gap-12 lg:grid-cols-[1.1fr_1fr] lg:gap-16">
+            <div>
+              {head}
+              {children}
+            </div>
+            {aside}
+          </div>
+        ) : (
+          <>
+            {head}
+            {children}
+          </>
+        )}
       </div>
     </section>
   );

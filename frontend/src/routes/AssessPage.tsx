@@ -1,3 +1,4 @@
+import { Link } from 'react-router';
 import { useEffect, useState } from 'react';
 import { backend, type AssessmentResult, type BackendUser, type BureauStatus, type CombinedAssessment } from '@/api/backend';
 import { ApiError } from '@/api/http';
@@ -51,12 +52,27 @@ function Offline({ message }: { message: string }) {
   return (
     <Card className="p-6">
       <CardHead eyebrow="Backend offline" title="Start the API to use this desk" aside={<Badge tone="restricted">offline</Badge>} />
-      <p className="mt-3 text-[14px] text-ink-2">{message}</p>
+      <p className="mt-3 max-w-[60ch] text-[14px] text-ink-2">
+        This desk runs the real assessment, so it needs the FastAPI server. Start it from the repository root, then try again:
+      </p>
       <pre className="mt-4 overflow-x-auto rounded-[8px] bg-ink p-4 font-mono text-[12.5px] text-paper">cd backend{'\n'}python main.py serve --port 8000</pre>
-      <p className="mt-3 text-[13px] text-ink-3">The rest of the demo keeps working on the built-in mock while the backend is down.</p>
-      <Button className="mt-5" variant="secondary" icon={<IconReset size={15} />} onClick={() => void checkBackend()}>
-        Try again
-      </Button>
+      <p className="mt-3 font-mono text-[11.5px] text-ink-3">Details: {message}</p>
+      <div className="mt-5 flex flex-wrap items-center gap-x-5 gap-y-3">
+        <Button variant="secondary" icon={<IconReset size={15} />} onClick={() => void checkBackend()}>
+          Try again
+        </Button>
+        <p className="text-[13px] text-ink-3">
+          Meanwhile, the{' '}
+          <Link to="/app" className="text-ink-2 underline decoration-rule-2 underline-offset-4 hover:text-ink">
+            guided story
+          </Link>{' '}
+          and the{' '}
+          <Link to="/community" className="text-ink-2 underline decoration-rule-2 underline-offset-4 hover:text-ink">
+            community
+          </Link>{' '}
+          run on built-in demo data.
+        </p>
+      </div>
     </Card>
   );
 }

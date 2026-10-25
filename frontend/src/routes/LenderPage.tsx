@@ -58,11 +58,18 @@ export function LenderPage() {
         <div className="px-6 pt-6">
           <CardHead eyebrow="Decide with both axes" title="Applications" />
         </div>
-        <div className="mt-4 overflow-x-auto">
+        <ul className="mt-4 border-t border-rule md:hidden">
+          {applied.length === 0 ? (
+            <li className="px-6 py-10 text-center text-ink-3">No open applications.</li>
+          ) : (
+            applied.map((l) => <ApplicationCard key={l.id} loan={l} onOpen={() => navigate(`/app/lender/${l.borrower}`)} />)
+          )}
+        </ul>
+        <div className="mt-4 hidden overflow-x-auto md:block">
           <table className="w-full min-w-[860px] text-[13.5px]">
             <thead>
               <tr className="border-y border-rule bg-paper/60 text-left">
-                {['Applicant', 'Asked', 'Score · band', 'Uncertainty σ²', 'Model limit', 'Vouches', ''].map((h) => (
+                {['Applicant', 'Asked', 'Lendable score · band', 'Uncertainty σ²', 'Model limit', 'Vouches', ''].map((h) => (
                   <th key={h} className="eyebrow px-6 py-2.5 font-medium first:pl-6">
                     {h}
                   </th>
@@ -125,6 +132,47 @@ export function LenderPage() {
         </Card>
       </div>
     </div>
+  );
+}
+
+function ApplicationCard({ loan, onOpen }: { loan: ApiLoan; onOpen: () => void }) {
+  const s = useSnapshot();
+  const n = s.nodes[loan.borrower]!;
+  const a = s.assessments[loan.borrower]!;
+  const fits = new Decimal(a.limit.amount).gte(loan.principal.amount);
+  return (
+    <li className="border-b border-rule last:border-0">
+      <button type="button" onClick={onOpen} className="w-full px-5 py-4 text-left transition-colors hover:bg-paper/70">
+        <span className="flex items-center gap-3">
+          <Avatar node={n} size={34} />
+          <span className="min-w-0 flex-1">
+            <span className="flex items-center gap-2 font-medium">
+              {n.name} <StatusBadge node={n} />
+            </span>
+            <span className="block truncate text-[12px] text-ink-3">
+              {n.role} · {loan.purpose}
+            </span>
+          </span>
+          <IconChevronRight size={18} className="shrink-0 text-ink-3" />
+        </span>
+        <span className="mt-3 grid grid-cols-3 gap-3 text-[12px]">
+          <span>
+            <span className="eyebrow block">Asked</span>
+            <span className="num mt-1 block text-[14px] font-medium">{formatMoney(loan.principal)}</span>
+          </span>
+          <span>
+            <span className="eyebrow block">Limit</span>
+            <span className={`num mt-1 block text-[14px] font-medium ${fits ? 'text-active' : 'text-restricted-ink'}`}>{formatMoney(a.limit)}</span>
+          </span>
+          <span>
+            <span className="eyebrow block">Score · σ²</span>
+            <span className="num mt-1 block font-mono text-[13px]">
+              {fmt(a.lcb)} · {fmt(a.sigma2)}
+            </span>
+          </span>
+        </span>
+      </button>
+    </li>
   );
 }
 

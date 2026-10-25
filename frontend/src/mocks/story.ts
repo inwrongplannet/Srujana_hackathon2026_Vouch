@@ -4,7 +4,7 @@
  *
  * Every person and figure here is demo data, not a real record; bureau scores are illustrative and
  * never a real bureau value. Derived figures are computed by the mock engine so components only
- * format. DATASET holds results from our own dataset build (data/combined/README.md).
+ * format.
  */
 import { D, Decimal } from './engine/params';
 import { evaluatePlan, incomeStats, searchPlans, type CashFlow, type Plan } from './engine/affordability';
@@ -175,15 +175,3 @@ export const CASES: Case[] = [
 /** The same ring without abuse checks, to show what the penalty prevents. */
 export const RING_UNCHECKED = vouchScore(Array(12).fill(e(40, '0.50', '0')));
 
-/** Results from our own dataset build on real, anonymised Home Credit applicants (not Indian borrowers). */
-export const DATASET = {
-  applicants: 30000,
-  refusedNoFile: 4299,
-  repaidShare: '0.894',
-  defaultNoFile: '0.106',
-  defaultWithFile: '0.078',
-  source: 'Home Credit Default Risk (anonymised; amounts rescaled), replayed through a bureau-only rule in our dataset build. See data/combined/README.md.',
-};
-
-/** Of every 100 people the bureau-only rule refused for having no file, how many repaid. */
-export const REPAID_OF_100 = D(DATASET.repaidShare).mul(100).toDecimalPlaces(0, Decimal.ROUND_HALF_EVEN).toNumber();

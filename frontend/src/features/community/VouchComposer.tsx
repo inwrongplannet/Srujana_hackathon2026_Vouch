@@ -87,7 +87,7 @@ export function VouchComposer({ ask, viewerId }: { ask: Ask; viewerId: string })
         ]}
         trackColor="#E3DDCF"
         thumbColor="#FBFAF6"
-        textColor="#6A6D76"
+        textColor="#464955"
         activeTextColor="#16181F"
         radius={10}
         aria-label="How you are vouching"

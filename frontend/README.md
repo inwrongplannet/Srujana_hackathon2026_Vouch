@@ -1,8 +1,8 @@
 # frontend
-VeriTrust demo app: onboarding, borrower, voucher and lender views over a mock protocol server.
+Vouch demo app: landing page, guided story over a mock server, community, and the live Assessment desk.
 
 ## Status
-- Works: landing (Vouch story: assessment panel, sourced credit-gap figures and research cards, Vouch Score builder, stress test, explanation), community platform (`/community`: discover feed, profiles with known and evidence vouching, setback stand-by, the borrower's own ask), four-step onboarding (simulated identity anchor), borrower, voucher and lender views, contract-event ledger, demo director, `?jump=<step>` fallback.
+- Works: landing (Vouch story: assessment panel, sourced credit-gap figures and research cards, Vouch Score builder, stress test, explanation), community platform (`/community`: discover feed, profiles with known and evidence vouching, setback stand-by, the borrower's own ask), four-step onboarding (simulated identity anchor), borrower, voucher and lender views, contract-event ledger, demo director, `?jump=<step>` fallback. One top bar on every app screen switches between Guided story, Community and Assessment desk (a dot shows whether the backend is up); each route sets the tab title and opens at the top.
 - Mock: no backend yet. `src/mocks/` stands in for it and holds all protocol maths, copied from the graph-trust-engine, dual-axis-scoring and slashing-cascade skills.
 - Missing: generated types from `make types` (the contract is still a placeholder), CI Node setup (needs Abhishek).
 
@@ -28,6 +28,7 @@ python main.py serve --port 8000
 | `src/state/` | shared stores: the mock snapshot, the community store, and `backendStatus.ts` (is the API up) |
 | `src/mocks/` | mock server, seed data, and `engine/` (trust paths, scoring, slashing, nullifier stub, EMI) with tests |
 | `src/routes/` | one file per screen |
+| `src/layout/` | route shells: `RootLayout` (tab title, scroll reset), `AppShell`, `CommunityShell`, and `ProductNav`, the shared top bar |
 | `src/features/` | screen-specific components (score, graph, borrower, voucher, lender, chain, demo, onboarding, landing, community, assess) |
 | `src/components/ui/` | shared primitives (button, badge, avatar, modal, card) |
 | `src/components/icons/` | the custom SVG icon set; never emoji |
