@@ -235,10 +235,13 @@ def cmd_borrow(args: argparse.Namespace) -> None:
     try:
         loan = lending.borrow(borrower_id, amount, tenure_months=tenure)
         store.save(engine, lending)
+        last_tx = lending.transactions[-1] if lending.transactions else None
+        fee_str = f"INR {last_tx.fee:,.2f}" if last_tx else "INR 0.00"
         print(f"Loan Approved & Disbursed!")
         print(f"  + Loan ID:             {loan.loan_id}")
         print(f"  + Borrower:            {loan.borrower_id}")
         print(f"  + Principal Amount:    INR {loan.principal:,.2f}")
+        print(f"  + Platform Fee (Cut):  {fee_str}")
         print(f"  + Outstanding Balance: INR {loan.outstanding_balance:,.2f}")
         print(f"  + Status:              {loan.status}")
     except ValueError as e:
@@ -262,9 +265,12 @@ def cmd_repay(args: argparse.Namespace) -> None:
         actual_payment = prev_balance - loan.outstanding_balance
         refund = max(Decimal("0.00"), amount - actual_payment)
         store.save(engine, lending)
+        last_tx = lending.transactions[-1] if lending.transactions else None
+        fee_str = f"INR {last_tx.fee:,.2f}" if last_tx else "INR 0.00"
 
         print(f"Repayment Processed for Loan '{loan_id}'!")
         print(f"  + Payment Applied:     INR {actual_payment:,.2f}")
+        print(f"  + Platform Fee (Cut):  {fee_str}")
         if refund > Decimal("0.00"):
             print(f"  + Excess Refunded:     INR {refund:,.2f} (Payment exceeded total debt balance)")
         print(f"  + Outstanding Balance: INR {loan.outstanding_balance:,.2f}")
@@ -431,6 +437,19 @@ def cmd_loans(args: argparse.Namespace) -> None:
     print("-----------------------------------------------------------------------------------------")
     for l in loans:
         print(f"{l.loan_id:<12} {l.borrower_id:<15} {l.principal:<18} {l.outstanding_balance:<18} {l.status}")
+    print("=========================================================================================")
+
+
+def cmd_treasury(args: argparse.Namespace) -> None:
+    _, _, lending, _, _ = _init_context()
+    treasury = lending.get_treasury_summary()
+    print("=========================================================================================")
+    print(f"VeriTrust Platform Treasury: {treasury.treasury_id}")
+    print("-----------------------------------------------------------------------------------------")
+    print(f"  + Total Fees Collected:       INR {treasury.total_fees_collected:,.2f}")
+    print(f"  + Platform Fee Cut Rate:      {treasury.fee_rate * Decimal('100.0'):,.2f}%")
+    print(f"  + Total Transactions Handled: {treasury.transaction_count}")
+    print(f"  + Operating Currency:         {treasury.currency}")
     print("=========================================================================================")
 
 
@@ -1185,6 +1204,10 @@ def build_parser() -> argparse.ArgumentParser:
     p_loans.add_argument("user_id", nargs="?", help="Filter by borrower user ID")
     p_loans.add_argument("--mine", "-m", action="store_true", help="Filter for current logged-in user")
     p_loans.set_defaults(func=cmd_loans)
+
+    # treasury
+    p_treasury = subparsers.add_parser("treasury", help="Display platform revenue and treasury status")
+    p_treasury.set_defaults(func=cmd_treasury)
 
     # graph
     p_graph = subparsers.add_parser("graph", help="Visualize trust network topology and weights")

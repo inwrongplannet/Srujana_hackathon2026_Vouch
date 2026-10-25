@@ -300,7 +300,7 @@ All endpoints accept and return `application/json`. Timestamps follow ISO 8601 U
 ### Repay a loan
 - **Method + path:** `POST /api/v1/loans/repay`
 - **Request:** `{"loan_id": "LN_00001", "amount": "7930.66"}`
-- **Response:** `{"loan_id": "LN_00001", "status": "ACTIVE", "outstanding_balance": "142069.34"}`
+- **Response:** `{"loan_id": "LN_00001", "status": "ACTIVE", "outstanding_balance": "142069.34", "fee_paid": "79.31"}`
 - **Status:** 200 OK; 400 on an unknown or closed loan.
 
 ### Record a default
@@ -324,6 +324,16 @@ All endpoints accept and return `application/json`. Timestamps follow ISO 8601 U
 ### Trust graph
 - **Method + path:** `GET /api/v1/graph`
 - **Response:** `{"nodes": [{"id": "MEENA", "name": "...", "reputation": "10.0", "capacity": "10.0", "status": "ACTIVE", "is_anchor": false}], "edges": [{"source": "MEENA", "target": "SURESH", "weight": "10.0"}]}`
+- **Status:** 200 OK
+
+### List transactions
+- **Method + path:** `GET /api/v1/transactions`
+- **Response:** a list of `{"tx_id": "TX_00001", "user_id": "LAKSHMI", "amount": "150000.00", "fee": "1500.00", "net_amount": "150000.00", "currency": "INR", "tx_type": "DISBURSEMENT", "timestamp": "2026-10-25T12:00:00Z"}`.
+- **Status:** 200 OK
+
+### Platform treasury status
+- **Method + path:** `GET /api/v1/platform/treasury`
+- **Response:** `{"treasury_id": "PLATFORM_TREASURY", "total_fees_collected": "1500.00", "fee_rate": "0.01", "transaction_count": 1, "currency": "INR"}`
 - **Status:** 200 OK
 
 ---

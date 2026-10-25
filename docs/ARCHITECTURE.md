@@ -63,9 +63,17 @@ flowchart TD
 - **Mathematical invariants:**
   1. *Out-degree capacity conservation:*
      $$\sum_{v \in \text{Out}(u)} W_{uv} \le C_u \quad \text{where } C_u = \max(0, R_u)$$
-  2. *Hop attenuation:* Lambda decay $\lambda^h = 0.5^h$ penalizes indirect endorsements geometrically.
-  3. *Per-path cycle absorption:* Graph traversal tracks visited nodes per path branch, terminating circular loops without artificial gain.
-  4. *Anchor grounding:* Trust propagates strictly from authorized institutional roots (`is_anchor=True`).
+  2. *Chronological rank diminishing returns:* Incoming endorsements are weighted by immutable chronological arrival order:
+     $$\alpha_{uv} = \frac{1}{2^{r_{uv} - 1}}$$
+     The 1st voucher receives weight 1.0, 2nd receives 0.5, 3rd receives 0.25, rendering Sybil burst swarms mathematically ineffective.
+  3. *Multi-hop path transmission:* Trust on path $P = (v_0, v_1, \dots, v_h)$ decays by node out-degrees, edge ranks, and hop attenuation:
+     $$T(P) = R_{v_0} \cdot \prod_{i=0}^{h-1} \frac{1}{d_{v_i}} \cdot \prod_{i=0}^{h-1} \alpha_{v_i v_{i+1}} \cdot \delta^{h-1}$$
+  4. *Same-source min-path consolidation & distinct aggregation:*
+     $$p_u(s) = \min_{P \in \mathcal{P}(s, u)} T(P), \quad G(u) = \sum_{s \ne u} p_u(s), \quad G_{\text{score}}(u) = \min(G(u), G_{\text{max}})$$
+  5. *Repeat transaction reputation minting:* Diminishing returns prevent transaction farming:
+     $$M_k = M_0 \exp(-\lambda(k - 1)) \quad \text{with } \lambda = \ln(2) \approx 0.6931$$
+  6. *Per-path cycle absorption:* Graph traversal tracks visited nodes per path branch, terminating circular loops without artificial gain.
+  7. *Anchor grounding:* Trust propagates strictly from authorized institutional roots (`is_anchor=True`).
 
 ### 5. Monte Carlo stress tester
 - **Role:** Tests repayment viability across 5,000 seeded stochastic economic futures over the proposed loan horizon.
@@ -86,6 +94,14 @@ flowchart TD
 - **Role:** Allows borrowers to contest erroneous transactions or submit updated documentation without conflating data errors with economic repayment capacity.
 - **Classification:** Categorizes records as `VERIFIED`, `MISSING`, `STALE`, `DUPLICATED`, or `DISPUTED`.
 - **Ledger integration:** Logs all dispute filings and resolutions as immutable SHA-256 events.
+
+### 8. Platform treasury and transaction fee cut
+- **Role:** Ensures economic sustainability for protocol operators through an automated, auditable transaction fee cut.
+- **Mechanism:**
+  - Configurable fee rate cut (default: $1.0\%$ / 100 bps surcharge via `PLATFORM_FEE_RATE`).
+  - Recorded on every `Transaction` (`amount`, `fee`, `net_amount`) across loan disbursements and repayments.
+  - Surcharge collected into a centralized `PlatformTreasury` ledger balance, verifiable via `GET /api/v1/platform/treasury` and CLI `python main.py treasury`.
+  - Audited in `LOAN_DISBURSED` and `LOAN_REPAID` ledger event payloads with deterministic disaster recovery replay.
 
 ---
 
