@@ -8,6 +8,13 @@
 
 <!-- ENTRIES -->
 
+### 2026-10-25: Landing-page story values
+- **Decision:** the landing page computes its figures in `frontend/src/mocks/engine/`: the Vouch Score from the Vouch scoring proposal (tau 3, lambda 1, its starting values), EMI from finance-domain, and a demo affordability rule that a plan fits while money left after essentials and EMIs stays at or above zero and DTI stays at or below 0.5. Lender pricing is a demo 24% a year; people, bureau scores and endorser factors are fictional (`src/mocks/story.ts`).
+- **Why:** the page shows live, checkable arithmetic rather than hard-coded numbers.
+- **Alternatives considered:** static figures (cannot be audited or varied).
+- **Consequences:** the DTI cap of 0.5 and the ring penalty (edge quality 0.1) are demo values, not policy; the backend must replace them with tuned ones.
+- **By:** Reehan
+
 ### 2026-10-24: Demo parameters the skills leave open
 - **Decision:** base unit 10,000 INR per point of Score_final, limits rounded down to 500 INR; delta0 = principal / 5,000 INR; settlement mints 0.5 x delta0 to the borrower and 0.1 x delta0 to each direct sponsor; cash-flow normalisation DSCR 0.5 to 2.5, income CV 0 to 0.6, volatility 0 to 1; five expected data fields; pricing 24% a.p.r., 6 monthly instalments, 30-day term. A DEFAULTED identity gets a 0 limit whatever its graph trust.
 - **Why:** the formulas need concrete values to run; these give the story a 6,000 INR first limit from one vouch and visible band shrinkage.

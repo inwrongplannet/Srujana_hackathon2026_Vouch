@@ -5,7 +5,7 @@
 ## Script
 Start the app with `make dev` and open `http://127.0.0.1:5173`. The dark presenter bar at the bottom shows the next step and the button for it. All figures are illustrative seed data.
 
-1. Landing: point at the hero. A bureau shows Lakshmi as `-1`, declined. VeriTrust shows "unknown, not risky" and a first limit from one vouch.
+1. Landing: the hero panel cycles three cases (hover pauses it). Lakshmi has no bureau file and the one-number lender declines her; Vouch shows four separate signals. Suresh's score fell 77 points after a shock while his endorsements held. Account 7731's twelve ring endorsements score 8, not 55. Below, tab 01 lets you toggle endorsers and watch diminishing returns; tab 02 opens the stress test on her worst month.
 2. Sign-in (`/login`): pick Lakshmi (`0000 0000 4821`), any six-digit code, allow DigiLocker. The nullifier is revealed with its identity glyph: credibility 0, uncertainty 1.00.
 3. Borrower: score -1.00 with a wide hatched band, limit 0 INR. Click "Ask someone who knows your work" and send to Meena.
 4. Voucher (Meena): open the request. The meter re-splits from 0.93 to 0.70 per vouch; exposure is -0.35 if Lakshmi defaults, +0.10 if she repays; Lakshmi goes from 0 INR to 6,000 INR. Hold to vouch.
