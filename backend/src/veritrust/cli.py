@@ -1078,6 +1078,15 @@ def run_interactive_shell() -> None:
 # Parser Definition
 # -----------------------------------------------------------------------------
 
+def cmd_serve(args: argparse.Namespace) -> None:
+    """Start FastAPI Uvicorn REST API server."""
+    import uvicorn
+    host = getattr(args, "host", "0.0.0.0")
+    port = getattr(args, "port", 8000)
+    print(f"Starting Vouch / VeriTrust REST API server on http://{host}:{port} ...")
+    uvicorn.run("veritrust.api.app:app", host=host, port=port, reload=False)
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="veritrust",
@@ -1253,6 +1262,12 @@ def build_parser() -> argparse.ArgumentParser:
     p_rec.add_argument("--income", type=str, help="Corrected monthly income")
     p_rec.add_argument("--debt", type=str, help="Corrected monthly debt")
     p_rec.set_defaults(func=cmd_recourse)
+
+    # serve
+    p_serve = subparsers.add_parser("serve", help="Start FastAPI REST API server")
+    p_serve.add_argument("--host", default="0.0.0.0", help="Host interface to bind (default: 0.0.0.0)")
+    p_serve.add_argument("--port", type=int, default=8000, help="Port to listen on (default: 8000)")
+    p_serve.set_defaults(func=cmd_serve)
 
     # reset
     p_reset = subparsers.add_parser("reset", help="Reset state to initial seed demo data")
