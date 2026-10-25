@@ -9,6 +9,7 @@ from fastapi import APIRouter, HTTPException, status
 from pydantic import BaseModel, Field
 
 from veritrust.affordability import AffordabilityEngine, affordability_input, calculate_emi
+from veritrust.api import registry
 from veritrust.api.deps import get_services
 from veritrust.counterfactual import CounterfactualSimulator
 from veritrust.models import (
@@ -25,9 +26,9 @@ from veritrust.stress_tester import MonteCarloStressTester
 
 router = APIRouter()
 
-# In-memory registry for loan applications and assessments
-_applications: dict[str, LoanApplication] = {}
-_assessments: dict[str, CombinedAssessment] = {}
+# In-memory registry for loan applications and assessments, shared with the protocol routes.
+_applications = registry.applications
+_assessments = registry.assessments
 
 
 # -----------------------------------------------------------------------------
@@ -373,7 +374,7 @@ def get_vouch_summary(user_id: str):
 @router.post("/api/v1/applications/{app_id}/assessments", response_model=AssessmentResponse, tags=["Assessments"])
 def run_assessment(app_id: str, req: RunAssessmentRequest):
     """Run affordability, OR-Tools restructuring, stress testing, and explainability."""
-    engine, scorer, _, _ = get_services()
+    _, scorer, _, _ = get_services()
     app = _applications.get(app_id)
     if not app:
         raise HTTPException(status_code=404, detail=f"Application '{app_id}' not found.")
