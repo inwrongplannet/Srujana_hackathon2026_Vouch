@@ -20,11 +20,13 @@ Nobody owns a folder. Any teammate can change any file through a task, a branch 
 - Types: `feat`, `fix`, `docs`, `chore`, `refactor`, `test`. Zones: `backend`, `frontend`, `spikes`, `docs`, `ci`.
 - Small and frequent. No secrets, no `.env`, no large data files, no debug code.
 
-## Pull requests
+## Pull requests and CI/CD
 1. Run `make check` locally and fix failures.
 2. Push your branch and open a PR. Fill every part of the PR template: what and why (link the `TASK-NNN`), zone, checklist.
-3. CI (`make check`) must be green. Abhishek reviews and merges. Do not merge your own PR.
-4. Merge conflicts: rebase on `origin/main`. Main's version of a contested line wins and you re-apply your change on top; shared docs keep both sides. For a real logic disagreement, ask Abhishek.
+3. CI runs the test suite (`pytest`, `vitest`, `lint`, and documentation/structure gates).
+4. Abhishek reviews and merges. Do not merge your own PR.
+5. On merge to `main`, the CI/CD pipeline automatically tags the release (e.g. `v1.0.<run_number>`), publishes a GitHub Release with changelog, and deploys the update to AWS EC2 with health verification.
+6. Merge conflicts: rebase on `origin/main`. Main's version of a contested line wins and you re-apply your change on top; shared docs keep both sides. For a real logic disagreement, ask Abhishek.
 
 ## API contract
 Endpoint shapes are written in `docs/API_CONTRACT.md` before they are implemented (Abhishek approves changes). Frontend builds against it; if an implementation must differ, change the contract in the same PR and tell the consumer. Money fields are decimal strings plus a currency code.

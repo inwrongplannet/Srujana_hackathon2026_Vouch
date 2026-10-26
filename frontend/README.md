@@ -20,6 +20,16 @@ cd backend
 python main.py serve --port 8000
 ```
 
+### Docker execution
+Launch backend and frontend together with automated port forwarding:
+```bash
+# From repository root
+./docker-run.sh        # On Linux/macOS/Git Bash
+.\docker-run.ps1       # On Windows PowerShell
+docker compose up      # Standard Docker Compose
+```
+Opens frontend on `http://localhost:5173` with the backend API automatically available at `http://localhost:8000`.
+
 ## Structure
 | Folder | What goes there |
 |---|---|

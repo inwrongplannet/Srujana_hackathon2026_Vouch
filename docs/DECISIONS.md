@@ -8,6 +8,13 @@
 
 <!-- ENTRIES -->
 
+### 2026-10-25: Multi-container and unified Dockerization for full-stack deployment
+- **Decision:** (1) Added `docker-compose.yml`, `backend/Dockerfile`, and `frontend/Dockerfile` defining a two-tier container architecture: FastAPI backend on port 8000 and Vite React frontend on port 5173. (2) Configured automatic backend healthchecks (`/health`) with frontend dependency ordering, passing `VITE_API_BASE_URL=http://backend:8000` for dev proxying. (3) Added a unified root `Dockerfile` and `scripts/docker-entrypoint.sh` for single-container execution. (4) Added cross-platform runner scripts `docker-run.sh`, `docker-run.ps1`, and `docker-run.bat` checking Docker daemon status and launching the full stack with automatic port forwarding.
+- **Why:** To enable zero-setup evaluation: judges and teammates can launch the complete backend and frontend with one command without installing Python, Node.js, or virtual environments locally.
+- **Alternatives considered:** Requiring manual host setup with Node and Python (error-prone across different OS environments); single monolithic Dockerfile only (slower rebuilds during frontend/backend iteration).
+- **Consequences:** Port 5173 (frontend) and 8000 (backend API docs) are automatically forwarded; frontend dev proxy forwards `/api` and `/health` seamlessly without CORS restrictions.
+- **By:** Abhishek, Reehan, Abhijit
+
 ### 2026-10-25: Explainable multi-model machine learning suite and finite-sample conformal prediction
 - **Decision:** (1) Introduced a multi-paradigm explainable credit-risk architecture in `backend/ml/`: Glassbox Explainable Boosting Machine (`EBMModel`, `interpret.glassbox`), GPU-accelerated XGBoost (`XGBoostGPUModel` on CUDA), PyTorch Tabular Neural Network with Monte Carlo Dropout for epistemic uncertainty (`PyTorchGPUModel`), LightGBM (`LightGBMModel`), and a Basel-style regularized linear scorecard (`LogisticScorecardModel`). (2) Ensembled via inverse-Brier held-out calibration into `GeneralizedCreditModel`, achieving 0.8892 AUC and 0.9191 PR-AUC on Option A shock evaluation. (3) Added Split and Mondrian Conformal Prediction (`backend/ml/conformal.py`) guaranteeing finite-sample 90% and 95% coverage across data completeness tiers with tri-state decisions (`ELIGIBLE`, `REVIEW`, `DECLINE_CANDIDATE`). (4) Implemented realistic synthetic noise injection (`backend/ml/noise.py`) with continuous jitter, financial rounding, MAR/MNAR missingness, fat-tailed shocks, and label noise.
 - **Why:** To satisfy literature review findings and regulatory explainability requirements: avoiding ungrounded black boxes while achieving superior predictive discrimination and provable uncertainty coverage for thin-file micro-borrowers.

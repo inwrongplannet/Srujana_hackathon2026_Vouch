@@ -1,0 +1,17 @@
+.git
+.venv
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache
+node_modules
+frontend/node_modules
+frontend/dist
+dist
+build
+.DS_Store
+.idea
+*.log
+backend/results
+backend/.venv
