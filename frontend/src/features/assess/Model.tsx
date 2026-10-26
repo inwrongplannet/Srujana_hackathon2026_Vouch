@@ -9,6 +9,7 @@ import type { PredictResponse } from '@/api/backend';
 import { Card, CardHead } from '@/components/ui/Card';
 import { Badge, type Tone } from '@/components/ui/StatusBadge';
 import { SourceBadge } from '@/components/ui/SourceBadge';
+import { Explain } from '@/features/explain/Explain';
 import { rupees } from './parts';
 
 const DECISION: Record<string, { tone: Tone; label: string }> = {
@@ -75,11 +76,15 @@ export function ModelView({ m, live }: { m: PredictResponse; live: boolean }) {
         <div>
           <dl className="grid grid-cols-2 gap-x-6 gap-y-4">
             <div>
-              <dt className="eyebrow">Default probability</dt>
+              <dt className="eyebrow">
+                <Explain id="defaultProbability">Default probability</Explain>
+              </dt>
               <dd className="display num mt-1 text-[32px] leading-none">{pctOf(p.default_probability, 2)}</dd>
             </div>
             <div>
-              <dt className="eyebrow">{pctOf(p.confidence_level, 0)} conformal set</dt>
+              <dt className="eyebrow">
+                <Explain id="conformal">{pctOf(p.confidence_level, 0)} conformal set</Explain>
+              </dt>
               <dd className="mt-1.5 flex flex-wrap gap-1">
                 {p.conformal_set.map((x) => (
                   <Badge key={x} tone="plain" dot={false} className="font-mono">
@@ -89,11 +94,15 @@ export function ModelView({ m, live }: { m: PredictResponse; live: boolean }) {
               </dd>
             </div>
             <div>
-              <dt className="eyebrow">Model uncertainty</dt>
+              <dt className="eyebrow">
+                <Explain id="modelUncertainty">Model uncertainty</Explain>
+              </dt>
               <dd className="num mt-1 font-mono text-[15px]">{fixed(p.epistemic_uncertainty, 2)}</dd>
             </div>
             <div>
-              <dt className="eyebrow">Model scale</dt>
+              <dt className="eyebrow">
+                <Explain id="modelScale">Model scale</Explain>
+              </dt>
               <dd className="num mt-1 font-mono text-[15px]">
                 {p.credit_score} <span className="text-[11px] text-ink-3">of 300-900, not a bureau score</span>
               </dd>

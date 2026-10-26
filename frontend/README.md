@@ -3,8 +3,8 @@ Vouch demo app: landing page, guided story over a mock server, community, and th
 
 ## Status
 - Works: landing (Vouch story: assessment panel, sourced credit-gap figures and research cards, Vouch Score builder, stress test, explanation), community platform (`/community`: discover feed, profiles with known and evidence vouching, setback stand-by, the borrower's own ask), four-step onboarding (simulated identity anchor), borrower, voucher and lender views, contract-event ledger, demo director, `?jump=<step>` fallback. One top bar on every app screen switches between Guided story, Community and Assessment desk (a dot shows whether the backend is up); each route sets the tab title and opens at the top.
-- Live when the backend answers: the Assessment desk (assessment, what-if, predictive model, decision), the community platform, and the lender console's live book. The guided story stays on `src/mocks/`. If the backend is down or a call fails, live screens fall back to demo data instead of an error: the community to `src/mocks/community.ts`, the Assessment desk to recorded backend runs in `src/mocks/deskRecorded.ts`, the live book hides; a refusal from the backend (a 4xx) is shown as its reason.
-- Missing: generated types from `make types` (the contract is still a placeholder), CI Node setup (needs Abhishek).
+- Live when the backend answers: the Assessment desk (assessment, what-if, predictive model, decision), the community platform, and the lender console's live book. The guided story stays on `src/mocks/`. If the backend is down or a call fails, live screens fall back to demo data instead of an error: the community to `src/mocks/community.ts`, the Assessment desk to recorded backend runs in `src/mocks/deskRecorded.ts`, the live book gives way to a "Try again" line; a live backend that stops answering turns offline on the next failed call; a refusal from the backend (a 4xx) is shown as its reason.
+- Types: live calls in `src/api/backend.ts` use the generated `src/types/api.d.ts` (`make types`); the guided story uses the hand-written mock shapes in `src/api/types.ts`.
 
 ## Run
 ```bash
@@ -12,7 +12,7 @@ cd frontend
 npm ci
 make dev
 ```
-Opens on `http://127.0.0.1:5173`. From the repo root, `make dev` starts it too.
+Opens on `http://127.0.0.1:5173`. From the repo root, `make dev` starts it too; it does not start the backend (`backend/` has no Makefile).
 
 The Assessment desk (`/app/assess`) needs the backend as well. In a second terminal:
 ```bash
@@ -39,7 +39,7 @@ Opens frontend on `http://localhost:5173` with the backend API automatically ava
 | `src/mocks/` | mock server, seed data, and `engine/` (trust paths, scoring, slashing, nullifier stub, EMI) with tests |
 | `src/routes/` | one file per screen |
 | `src/layout/` | route shells: `RootLayout` (tab title, scroll reset), `AppShell`, `CommunityShell`, and `ProductNav`, the shared top bar |
-| `src/features/` | screen-specific components (score, graph, borrower, voucher, lender, chain, demo, onboarding, landing, community, assess) |
+| `src/features/` | screen-specific components (score, graph, borrower, voucher, lender, chain, demo, onboarding, landing, community, assess, explain: the formula hovers and their registry) |
 | `src/components/ui/` | shared primitives (button, badge, avatar, modal, card) |
 | `src/components/icons/` | the custom SVG icon set; never emoji |
 | `src/components/bits/` | React Bits components, vendored and restyled through props |

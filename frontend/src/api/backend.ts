@@ -39,7 +39,7 @@ const enc = encodeURIComponent;
 const viewer = (viewerId?: string) => (viewerId ? `?viewer_id=${enc(viewerId)}` : '');
 
 export const backend = {
-  health: () => request<Health>('GET', '/health', undefined, 2500),
+  health: () => request<Health>('GET', '/health', undefined, 5000),
   users: () => request<BackendUser[]>('GET', '/api/v1/users'),
   vouchSummary: (userId: string) => request<VouchSummary>('GET', `/api/v1/users/${enc(userId)}/vouch-summary`),
 

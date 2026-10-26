@@ -1,9 +1,12 @@
 /**
  * Is the real backend reachable? One shared probe of `GET /health`, so every screen agrees on
- * whether it shows live results or tells the presenter how to start the server.
+ * whether it shows live results or demo data. Any later call that gets no answer (or a 5xx) turns
+ * a live backend offline; "Try again" probes once more, and screens reload live data when it
+ * answers. States and transitions: docs/FRONTEND_FALLBACK.md.
  */
 import { useSyncExternalStore } from 'react';
 import { backend, type Health } from '@/api/backend';
+import { onOutage } from '@/api/http';
 
 export type BackendState =
   | { status: 'checking' }
@@ -18,6 +21,10 @@ function set(next: BackendState) {
   state = next;
   listeners.forEach((l) => l());
 }
+
+onOutage((message) => {
+  if (state.status === 'live') set({ status: 'offline', message });
+});
 
 /** Probe the backend again (on mount, and from the "Try again" button). */
 export function checkBackend(): Promise<void> {

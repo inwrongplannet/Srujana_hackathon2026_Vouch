@@ -11,9 +11,11 @@ import { isRefusal } from '@/api/http';
 import { Button } from '@/components/ui/Button';
 import { Card, CardHead } from '@/components/ui/Card';
 import { SourceBadge } from '@/components/ui/SourceBadge';
+import { Explain } from '@/features/explain/Explain';
 import { Badge, type Tone } from '@/components/ui/StatusBadge';
 import { formatMoney, inr, pct } from '@/lib/format';
 import { useBackend } from '@/state/backendStatus';
+import { TryAgain } from '@/layout/ProductNav';
 
 const TONE: Record<string, Tone> = { ACTIVE: 'neel', SETTLED: 'active', REPAID: 'active', DEFAULTED: 'defaulted' };
 const money = (v: string) => formatMoney(inr(v));
@@ -87,7 +89,8 @@ function LoanRow({ loan, onDone }: { loan: LoanSummary; onDone: (cascade?: Defau
 }
 
 export function LiveBook() {
-  const live = useBackend().status === 'live';
+  const status = useBackend().status;
+  const live = status === 'live';
   const [book, setBook] = useState<Book | null>(null);
   const [unreadable, setUnreadable] = useState(false);
   const [cascade, setCascade] = useState<DefaultResult | null>(null);
@@ -107,7 +110,16 @@ export function LiveBook() {
     if (live) void load();
   }, [live, load]);
 
-  if (!live || (unreadable && !book)) return null;
+  if (status === 'checking' && !book) return null;
+  if (!live || (unreadable && !book)) {
+    return (
+      <p className="flex flex-wrap items-center gap-3 rounded-[10px] border border-rule bg-surface px-4 py-2.5 text-[12.5px] text-ink-3">
+        <SourceBadge live={false} />
+        Live book hidden: the backend is not answering. The book below is the story&rsquo;s demo data.
+        <TryAgain />
+      </p>
+    );
+  }
 
   return (
     <Card className="p-6">
@@ -135,7 +147,7 @@ export function LiveBook() {
               ['Fee-bearing payments', String(book.treasury.transaction_count)],
             ].map(([k, v]) => (
               <div key={k} className="bg-surface px-4 py-2.5">
-                <dt className="text-[11.5px] text-ink-3">{k}</dt>
+                <dt className="text-[11.5px] text-ink-3">{k === 'Fee on each payment' ? <Explain id="fee">{k}</Explain> : k}</dt>
                 <dd className="num text-[17px] font-medium">{v}</dd>
               </div>
             ))}

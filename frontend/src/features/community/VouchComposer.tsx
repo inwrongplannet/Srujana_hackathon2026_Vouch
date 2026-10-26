@@ -1,19 +1,22 @@
 /**
  * The viewer vouches for a borrower, one of two ways. KNOWN: say how you know them. EVIDENCE: you
- * don't, but you read their verified summary and stake reputation on your judgement. Before the
- * hold, the composer shows the cost: points staked, the weight it will carry, the score change,
- * and the reputation won or lost on the outcome.
+ * don't, but you read their verified summary and stake reputation on your judgement. The stake is
+ * the platform's fixed VOUCH_STAKE, never the voucher's choice. Before the hold, the composer shows
+ * the cost: points staked, the weight it will carry, the score change, and the reputation won or
+ * lost on the outcome.
  */
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { backend, type VouchPreview } from '@/api/backend';
 import { toApiId } from '@/api/communityAdapter';
 import HoldButton from '@/components/bits/HoldButton';
 import RubberSegment from '@/components/bits/RubberSegment';
 import { IconCheck, IconVouch } from '@/components/icons';
 import { fmt } from '@/lib/format';
+import { Explain } from '@/features/explain/Explain';
 import { D } from '@/mocks/engine/params';
 import {
   JUDGE_MIN_RESOLVED,
+  VOUCH_STAKE,
   communityScore,
   rewardPreview,
   utilisation,
@@ -34,7 +37,7 @@ const RELATIONSHIPS: { value: Relationship; label: string }[] = [
   { value: 'FAMILY', label: 'Family' },
 ];
 
-function Stat({ label, value, tone = '' }: { label: string; value: string; tone?: string }) {
+function Stat({ label, value, tone = '' }: { label: ReactNode; value: string; tone?: string }) {
   return (
     <div>
       <p className="text-[12px] text-ink-3">{label}</p>
@@ -50,13 +53,12 @@ export function VouchComposer({ ask, viewerId }: { ask: Ask; viewerId: string })
   const [kind, setKind] = useState<VouchKind>(knows ? 'KNOWN' : 'EVIDENCE');
   const [relationship, setRelationship] = useState<Relationship>('NEIGHBOUR');
   const [years, setYears] = useState(9);
-  const [stake, setStake] = useState(15);
   const [read, setRead] = useState(false);
 
   const already = ask.vouches.some((v) => v.voucherId === viewerId);
   const shown = ask.verified.filter((x) => x.shown);
-  const vouch: Vouch = { voucherId: viewerId, kind, stake: D(stake), relationship, yearsKnown: years };
-  const fits = utilisation(me, D(stake)) !== null;
+  const vouch: Vouch = { voucherId: viewerId, kind, stake: VOUCH_STAKE, relationship, yearsKnown: years };
+  const fits = utilisation(me, VOUCH_STAKE) !== null;
   const w = weight(me, vouch);
   const local = {
     w,
@@ -75,7 +77,7 @@ export function VouchComposer({ ask, viewerId }: { ask: Ask; viewerId: string })
         .preview(toApiId(ask.id), {
           voucher_id: toApiId(viewerId),
           kind,
-          stake: String(stake),
+          stake: VOUCH_STAKE.toString(),
           relationship: kind === 'KNOWN' ? relationship : undefined,
           years_known: kind === 'KNOWN' ? years : undefined,
           read_verified: kind === 'EVIDENCE' && read,
@@ -87,7 +89,7 @@ export function VouchComposer({ ask, viewerId }: { ask: Ask; viewerId: string })
       alive = false;
       window.clearTimeout(t);
     };
-  }, [source, already, ask.id, viewerId, kind, stake, relationship, years, read]);
+  }, [source, already, ask.id, viewerId, kind, relationship, years, read]);
   const preview =
     source === 'live' && remote
       ? {
@@ -179,38 +181,33 @@ export function VouchComposer({ ask, viewerId }: { ask: Ask; viewerId: string })
         </div>
       )}
 
-      <label className="mt-5 block text-[12.5px] text-ink-3" htmlFor="stake">
-        Points you stake · {fmt(me.budget.minus(me.committed).toString(), 0)} free of {fmt(me.budget.toString(), 0)}
-      </label>
-      <div className="mt-1 flex items-center gap-3">
-        <input
-          id="stake"
-          type="range"
-          min={5}
-          max={25}
-          value={stake}
-          onChange={(e) => setStake(Number(e.target.value))}
-          className="vt-range flex-1"
-          style={{ ['--fill' as string]: `${((stake - 5) / 20) * 100}%` }}
-        />
-        <span className="num w-8 text-right font-mono text-[14px]">{stake}</span>
-      </div>
+      <p className="mt-5 flex flex-wrap items-baseline justify-between gap-2 text-[12.5px] text-ink-3">
+        <span>
+          Every vouch stakes <span className="num font-mono text-[14px] text-ink">{fmt(VOUCH_STAKE.toString(), 0)}</span> reputation points, the same
+          for everyone.
+        </span>
+        <span className="num">
+          {fmt(me.budget.minus(me.committed).toString(), 0)} free of {fmt(me.budget.toString(), 0)}
+        </span>
+      </p>
 
       <div className="mt-5 grid grid-cols-2 gap-4 rounded-[10px] border border-rule bg-paper-2/50 p-4">
-        <Stat label="This vouch carries" value={`w ${fmt(preview.w.toString(), 2)}`} />
+        <Stat label={<Explain id="vouchWeight">This vouch carries</Explain>} value={`w ${fmt(preview.w.toString(), 2)}`} />
         <Stat
-          label="Their score"
+          label={<Explain id="communityScore">Their score</Explain>}
           value={`${preview.before ? fmt(preview.before.toString(), 0) : '—'} → ${fmt(preview.after.toString(), 0)}`}
         />
-        <Stat label="If they repay" value={`+${fmt(preview.gain.toString(), 2)} rep`} tone="text-active" />
-        <Stat label="If they default" value={`${fmt(preview.loss.toString(), 2)} rep`} tone="text-defaulted" />
+        <Stat label={<Explain id="reward">If they repay</Explain>} value={`+${fmt(preview.gain.toString(), 2)} rep`} tone="text-active" />
+        <Stat label={<Explain id="reward">If they default</Explain>} value={`${fmt(preview.loss.toString(), 2)} rep`} tone="text-defaulted" />
         <p className="col-span-2 text-[12px] leading-relaxed text-ink-3">
           Comparable borrowers repay {fmt(ask.expectedRepay.mul(100).toString(), 0)}% of the time. The less expected the repayment, the more you
           earn for backing them.
         </p>
       </div>
 
-      {!fits ? <p className="mt-3 text-[13px] text-defaulted">That stake is more than your free points.</p> : null}
+      {!fits ? (
+        <p className="mt-3 text-[13px] text-defaulted">A vouch needs {fmt(VOUCH_STAKE.toString(), 0)} free points; yours are committed to people you already back.</p>
+      ) : null}
       {zeroWeight && !disabled ? (
         <p className="mt-3 text-[13px] text-restricted-ink">With no record yet this vouch is logged but carries no weight.</p>
       ) : null}

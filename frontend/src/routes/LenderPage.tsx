@@ -12,8 +12,20 @@ import { BandChip } from '@/features/score/BandChip';
 import { BreakerBanner } from '@/features/lender/BreakerBanner';
 import { TrustGraph } from '@/features/graph/TrustGraph';
 import { LiveBook } from '@/features/lender/LiveBook';
+import { SourceBadge } from '@/components/ui/SourceBadge';
+import { Explain } from '@/features/explain/Explain';
+import type { FormulaId } from '@/features/explain/formulas';
 
 const loanTone = { APPLIED: 'neel', DISBURSED: 'plain', SETTLED: 'active', DEFAULTED: 'defaulted', DECLINED: 'plain' } as const;
+const HEADERS: [string, FormulaId | null][] = [
+  ['Applicant', null],
+  ['Asked', null],
+  ['Lendable score · band', 'lcb'],
+  ['Uncertainty σ²', 'sigma2'],
+  ['Model limit', 'limit'],
+  ['Vouches', null],
+  ['', null],
+];
 const loanLabel = { APPLIED: 'Awaiting decision', DISBURSED: 'Disbursed', SETTLED: 'Repaid', DEFAULTED: 'Defaulted', DECLINED: 'Declined' };
 
 export function LenderPage() {
@@ -72,9 +84,9 @@ export function LenderPage() {
           <table className="w-full min-w-[860px] text-[13.5px]">
             <thead>
               <tr className="border-y border-rule bg-paper/60 text-left">
-                {['Applicant', 'Asked', 'Lendable score · band', 'Uncertainty σ²', 'Model limit', 'Vouches', ''].map((h) => (
+                {HEADERS.map(([h, id]) => (
                   <th key={h} className="eyebrow px-6 py-2.5 font-medium first:pl-6">
-                    {h}
+                    {id ? <Explain id={id}>{h}</Explain> : h}
                   </th>
                 ))}
               </tr>
@@ -112,11 +124,12 @@ export function LenderPage() {
             <TrustGraph s={s} nodeIds={network} cascade={s.lastCascade} maxHeight={640} onNodeClick={(id) => s.assessments[id] && navigate(`/app/lender/${id}`)} />
           </div>
           <p className="mt-2 flex items-center gap-2 text-[12.5px] text-ink-3">
-            <IconAnchor size={14} /> Squares are institutional anchors. Edge labels are vouch weights W = C / |Out|. Click a person to open their file.
+            <IconAnchor size={14} /> Squares are institutional anchors. Edge labels are <Explain id="rGraph">vouch weights W = C / |Out|</Explain>. Click a
+            person to open their file.
           </p>
         </Card>
         <Card className="p-6 lg:col-span-12">
-          <CardHead eyebrow="Book" title="Loans" />
+          <CardHead eyebrow="Book" title="Loans" aside={<SourceBadge live={false} />} />
           <ul className="mt-3 grid gap-x-8 md:grid-cols-2 [&>li]:border-b [&>li]:border-rule">
             {book.map((l) => (
               <li key={l.id} className="flex items-center gap-3 py-3">

@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/StatusBadge';
 import { IconArrowLeft, IconCheck, IconClose, IconRipple, IconAlert, IconBreaker } from '@/components/icons';
 import { dayDate, fmt, fmtSigned, formatMoney } from '@/lib/format';
+import { Explain } from '@/features/explain/Explain';
 import { PersonHeader } from '@/features/shared/PersonHeader';
 import { ScoreGauge } from '@/features/score/ScoreGauge';
 import { PathList } from '@/features/graph/PathList';
@@ -93,7 +94,9 @@ function CashflowRows({ s, nodeId }: { s: Snapshot; nodeId: string }) {
           <dd className={`num text-right font-mono ${Number(cf.dscr) >= 1.25 ? 'text-active' : 'text-defaulted'}`}>{fmt(cf.dscr)}×</dd>
           <dt className="text-ink-3">Income variation</dt>
           <dd className="num text-right font-mono">{fmt(cf.incomeCv)}</dd>
-          <dt className="text-ink-3">Cash-flow score</dt>
+          <dt className="text-ink-3">
+            <Explain id="cashflow">Cash-flow score</Explain>
+          </dt>
           <dd className="num text-right font-mono">{fmt(cf.sCashflow)}</dd>
         </dl>
       ) : (
@@ -147,11 +150,17 @@ function DecisionCard({ s, nodeId, loanId }: { s: Snapshot; nodeId: string; loan
     <Card className="border-neel-200 p-6 shadow-[var(--shadow-lift)]">
       <CardHead eyebrow={`Decision · ${loan.id}`} title={`${formatMoney(loan.principal)} for ${loan.purpose.toLowerCase()}`} />
       <dl className="mt-4 grid grid-cols-2 gap-y-1.5 text-[13.5px]">
-        <dt className="text-ink-3">Model limit</dt>
+        <dt className="text-ink-3">
+          <Explain id="limit">Model limit</Explain>
+        </dt>
         <dd className={`num text-right font-medium ${fits ? 'text-active' : 'text-restricted-ink'}`}>{formatMoney(a.limit)}</dd>
-        <dt className="text-ink-3">6 instalments of</dt>
+        <dt className="text-ink-3">
+          <Explain id="emi">6 instalments of</Explain>
+        </dt>
         <dd className="num text-right">{formatMoney(loan.emi, 2)}</dd>
-        <dt className="text-ink-3">If it defaults, Δ₀</dt>
+        <dt className="text-ink-3">
+          <Explain id="cascade">If it defaults, Δ₀</Explain>
+        </dt>
         <dd className="num text-right font-mono">{fmtSigned(`-${loan.delta0}`)}</dd>
       </dl>
       <div className="mt-5 flex flex-wrap gap-3">

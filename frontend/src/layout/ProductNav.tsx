@@ -6,6 +6,7 @@
 import { useEffect } from 'react';
 import { NavLink, useLocation } from 'react-router';
 import { checkBackend, useBackend } from '@/state/backendStatus';
+import { Button } from '@/components/ui/Button';
 
 const item = (active: boolean) =>
   `relative flex h-full items-center gap-1.5 whitespace-nowrap text-[13.5px] transition-colors ${
@@ -43,4 +44,14 @@ export function BackendDot() {
   const label = b.status === 'live' ? 'Backend live' : b.status === 'offline' ? 'Backend offline' : 'Checking backend';
   const tone = b.status === 'live' ? 'bg-active' : b.status === 'offline' ? 'bg-cold' : 'bg-ink-3 animate-pulse';
   return <span role="img" aria-label={label} title={label} className={`size-2 shrink-0 rounded-full ${tone}`} />;
+}
+
+/** Probes /health again without reloading the page; shown wherever a screen fell back to demo data. */
+export function TryAgain() {
+  const checking = useBackend().status === 'checking';
+  return (
+    <Button size="sm" variant="ghost" disabled={checking} onClick={() => void checkBackend()}>
+      {checking ? 'Checking…' : 'Try again'}
+    </Button>
+  );
 }
