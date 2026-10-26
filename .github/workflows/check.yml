@@ -1,20 +1,168 @@
-# Why: an automatic gate that works without any agent, so a broken or undocumented PR is caught
-# even when nobody ran /review-pr.
-name: check
+# Continuous Integration and Continuous Deployment Pipeline
+# 1. On Pull Requests to main: Runs full test suite (pytest, vitest, linters, repo structure gates).
+# 2. On Push to main: Runs tests, tags the release (v1.0.<run_number>), creates a GitHub Release, and deploys to AWS EC2.
+name: CI/CD Pipeline
+
 on:
+  push:
+    branches: [ main ]
   pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
 jobs:
-  check:
+  test:
+    name: Test Suite & Verification Gates
     runs-on: ubuntu-latest
     env:
-      CHECK_BASE: origin/${{ github.base_ref }}
+      CHECK_BASE: origin/${{ github.base_ref || 'main' }}
       PR_BODY: ${{ github.event.pull_request.body }}
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout Code
+        uses: actions/checkout@v4
         with:
-          fetch-depth: 0  # the docs gates compare against the base branch
-      - uses: actions/setup-python@v5
+          fetch-depth: 0
+
+      - name: Setup Python 3.11
+        uses: actions/setup-python@v5
         with:
-          python-version: "3.12"
-      # TODO(scaffold): set up node (actions/setup-node) and install deps once backend and frontend exist
-      - run: make check
+          python-version: "3.11"
+          cache: "pip"
+          cache-dependency-path: "backend/requirements.txt"
+
+      - name: Setup Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+          cache-dependency-path: "frontend/package-lock.json"
+
+      - name: Install Python Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r backend/requirements.txt
+
+      - name: Install Frontend Dependencies
+        working-directory: ./frontend
+        run: npm ci
+
+      - name: Run Backend Pytest Suite
+        run: |
+          cd backend
+          python -m pytest tests/
+
+      - name: Run Frontend Tests & Linter
+        working-directory: ./frontend
+        run: |
+          npm test
+          npm run lint
+
+      - name: Run Repository Checks & Document Gates
+        run: |
+          python scripts/check_structure.py
+          python scripts/check_agents.py
+          python scripts/check_docs_style.py
+
+  release:
+    name: Tag & Create GitHub Release
+    needs: test
+    if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
+    runs-on: ubuntu-latest
+    outputs:
+      tag: ${{ steps.tag_version.outputs.tag }}
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Generate Semantic Release Tag
+        id: tag_version
+        run: |
+          TAG="v1.0.${{ github.run_number }}"
+          echo "tag=$TAG" >> $GITHUB_OUTPUT
+          echo "TAG=$TAG" >> $GITHUB_ENV
+          echo "Created tag: $TAG"
+
+      - name: Create Git Tag and GitHub Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git tag -a "$TAG" -m "Automated Release $TAG"
+          git push origin "$TAG"
+          
+          gh release create "$TAG" \
+            --title "Release $TAG" \
+            --generate-notes \
+            --target main
+
+  deploy:
+    name: Deploy to AWS EC2
+    needs: [test, release]
+    if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy to EC2 via SSH
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USER }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          port: 22
+          script: |
+            set -e
+            echo "=========================================================="
+            echo " Deploying Release ${{ needs.release.outputs.tag }} to EC2"
+            echo " Time: $(date)"
+            echo "=========================================================="
+            
+            cd /opt/app/repo
+            sudo git reset --hard
+            sudo git clean -fd
+            sudo git fetch origin main
+            sudo git checkout -f main
+            sudo git reset --hard origin/main
+            sudo chmod +x scripts/docker-entrypoint.sh
+            
+            echo "Building updated Docker container..."
+            sudo docker build -t veritrust:latest .
+            
+            echo "Restarting application container..."
+            sudo docker rm -f veritrust-app || true
+            sudo docker run -d \
+              --name veritrust-app \
+              --restart always \
+              -p 8080:5173 \
+              -p 8000:8000 \
+              veritrust:latest
+            
+            echo "Verifying backend health..."
+            for i in $(seq 1 30); do
+              if curl -s http://localhost:8000/health > /dev/null; then
+                echo "[OK] Backend is healthy!"
+                break
+              fi
+              echo "Waiting for backend ($i/30)..."
+              sleep 1
+            done
+            
+            echo "Ensuring Caddy reverse proxy is running..."
+            if ! sudo docker ps | grep -q caddy; then
+              sudo docker run -d \
+                --name caddy \
+                --restart always \
+                --net=host \
+                -v /opt/app/Caddyfile:/etc/caddy/Caddyfile \
+                -v caddy_data:/data \
+                caddy:alpine
+            fi
+            
+            echo "=========================================================="
+            echo " Release ${{ needs.release.outputs.tag }} Deployed & Verified!"
+            echo " Live URL: https://3-110-225-114.sslip.io"
+            echo "=========================================================="

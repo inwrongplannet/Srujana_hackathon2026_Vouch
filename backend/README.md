@@ -83,6 +83,22 @@ python main.py treasury                       # Inspect platform treasury fees a
 python main.py --demo                         # Run automated walkthrough simulation
 ```
 
+### Mode C: Docker Execution (Full-Stack Automated Launch)
+
+Run the backend and frontend together with automatic port forwarding:
+
+```bash
+# From repository root
+./docker-run.sh        # On Linux/macOS/Git Bash
+.\docker-run.ps1       # On Windows PowerShell
+docker compose up      # Standard Docker Compose
+```
+
+Accessible at:
+- **Frontend UI:** `http://localhost:5173`
+- **Backend API & Swagger Docs:** `http://localhost:8000/docs`
+- **Health Check:** `http://localhost:8000/health`
+
 ### Step-by-Step Walkthrough
 
 1. **View all nodes in the network:**
@@ -297,6 +313,7 @@ pytest tests/test_protocol_routes.py # Vouch requests, decisions, defaults, comm
 pytest tests/test_api_routes.py     # Assessment, scenario and other REST routes (needs OR-Tools)
 pytest tests/test_platform_fee.py    # Transaction fees, treasury cuts, ledger replay and persistence
 pytest tests/test_mathematical_framework.py # Complete mathematical framework, rank weights, and calibration invariants
+pytest tests/test_rule_fallback.py     # Tuned rule-based underwriting and explainability fallback
 pytest tests/test_temporal_uncertainty.py # Temporal evidence decay and epistemic inflation
 pytest tests/test_prediction_api.py   # Predictive risk inference and conformal API
 pytest tests/test_ml_pipeline.py      # Parallel GPU training, noise generator, conformal coverage

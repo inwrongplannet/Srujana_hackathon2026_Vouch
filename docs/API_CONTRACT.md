@@ -423,18 +423,23 @@ In memory and reseeded on restart. There is no login yet: the caller names the v
     "vouch_score": "63.5",
     "vouch_count": 2,
     "bank_statement_status": "VERIFIED",
-    "evidence_age_months": 0.0
+    "evidence_age_months": 0.0,
+    "force_fallback": false
   }
   ```
-  `borrower_id` is optional; when supplied, financial and graph fields default to the borrower's registered profile. When omitted, all calculations execute directly from the provided parameters.
+  `borrower_id` is optional; when supplied, financial and graph fields default to the borrower's registered profile. When omitted, all calculations execute directly from the provided parameters. Set `force_fallback: true` to test or force the deterministic rule-based underwriter.
   Rules the response always keeps:
   - Affordability uses the assessment's basis (`affordability_input`): when the requested EMI is above the maximum affordable instalment, `decision` is `DECLINE_CANDIDATE` whatever the default probability, and `counterfactual_remedy.sustainable_emi` is that maximum.
   - A field not sent is missing, not zero: bureau factors appear only for bureau fields that were sent, and an unsent `vouch_count` is the borrower's eligible endorsements (the same report as the vouch score).
   - `epistemic_uncertainty` starts from the scorer's `1 / (1 + N x completeness)` and is inflated by evidence age.
+  - Fail-safe resilience: if machine learning model inference crashes or encounters numerical errors, the endpoint intercepts the exception and automatically evaluates via `RuleBasedFallbackEngine`, setting `is_fallback: true` and `model_source: "RULE_BASED_FALLBACK"`.
 - **Response:**
   ```json
   {
     "borrower_id": "LAKSHMI",
+    "is_fallback": false,
+    "fallback_reason": null,
+    "model_source": "PRIMARY_ML",
     "prediction": {
       "default_probability": 0.0067,
       "repayment_probability": 0.9933,

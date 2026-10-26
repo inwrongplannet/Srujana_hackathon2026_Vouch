@@ -37,6 +37,7 @@ A zone is a top-level folder with its own `AGENTS.md` (`backend/`, `frontend/`, 
 | `README.md` | Judges' first impression; marker sections keep it controlled | Overview at kickoff, rest ongoing via `/readme` |
 | `CONTRIBUTING.md` | Claude-free copy of the team rules | Before event |
 | `Makefile` | One command vocabulary (dev/test/check/seed/types) | Wired up when backend/frontend exist |
+| `docker-compose.yml`, `Dockerfile`, `.dockerignore`, `docker-run.sh`, `docker-run.ps1`, `docker-run.bat` | Dockerization, multi-container compose, and cross-platform launcher scripts for backend and frontend | Done |
 | `.env.example` | Documents required keys, no secrets | As keys are added |
 | `.gitignore` | Keeps secrets and junk out of git | Done |
 | `.github/CODEOWNERS` | Requests Abhishek's review on every PR | Before event (real username) |
