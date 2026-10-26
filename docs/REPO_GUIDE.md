@@ -53,6 +53,8 @@ A zone is a top-level folder with its own `AGENTS.md` (`backend/`, `frontend/`, 
 | `docs/ARCHITECTURE.md` | The agreed technical plan | At kickoff via `/kickoff` |
 | `docs/API_CONTRACT.md` | Lets frontend and backend be built in parallel | At kickoff, then ongoing |
 | `docs/FRONTEND_GUIDE.md` | Capabilities, data requirements, screen mappings, and request guidelines for the frontend | Ongoing |
+| `docs/FRONTEND_FALLBACK.md` | Dual-mode resilience architecture and frontend behavior when backend is offline | Done |
+| `docs/FORMULAS_EXPLAINED.md` | Plain-language guide to all mathematical formulas, economic rules, and safety mechanisms | Done |
 | `docs/SYSTEM_GUIDE.md` | Plain-language guide to models, formulas, complex interactions, and empirical benchmarks | Done |
 | `docs/TASKS.md` | Task board; how work is assigned | Via `/task` |
 | `docs/DECISIONS.md` | Log of choices and dependencies; pitch material | Via `/decide` |
