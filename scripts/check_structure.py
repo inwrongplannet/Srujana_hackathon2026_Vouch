@@ -45,7 +45,12 @@ def outside_markers(text: str) -> str | None:
         pos = e + len(end)
     kept.append(text[pos:])
     body = "".join(kept)
-    return re.sub(r"\A# .*\n", "", body, count=1)
+    body = body.replace(
+        "\n> PLACEHOLDER. Edit only through `/readme`, and only inside the marker sections.\n",
+        "\n",
+    )
+    body = re.sub(r"\A# .*\n", "", body, count=1)
+    return body.lstrip("\n")
 
 
 def check_required() -> None:
