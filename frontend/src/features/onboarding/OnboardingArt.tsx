@@ -79,7 +79,7 @@ function Phone() {
       <motion.g initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.25, duration: 0.4 }}>
         <rect x="140" y="104" width="86" height="76" rx="10" fill={SURFACE} stroke={INK} strokeWidth="1.3" />
         <text x="150" y="124" fontFamily="IBM Plex Sans" fontSize="9.5" fontWeight="600" fill={INK}>
-          VeriTrust code
+          Vouch code
         </text>
         {[0, 1, 2, 3, 4, 5].map((i) => (
           <motion.rect

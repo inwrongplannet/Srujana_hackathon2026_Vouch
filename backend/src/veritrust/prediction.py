@@ -17,8 +17,9 @@ from decimal import Decimal
 import math
 from typing import Any, Dict, List, Optional, Tuple
 
-from veritrust.affordability import calculate_emi
+from veritrust.affordability import AffordabilityEngine, affordability_input, calculate_emi
 from veritrust.engine import TrustEngine
+from veritrust.models import FinancialFeatures
 from veritrust.temporal import compute_temporal_confidences
 
 # Reason code metadata aligned with backend/ml/explain.py
@@ -112,6 +113,8 @@ def evaluate_credit_prediction(
     default_net_op = "20000.00"
     default_vouch_score = "0.0"
     default_vouch_count = 0
+    user = None
+    completeness = Decimal("1.0")
 
     if borrower_id and engine:
         user = engine.get_user(borrower_id)
@@ -121,13 +124,15 @@ def evaluate_credit_prediction(
             default_income = str(user.financial_features.monthly_income)
             default_debt = str(user.financial_features.monthly_debt)
             default_net_op = str(user.financial_features.net_operating_income)
-        # Pull live vouch score and incoming endorsements
+            completeness = user.financial_features.completeness
+        # Score and count from one report, so "0 vouches" never sits beside a positive vouch score.
         if scorer is not None:
             vouch_rep = scorer.compute_vouch_score(borrower_id)
             default_vouch_score = str(vouch_rep.vouch_score)
+            default_vouch_count = vouch_rep.eligible_endorsements
         else:
             default_vouch_score = str(user.reputation)
-        default_vouch_count = len(list(engine.graph.in_edges(borrower_id)))
+            default_vouch_count = len(list(engine.graph.in_edges(borrower_id)))
 
     # 2. Extract inputs with fallbacks
     income_val = Decimal(str(params.get("monthly_income") or default_income))
@@ -138,13 +143,22 @@ def evaluate_credit_prediction(
     rate_val = Decimal(str(params.get("annual_interest_rate") or 0.18))
 
     bureau_score_val: Optional[int] = params.get("bureau_score")
-    bureau_status_val: str = params.get("bureau_status") or "NO_FILE"
+    bureau_fields = ("bureau_max_dpd_24m", "bureau_months_30plus_24m", "bureau_written_off", "bureau_utilisation")
+    bureau_sent = any(params.get(f) is not None for f in bureau_fields)
+    bureau_status_val: str = params.get("bureau_status") or ("AVAILABLE" if bureau_sent else "NO_FILE")
+    has_bureau_file = bureau_status_val not in ("NO_FILE", "NO_RECORD") or bureau_sent
+    statuses = {
+        "bureau_status": bureau_status_val,
+        "bank_statement_status": params.get("bank_statement_status") or "VERIFIED",
+        "gst_status": params.get("gst_status") or "NOT_APPLICABLE",
+        "declared_income_status": params.get("declared_income_status") or "VERIFIED",
+    }
     bureau_max_dpd_val: int = int(params.get("bureau_max_dpd_24m") or 0)
     bureau_months_30p_val: int = int(params.get("bureau_months_30plus_24m") or 0)
     bureau_written_off_val: int = int(params.get("bureau_written_off") or 0)
     bureau_util_val: float = float(params.get("bureau_utilisation") or 0.0)
 
-    vouch_count_val: int = int(params.get("vouch_count") if params.get("vouch_count") is not None else default_vouch_count)
+    vouch_count_val: int = int(params["vouch_count"] if params.get("vouch_count") is not None else default_vouch_count)
     raw_vouch_score_str = params.get("vouch_score") or default_vouch_score
     raw_vouch_score_val = Decimal(str(raw_vouch_score_str))
 
@@ -159,14 +173,22 @@ def evaluate_credit_prediction(
     dti_ratio = total_debt_service / income_val if income_val > Decimal("0") else Decimal("1.0")
     amount_to_income = principal_val / income_val if income_val > Decimal("0") else Decimal("10.0")
 
-    # Essential expenses and cash buffer
-    if net_op_val > Decimal("0") and income_val > net_op_val:
-        essential_expenses = income_val - net_op_val
-    else:
-        essential_expenses = income_val * Decimal("0.55")
-
-    protected_buffer = max(Decimal("3000.00"), income_val * Decimal("0.15"))
-    disposable_income = max(Decimal("0.00"), income_val - essential_expenses - protected_buffer)
+    # Affordability on the assessment's basis: essential expenses are income minus NOI, a fixed
+    # undocumented-expense allowance when NOI is missing (never a share of income), then the buffer.
+    afford = AffordabilityEngine().evaluate(
+        affordability_input(
+            FinancialFeatures(
+                monthly_income=income_val,
+                monthly_debt=debt_val,
+                net_operating_income=net_op_val,
+                completeness=completeness,
+            )
+        )
+    )
+    essential_expenses = afford.essential_expenses
+    disposable_income = max(Decimal("0.00"), afford.disposable_income)
+    max_affordable_emi = afford.max_affordable_emi
+    emi_fits = monthly_emi <= max_affordable_emi
 
     if params.get("bank_surplus_median"):
         surplus_val = Decimal(str(params["bank_surplus_median"]))
@@ -183,8 +205,13 @@ def evaluate_credit_prediction(
     # Freshness-discounted effective vouch score
     effective_vouch_score = min(Decimal("100.0"), raw_vouch_score_val * temporal_rep.vouch_confidence)
 
-    # Base epistemic uncertainty inflated by staleness
-    base_epistemic = 0.12
+    # Base epistemic uncertainty from evidence depth: sigma2 = 1 / (1 + N x completeness), the
+    # scorer's formula (N = settled loans + eligible vouches + 1 when financials are on file).
+    if user is not None and scorer is not None:
+        base_epistemic = float(scorer.compute_epistemic_uncertainty(user, completeness, vouch_count_val))
+    else:
+        n_points = Decimal(vouch_count_val + 1)
+        base_epistemic = float(Decimal("1.0") / (Decimal("1.0") + n_points * completeness))
     inflated_epistemic = round(1.0 - comp_conf * (1.0 - base_epistemic), 4)
 
     is_stale = evidence_age_val >= Decimal("12.0") or comp_conf < 0.60
@@ -270,8 +297,11 @@ def evaluate_credit_prediction(
     else:
         _add_factor("bank_bounces_3m", +1.40, bank_bounces_val)
 
-    # Bureau delinquency
-    if bureau_max_dpd_val == 0:
+    # Bureau factors count only when the field was sent: a missing bureau value is disclosed, never
+    # scored as a clean record.
+    if params.get("bureau_max_dpd_24m") is None:
+        pass
+    elif bureau_max_dpd_val == 0:
         _add_factor("bureau_max_dpd_24m", -0.25, bureau_max_dpd_val)
     elif bureau_max_dpd_val < 30:
         _add_factor("bureau_max_dpd_24m", +0.10, bureau_max_dpd_val)
@@ -283,13 +313,17 @@ def evaluate_credit_prediction(
         _add_factor("bureau_max_dpd_24m", +2.40, bureau_max_dpd_val)
 
     # Bureau write-offs
-    if bureau_written_off_val == 0:
+    if params.get("bureau_written_off") is None:
+        pass
+    elif bureau_written_off_val == 0:
         _add_factor("bureau_written_off", -0.10, bureau_written_off_val)
     else:
         _add_factor("bureau_written_off", +2.50 * bureau_written_off_val, bureau_written_off_val)
 
     # Bureau utilisation
-    if bureau_util_val <= 0.35:
+    if params.get("bureau_utilisation") is None:
+        pass
+    elif bureau_util_val <= 0.35:
         _add_factor("bureau_utilisation", -0.20, bureau_util_val)
     elif bureau_util_val <= 0.70:
         _add_factor("bureau_utilisation", 0.05, bureau_util_val)
@@ -374,6 +408,8 @@ def evaluate_credit_prediction(
                 conformal_set.append("DEFAULT")
         else:
             decision = "ELIGIBLE"
+    if not emi_fits:
+        decision = "DECLINE_CANDIDATE"
 
     # Split positive and risk factors, sorted by absolute magnitude
     factor_items.sort(key=lambda x: abs(x["log_odds"]), reverse=True)
@@ -383,7 +419,7 @@ def evaluate_credit_prediction(
     # 8. Missing Evidence Disclosures
     missing_info: list[dict[str, str]] = []
     for field, (label, gap_map) in STATUS_DISCLOSURES.items():
-        val = params.get(field)
+        val = statuses[field]
         if isinstance(val, str) and val in gap_map:
             missing_info.append({
                 "code": f"MISSING_{label}",
@@ -405,6 +441,12 @@ def evaluate_credit_prediction(
             + (f"Evidence staleness warning: {staleness_warning} " if is_stale else "")
             + f"Key concern: {risk_factors[0]['text'] if risk_factors else 'borderline affordability'}."
         )
+    elif not emi_fits:
+        summary = (
+            f"The requested loan does not fit: its EMI of INR {float(monthly_emi):,.2f} is above the maximum "
+            f"affordable instalment of INR {float(max_affordable_emi):,.2f} ({afford.binding_policy_rule}). "
+            f"Default probability on these terms is {default_prob:.1%}; see the remedies for terms that fit."
+        )
     else:
         summary = (
             f"Borrower flagged as DECLINE_CANDIDATE for the requested loan parameters. "
@@ -415,35 +457,35 @@ def evaluate_credit_prediction(
     # 9. Multidimensional Underwriting Scores (0 - 100)
     # Financial capacity: ratio of disposable income to EMI, capped at 100
     if monthly_emi > Decimal("0"):
-        cap_ratio = float(disposable_income / monthly_emi)
+        cap_ratio = float(max_affordable_emi / monthly_emi)
         financial_cap_score = round(min(100.0, max(0.0, cap_ratio * 75.0)), 1)
     else:
         financial_cap_score = 100.0
 
     # Evidence reliability: base 60 + completeness, scaled down by staleness
     doc_points = 50.0
-    if params.get("bank_statement_status") == "VERIFIED":
+    if statuses["bank_statement_status"] == "VERIFIED":
         doc_points += 25.0
-    if bureau_status_val != "NO_FILE":
+    if has_bureau_file:
         doc_points += 15.0
     evidence_rel_score = round(doc_points * comp_conf, 1)
 
     # Graph reputation score: freshness-adjusted vouch score
     graph_rep_score = round(float(effective_vouch_score), 1)
 
-    # Stress resilience score: residual cash flow under 20% income shock
+    # Stress resilience: cover r = cash left for the EMI after a 20% income fall, in EMIs. Below one
+    # EMI the score is 30 x r (0 when nothing is left); from one EMI up it is 30 + 60 x (r - 1).
     shocked_income = income_val * Decimal("0.80")
-    shocked_disposable = max(Decimal("0.00"), shocked_income - essential_expenses - debt_val - monthly_emi)
     if monthly_emi > Decimal("0"):
-        shock_tolerance = float(shocked_disposable / monthly_emi)
-        stress_resil_score = round(min(100.0, max(0.0, shock_tolerance * 60.0 + 30.0)), 1)
+        cover = float((shocked_income - essential_expenses - debt_val) / monthly_emi)
+        raw_stress = 30.0 * cover if cover < 1.0 else 30.0 + 60.0 * (cover - 1.0)
+        stress_resil_score = round(min(100.0, max(0.0, raw_stress)), 1)
     else:
         stress_resil_score = 100.0
 
     # 10. Actionable Counterfactual Remedies
     is_eligible = (decision == "ELIGIBLE")
-    sustainable_emi_dec = min(disposable_income, income_val * Decimal("0.40") - debt_val)
-    sustainable_emi_dec = max(Decimal("500.00"), sustainable_emi_dec)
+    sustainable_emi_dec = max(Decimal("0.00"), max_affordable_emi)
 
     # Max sustainable principal at requested tenure
     # P = EMI * ((1+r)^n - 1) / (r * (1+r)^n)
@@ -454,13 +496,13 @@ def evaluate_credit_prediction(
     else:
         max_principal_dec = sustainable_emi_dec * Decimal(str(tenure_val))
 
-    max_recommended_principal = f"{max(Decimal('10000.00'), max_principal_dec):.2f}"
+    max_recommended_principal = f"{max(Decimal('0.00'), max_principal_dec):.2f}"
 
     # Recommended extended tenure to fit current requested principal
     recommended_tenure = tenure_val
     for test_t in [18, 24, 36, 48]:
         test_emi = calculate_emi(principal_val, rate_val, test_t)
-        if test_emi <= sustainable_emi_dec:
+        if sustainable_emi_dec > Decimal("0") and test_emi <= sustainable_emi_dec:
             recommended_tenure = test_t
             break
 
@@ -493,7 +535,7 @@ def evaluate_credit_prediction(
 
         # Calculate required additional income
         needed_emi = monthly_emi
-        deficit = needed_emi - disposable_income
+        deficit = needed_emi - max_affordable_emi
         if deficit > Decimal("0"):
             needed_extra_income = deficit / Decimal("0.35")
             req_add_income = f"{needed_extra_income:.2f}"

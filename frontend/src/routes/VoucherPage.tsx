@@ -47,7 +47,7 @@ export function VoucherPage() {
           <CardHead
             eyebrow="Out-degree conservation"
             title="Your vouch capacity"
-            aside={<span className="font-mono text-[12.5px] text-ink-3">W = C / |Out| = {fmt(me.capacity)} / {out.length || 1}</span>}
+            aside={<span className="hidden font-mono text-[12.5px] text-ink-3 sm:inline">W = C / |Out| = {fmt(me.capacity)} / {out.length || 1}</span>}
           />
           <div className="mt-6">
             <CapacityMeter s={s} voucherId={me.id} height={64} />

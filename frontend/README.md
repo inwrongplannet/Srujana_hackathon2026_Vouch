@@ -1,9 +1,9 @@
 # frontend
-VeriTrust demo app: onboarding, borrower, voucher and lender views over a mock protocol server.
+Vouch demo app: landing page, guided story over a mock server, community, and the live Assessment desk.
 
 ## Status
-- Works: landing (Vouch story: assessment panel, sourced credit-gap figures and research cards, Vouch Score builder, stress test, explanation), community platform (`/community`: discover feed, profiles with known and evidence vouching, setback stand-by, the borrower's own ask), four-step onboarding (simulated identity anchor), borrower, voucher and lender views, contract-event ledger, demo director, `?jump=<step>` fallback.
-- Mock: no backend yet. `src/mocks/` stands in for it and holds all protocol maths, copied from the graph-trust-engine, dual-axis-scoring and slashing-cascade skills.
+- Works: landing (Vouch story: assessment panel, sourced credit-gap figures and research cards, Vouch Score builder, stress test, explanation), community platform (`/community`: discover feed, profiles with known and evidence vouching, setback stand-by, the borrower's own ask), four-step onboarding (simulated identity anchor), borrower, voucher and lender views, contract-event ledger, demo director, `?jump=<step>` fallback. One top bar on every app screen switches between Guided story, Community and Assessment desk (a dot shows whether the backend is up); each route sets the tab title and opens at the top.
+- Live when the backend answers: the Assessment desk (assessment, what-if, predictive model, decision), the community platform, and the lender console's live book. The guided story stays on `src/mocks/`. If the backend is down or a call fails, live screens fall back to demo data instead of an error: the community to `src/mocks/community.ts`, the Assessment desk to recorded backend runs in `src/mocks/deskRecorded.ts`, the live book hides; a refusal from the backend (a 4xx) is shown as its reason.
 - Missing: generated types from `make types` (the contract is still a placeholder), CI Node setup (needs Abhishek).
 
 ## Run
@@ -28,6 +28,7 @@ python main.py serve --port 8000
 | `src/state/` | shared stores: the mock snapshot, the community store, and `backendStatus.ts` (is the API up) |
 | `src/mocks/` | mock server, seed data, and `engine/` (trust paths, scoring, slashing, nullifier stub, EMI) with tests |
 | `src/routes/` | one file per screen |
+| `src/layout/` | route shells: `RootLayout` (tab title, scroll reset), `AppShell`, `CommunityShell`, and `ProductNav`, the shared top bar |
 | `src/features/` | screen-specific components (score, graph, borrower, voucher, lender, chain, demo, onboarding, landing, community, assess) |
 | `src/components/ui/` | shared primitives (button, badge, avatar, modal, card) |
 | `src/components/icons/` | the custom SVG icon set; never emoji |
@@ -36,9 +37,11 @@ python main.py serve --port 8000
 | `src/styles/index.css` | Tailwind v4 theme tokens (ink on ledger paper) |
 
 ## Interfaces
-- Live backend, used by the Assessment desk: `GET /health`, `GET /api/v1/users`, `POST /api/v1/applications`, `POST /api/v1/applications/{id}/assessments`, `GET /api/v1/assessments/{id}`, `POST /api/v1/assessments/{id}/scenarios`, `POST /api/v1/predict`, `GET /api/v1/predict/sample` (`docs/API_CONTRACT.md`).
-- Typed in `src/api/backend.ts` and ready for the other screens, not yet wired: vouch requests, application decisions, defaults and the `/api/v1/community` endpoints.
-- Every other screen consumes the shapes in `src/api/types.ts`, served by `src/mocks/server.ts` until the backend has endpoints for them.
+- Assessment desk: `GET /health`, `GET /api/v1/users`, `POST /api/v1/applications`, `POST /api/v1/applications/{id}/assessments`, `GET /api/v1/assessments/{id}`, `POST /api/v1/assessments/{id}/scenarios`, `POST /api/v1/predict`, `POST /api/v1/applications/{id}/decision` (`docs/API_CONTRACT.md`).
+- Community: every `/api/v1/community` endpoint, through `src/api/communityAdapter.ts` (the backend's upper-case ids become the screens' lower-case ones there and only there).
+- Lender live book: `GET /api/v1/loans`, `POST /api/v1/loans/repay`, `POST /api/v1/loans/{id}/default`, `GET /api/v1/platform/treasury`, `GET /api/v1/transactions`.
+- Typed in `src/api/backend.ts`, not yet wired: vouch requests.
+- The guided story consumes the shapes in `src/api/types.ts`, served by `src/mocks/server.ts`.
 - Calls a backend would serve: register, requestVouch, respondVouch, previewVouch, linkSource, applyLoan, decideLoan, settle, defaultLoan, simulate, restructure.
 - Demo-only calls: advance, regionalShock, reset, jumpTo.
 

@@ -1,7 +1,6 @@
-import { Link } from 'react-router';
 import { useSnapshot } from '@/state/DemoProvider';
 import { Card, CardHead } from '@/components/ui/Card';
-import { Button } from '@/components/ui/Button';
+import { ButtonLink } from '@/components/ui/Button';
 import { IconArrowRight, IconShield } from '@/components/icons';
 import { ScoreGauge } from '@/features/score/ScoreGauge';
 import { UncertaintyPlot } from '@/features/score/UncertaintyPlot';
@@ -71,11 +70,9 @@ function NotSignedIn({ name }: { name: string }) {
       </span>
       <h1 className="display mt-6 text-[34px] leading-tight">{name} hasn’t anchored an identity yet</h1>
       <p className="mt-3 text-ink-2">The borrower view opens once she signs in with her demo Aadhaar and becomes a node on the graph.</p>
-      <Link to="/login" className="mt-8">
-        <Button size="lg" trailingIcon={<IconArrowRight size={17} />}>
-          Go to sign-in
-        </Button>
-      </Link>
+      <ButtonLink to="/login" size="lg" className="mt-8" trailingIcon={<IconArrowRight size={17} />}>
+        Go to sign-in
+      </ButtonLink>
     </div>
   );
 }

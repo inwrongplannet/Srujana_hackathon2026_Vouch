@@ -4,7 +4,9 @@
  * hold, the composer shows the cost: points staked, the weight it will carry, the score change,
  * and the reputation won or lost on the outcome.
  */
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { backend, type VouchPreview } from '@/api/backend';
+import { toApiId } from '@/api/communityAdapter';
 import HoldButton from '@/components/bits/HoldButton';
 import RubberSegment from '@/components/bits/RubberSegment';
 import { IconCheck, IconVouch } from '@/components/icons';
@@ -42,7 +44,7 @@ function Stat({ label, value, tone = '' }: { label: string; value: string; tone?
 }
 
 export function VouchComposer({ ask, viewerId }: { ask: Ask; viewerId: string }) {
-  const { members } = useCommunity();
+  const { members, source } = useCommunity();
   const me = members[viewerId]!;
   const knows = ask.knownBy.includes(viewerId);
   const [kind, setKind] = useState<VouchKind>(knows ? 'KNOWN' : 'EVIDENCE');
@@ -56,12 +58,46 @@ export function VouchComposer({ ask, viewerId }: { ask: Ask; viewerId: string })
   const vouch: Vouch = { voucherId: viewerId, kind, stake: D(stake), relationship, yearsKnown: years };
   const fits = utilisation(me, D(stake)) !== null;
   const w = weight(me, vouch);
-  const preview = {
+  const local = {
     w,
     before: communityScore(members, ask.vouches).score,
     after: communityScore(members, [...ask.vouches, vouch]).score!,
     ...rewardPreview(w, ask.expectedRepay),
   };
+
+  // Live, the preview is the backend's own (POST /vouch-preview); demo data uses the same formulas here.
+  const [remote, setRemote] = useState<VouchPreview | null>(null);
+  useEffect(() => {
+    if (source !== 'live' || already) return;
+    let alive = true;
+    const t = window.setTimeout(() => {
+      backend.community
+        .preview(toApiId(ask.id), {
+          voucher_id: toApiId(viewerId),
+          kind,
+          stake: String(stake),
+          relationship: kind === 'KNOWN' ? relationship : undefined,
+          years_known: kind === 'KNOWN' ? years : undefined,
+          read_verified: kind === 'EVIDENCE' && read,
+        })
+        .then((r) => alive && setRemote(r))
+        .catch(() => alive && setRemote(null));
+    }, 250);
+    return () => {
+      alive = false;
+      window.clearTimeout(t);
+    };
+  }, [source, already, ask.id, viewerId, kind, stake, relationship, years, read]);
+  const preview =
+    source === 'live' && remote
+      ? {
+          w: D(remote.weight),
+          before: remote.score_before ? D(remote.score_before) : null,
+          after: D(remote.score_after),
+          gain: D(remote.gain_if_repaid),
+          loss: D(remote.loss_if_default),
+        }
+      : local;
 
   if (already) {
     return (
@@ -87,7 +123,7 @@ export function VouchComposer({ ask, viewerId }: { ask: Ask; viewerId: string })
         ]}
         trackColor="#E3DDCF"
         thumbColor="#FBFAF6"
-        textColor="#6A6D76"
+        textColor="#464955"
         activeTextColor="#16181F"
         radius={10}
         aria-label="How you are vouching"

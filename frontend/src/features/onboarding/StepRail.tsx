@@ -21,7 +21,7 @@ export function StepRail({ steps, current }: { steps: string[]; current: number 
               <span className={`hidden text-[12.5px] sm:inline ${active ? 'font-medium text-ink' : 'text-ink-3'}`}>{label}</span>
             </div>
             {i < steps.length - 1 ? (
-              <span className="relative mx-3 h-px w-6 bg-rule-2 sm:w-8">
+              <span className="relative mx-2 h-px w-4 bg-rule-2 sm:mx-3 sm:w-8">
                 <motion.span
                   className="absolute inset-y-0 left-0 bg-neel-700"
                   initial={false}

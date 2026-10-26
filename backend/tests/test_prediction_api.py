@@ -186,3 +186,59 @@ def test_predict_missing_information_disclosures(client):
     assert "MISSING_GST" in codes
     assert "MISSING_DECLARED_INCOME" in codes
 
+
+
+def _predict(client, **body):
+    base = {"requested_amount": "150000.00", "requested_tenure_months": 12, "annual_interest_rate": 0.24}
+    res = client.post("/api/v1/predict", json={**base, **body})
+    assert res.status_code == 200
+    return res.json()
+
+
+def test_predict_never_eligible_when_the_emi_does_not_fit(client):
+    """Same affordability basis as the assessment: Lakshmi can afford INR 8,945 a month."""
+    # 1,50,000 at 24% over 12 months: EMI 14,183.94 > 8,945.00, so not eligible on these terms.
+    d = _predict(client, borrower_id="LAKSHMI")
+    assert d["prediction"]["decision"] == "DECLINE_CANDIDATE"
+    assert d["counterfactual_remedy"]["sustainable_emi"] == "8945.00"
+    assert "14,183.94" in d["explanation"]["summary"]
+    # Over 24 months the EMI is 7,930.66, which fits.
+    d24 = _predict(client, borrower_id="LAKSHMI", requested_tenure_months=24)
+    assert d24["prediction"]["decision"] == "ELIGIBLE"
+
+
+def test_predict_undocumented_expenses_use_the_fixed_allowance(client):
+    """Imran has no net operating income on file: expenses are the INR 10,000 allowance, not a share of income."""
+    d = _predict(client, borrower_id="IMRAN")
+    assert d["prediction"]["decision"] != "ELIGIBLE"
+    assert d["counterfactual_remedy"]["sustainable_emi"] == "8205.00"
+
+
+def test_predict_uncertainty_follows_evidence_depth(client):
+    """sigma2 = 1 / (1 + N x completeness): Lakshmi N = 2 vouches + financials = 3 at 0.90; Imran N = 1 at 0.75."""
+    assert _predict(client, borrower_id="LAKSHMI")["prediction"]["epistemic_uncertainty"] == pytest.approx(0.2703, abs=1e-4)
+    assert _predict(client, borrower_id="IMRAN")["prediction"]["epistemic_uncertainty"] == pytest.approx(0.5714, abs=1e-4)
+
+
+def test_predict_vouch_count_matches_the_vouch_score(client):
+    """Count and score come from one report: Lakshmi's seed vouches (Ramesh, Anand) are 2 eligible endorsements."""
+    d = _predict(client, borrower_id="LAKSHMI")
+    texts = [f["text"] for f in d["explanation"]["positive_factors"] + d["explanation"]["risk_factors"]]
+    assert "Community peer vouches: 2" in texts
+    assert d["multidimensional_scores"]["graph_reputation_score"] > 0
+
+
+def test_predict_missing_bureau_is_not_a_clean_record(client):
+    """No bureau file: no bureau factor is scored; a sent value is."""
+    codes = lambda d: {f["code"] for f in d["explanation"]["positive_factors"] + d["explanation"]["risk_factors"]}
+    d = _predict(client, borrower_id="LAKSHMI", bureau_status="NO_FILE")
+    assert not {c for c in codes(d) if c.startswith("BUREAU_")}
+    assert "MISSING_BUREAU_FILE" in {m["code"] for m in d["explanation"]["missing_information"]}
+    sent = _predict(client, borrower_id="LAKSHMI", bureau_status="AVAILABLE", bureau_max_dpd_24m=0)
+    assert "BUREAU_DELINQUENCY" in codes(sent)
+
+
+def test_predict_stress_resilience_is_continuous(client):
+    """After a 20% income fall Lakshmi has 30,400 - 20,500 - 2,000 = 7,900 for a 14,183.94 EMI: 30 x 0.557 = 16.7."""
+    d = _predict(client, borrower_id="LAKSHMI")
+    assert d["multidimensional_scores"]["stress_resilience_score"] == pytest.approx(16.7, abs=0.05)

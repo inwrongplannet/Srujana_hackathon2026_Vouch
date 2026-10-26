@@ -33,6 +33,7 @@ export type PredictResponse = Schemas['PredictResponse'];
 export type PlatformTreasury = Schemas['PlatformTreasurySummary'];
 export type TransactionSummary = Schemas['TransactionSummary'];
 export type RepayResponse = Schemas['RepayResponse'];
+export type LoanSummary = Schemas['LoanSummary'];
 
 const enc = encodeURIComponent;
 const viewer = (viewerId?: string) => (viewerId ? `?viewer_id=${enc(viewerId)}` : '');
@@ -52,10 +53,12 @@ export const backend = {
   decide: (applicationId: string, decision: Decision) =>
     request<DecisionResult>('POST', `/api/v1/applications/${enc(applicationId)}/decision`, { decision }),
   defaultLoan: (loanId: string, delta0?: string) => request<DefaultResult>('POST', `/api/v1/loans/${enc(loanId)}/default`, { delta0 }),
+  loans: () => request<LoanSummary[]>('GET', '/api/v1/loans'),
   repay: (loanId: string, amount: string) => request<RepayResponse>('POST', '/api/v1/loans/repay', { loan_id: loanId, amount }),
   treasury: () => request<PlatformTreasury>('GET', '/api/v1/platform/treasury'),
   transactions: () => request<TransactionSummary[]>('GET', '/api/v1/transactions'),
-  predict: (body: PredictRequest) => request<PredictResponse>('POST', '/api/v1/predict', body),
+  // Every PredictRequest field has a backend default (or a lookup by borrower_id), so callers send only what they know.
+  predict: (body: Partial<PredictRequest>) => request<PredictResponse>('POST', '/api/v1/predict', body),
   predictSample: () => request<PredictRequest>('GET', '/api/v1/predict/sample'),
 
   askForVouch: (requesterId: string, voucherId: string, note: string) =>

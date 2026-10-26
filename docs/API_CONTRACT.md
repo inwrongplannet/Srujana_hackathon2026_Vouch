@@ -427,6 +427,10 @@ In memory and reseeded on restart. There is no login yet: the caller names the v
   }
   ```
   `borrower_id` is optional; when supplied, financial and graph fields default to the borrower's registered profile. When omitted, all calculations execute directly from the provided parameters.
+  Rules the response always keeps:
+  - Affordability uses the assessment's basis (`affordability_input`): when the requested EMI is above the maximum affordable instalment, `decision` is `DECLINE_CANDIDATE` whatever the default probability, and `counterfactual_remedy.sustainable_emi` is that maximum.
+  - A field not sent is missing, not zero: bureau factors appear only for bureau fields that were sent, and an unsent `vouch_count` is the borrower's eligible endorsements (the same report as the vouch score).
+  - `epistemic_uncertainty` starts from the scorer's `1 / (1 + N x completeness)` and is inflated by evidence age.
 - **Response:**
   ```json
   {

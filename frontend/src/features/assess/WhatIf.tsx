@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react';
 import { backend, type ScenarioResult } from '@/api/backend';
-import { ApiError } from '@/api/http';
 import { Card, CardHead } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/StatusBadge';
 import { rupees } from './parts';
@@ -36,18 +35,20 @@ function Slider({ id, label, value, min, max, step, unset, onChange }: { id: str
 
 /**
  * Counterfactuals from `POST /assessments/{id}/scenarios`, re-fetched 300 ms after the last
- * change (frontend/AGENTS.md): the maths stays on the backend.
+ * change (frontend/AGENTS.md): the maths stays on the backend. With a `recorded` base case (demo
+ * data) the sliders rest and the recorded answer shows; if a live call fails, the last answer stays.
  */
-export function WhatIf({ assessmentId, principal, tenure }: { assessmentId: string; principal: number; tenure: number }) {
+export function WhatIf({ assessmentId, principal, tenure, recorded }: { assessmentId: string; principal: number; tenure: number; recorded?: ScenarioResult }) {
   const [income, setIncome] = useState<number | null>(null);
   const [expenses, setExpenses] = useState<number | null>(null);
   const [amount, setAmount] = useState(principal);
   const [months, setMonths] = useState(tenure);
-  const [result, setResult] = useState<ScenarioResult | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [result, setResult] = useState<ScenarioResult | null>(recorded ?? null);
+  const [stale, setStale] = useState(false);
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
+    if (recorded) return;
     let alive = true;
     setBusy(true);
     const timer = setTimeout(() => {
@@ -61,22 +62,23 @@ export function WhatIf({ assessmentId, principal, tenure }: { assessmentId: stri
         .then((r) => {
           if (!alive) return;
           setResult(r);
-          setError(null);
+          setStale(false);
         })
-        .catch((e: unknown) => alive && setError(e instanceof ApiError ? e.message : 'Scenario failed'))
+        .catch(() => alive && setStale(true))
         .finally(() => alive && setBusy(false));
     }, 300);
     return () => {
       alive = false;
       clearTimeout(timer);
     };
-  }, [assessmentId, income, expenses, amount, months]);
+  }, [assessmentId, income, expenses, amount, months, recorded]);
 
   return (
     <Card className="p-6">
       <CardHead eyebrow="What if" title="Move the numbers, the backend re-checks" aside={busy ? <span className="text-[12px] text-ink-3">checking…</span> : null} />
+      {recorded ? <p className="mt-2 text-[12.5px] text-ink-3">Demo data: the recorded base case. The sliders re-check on the live backend.</p> : null}
       <div className="mt-5 grid gap-5 md:grid-cols-2">
-        <div className="space-y-4">
+        <fieldset disabled={!!recorded} className="space-y-4 disabled:opacity-50">
           <Slider id="wi-income" label="Monthly income" value={income} min={5000} max={100000} step={500} unset="as on file" onChange={setIncome} />
           <Slider id="wi-expenses" label="Essential expenses a month" value={expenses} min={0} max={80000} step={500} unset="as on file" onChange={setExpenses} />
           <Slider id="wi-amount" label="Loan amount" value={amount} min={5000} max={500000} step={5000} onChange={setAmount} />
@@ -97,12 +99,11 @@ export function WhatIf({ assessmentId, principal, tenure }: { assessmentId: stri
               ))}
             </div>
           </div>
-        </div>
+        </fieldset>
 
         <div className="rounded-[10px] bg-paper p-4 text-[13.5px]">
-          {error ? (
-            <p className="text-defaulted">{error}</p>
-          ) : result ? (
+          {stale ? <p className="mb-2 text-[12px] text-ink-3">The backend did not answer; showing the last answer.</p> : null}
+          {result ? (
             <>
               <Badge tone={result.is_feasible ? 'active' : 'restricted'}>{result.is_feasible ? 'Fits' : 'Does not fit'}</Badge>
               <dl className="mt-3 grid grid-cols-2 gap-y-1.5">
