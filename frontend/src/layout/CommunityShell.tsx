@@ -12,7 +12,7 @@ import { community, useCommunity } from '@/state/communityStore';
 import { useBackend } from '@/state/backendStatus';
 import { SourceBadge } from '@/components/ui/SourceBadge';
 import { PersonMark, recordLabel } from '@/features/community/parts';
-import { ProductNav } from './ProductNav';
+import { ProductNav, TryAgain } from './ProductNav';
 
 const tab = ({ isActive }: { isActive: boolean }) =>
   `relative px-1 py-3 text-[13.5px] transition-colors ${isActive ? 'text-ink after:absolute after:inset-x-0 after:bottom-0 after:h-[2px] after:bg-ink' : 'text-ink-3 hover:text-ink-2'}`;
@@ -21,8 +21,10 @@ export function CommunityShell() {
   const { members, source, notice } = useCommunity();
   const backend = useBackend();
   // Live data as soon as the backend answers; the demo seed stays in place until then.
+  // Offline, it keeps what it holds and carries on locally, labelled as demo data.
   useEffect(() => {
     if (backend.status === 'live') void community.connect();
+    if (backend.status === 'offline') community.disconnect();
   }, [backend.status]);
   const { pathname } = useLocation();
   const borrowerSide = pathname.startsWith('/community/me');
@@ -76,6 +78,7 @@ export function CommunityShell() {
             </nav>
             <p className="flex items-center gap-3 text-[12px] text-ink-3">
               <SourceBadge live={source === 'live'} />
+              {source === 'live' ? null : <TryAgain />}
               <span className="hidden sm:inline">Viewing as</span>{' '}
               <span className="font-medium text-ink-2">
                 {borrowerSide ? 'Lakshmi, asking' : `${MEMBERS[VIEWER_ID]!.name.split(' ')[0]}, vouching`}

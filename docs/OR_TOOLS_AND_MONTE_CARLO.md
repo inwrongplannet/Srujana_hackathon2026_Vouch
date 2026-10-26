@@ -74,13 +74,13 @@ A loan plan that appears 100% affordable under static calculations can have an 8
 
 ### How VeriTrust uses Monte Carlo
 For each of the 5,000 simulated paths, the simulator steps through month $t = 1 \dots T$:
-1. **Stochastic income drift:** Samples monthly income from a Gaussian distribution:
-   $$I_t \sim \mathcal{N}(\mu_I, \sigma_I^2)$$
+1. **Stochastic income drift:** Multiplies monthly income by a Gaussian draw, floored at 0 (default volatility 0.15):
+   $$I_t = I \cdot \max(0, \epsilon_t), \quad \epsilon_t \sim \mathcal{N}(1, 0.15^2)$$
 2. **Stochastic payment delay:** Evaluates whether an invoice or receivable is delayed:
-   $$\text{Delay} \sim \text{Bernoulli}(p_{\text{delay}})$$
-   If delayed, cash is deferred to month $t+1$.
+   $$\text{Delay} \sim \text{Bernoulli}(0.05)$$
+   If delayed, 40% of that month's income is deferred to month $t+1$.
 3. **Stochastic emergency expense:** Evaluates sudden unplanned outflows:
-   $$\text{Shock} \sim \text{Poisson}(\lambda_{\text{shock}})$$
+   $$\text{Shock}_t = \text{Bernoulli}(0.10) \cdot \max(0, \mathcal{N}(4000, 2000^2)) \text{ INR}$$
 4. **Cash flow accounting:**
    $$\text{Net Cash}_t = I_t - E - \text{Debt} - \text{EMI} - \text{Shock}_t$$
    $$\text{Liquid Reserve}_t = \text{Liquid Reserve}_{t-1} + \text{Net Cash}_t$$

@@ -118,6 +118,10 @@ export const community = {
       set({ ...state, source: 'demo', notice: null });
     }
   },
+  /** The backend went offline: keep what the screens show and carry on locally, labelled as demo data. */
+  disconnect() {
+    if (state.source === 'live') set({ ...state, source: 'demo', notice: null });
+  },
   /** The viewer vouches: the stake is committed against their budget and the vouch joins the ask. */
   vouch(askId: string, vouch: Vouch) {
     return run(

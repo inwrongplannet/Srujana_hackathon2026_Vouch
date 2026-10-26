@@ -3,6 +3,8 @@ import type { ApiAssessment, ApiNode } from '@/api/types';
 import Counter from '@/components/bits/Counter';
 import { Badge, type Tone } from '@/components/ui/StatusBadge';
 import { confidencePct, fmt, geom } from '@/lib/format';
+import { Explain } from '@/features/explain/Explain';
+import type { FormulaId } from '@/features/explain/formulas';
 
 const spring = { type: 'spring' as const, duration: 0.7, bounce: 0.12 };
 
@@ -36,7 +38,9 @@ export function ScoreGauge({ a, node, compact = false }: { a: ApiAssessment; nod
     <div>
       <div className="flex flex-wrap items-end justify-between gap-6">
         <div>
-          <p className="text-[13px] text-ink-3">Score you can lend against</p>
+          <p className="text-[13px] text-ink-3">
+            <Explain id="lcb">Score you can lend against</Explain>
+          </p>
           <div className="mt-1 flex items-end gap-4">
             <Counter
               value={Number(fmt(a.lcb, 2))}
@@ -56,8 +60,8 @@ export function ScoreGauge({ a, node, compact = false }: { a: ApiAssessment; nod
           </div>
         </div>
         <dl className="grid grid-cols-3 gap-px overflow-hidden rounded-[10px] border border-rule bg-rule">
-          <Stat label="Expected capacity" sym="μ" value={fmt(a.mu)} />
-          <Stat label="Uncertainty" sym="σ²" value={fmt(a.sigma2)} />
+          <Stat label="Expected capacity" sym="μ" id="mu" value={fmt(a.mu)} />
+          <Stat label="Uncertainty" sym="σ²" id="sigma2" value={fmt(a.sigma2)} />
           <Stat label="Confidence" value={confidence} />
         </dl>
       </div>
@@ -109,11 +113,19 @@ export function ScoreGauge({ a, node, compact = false }: { a: ApiAssessment; nod
   );
 }
 
-function Stat({ label, sym, value }: { label: string; sym?: string; value: string }) {
+function Stat({ label, sym, id, value }: { label: string; sym?: string; id?: FormulaId; value: string }) {
   return (
     <div className="min-w-[112px] bg-surface px-4 py-3">
       <dt className="text-[11.5px] text-ink-3">
-        {label} {sym ? <span className="font-mono">{sym}</span> : null}
+        {id ? (
+          <Explain id={id}>
+            {label} {sym ? <span className="font-mono">{sym}</span> : null}
+          </Explain>
+        ) : (
+          <>
+            {label} {sym ? <span className="font-mono">{sym}</span> : null}
+          </>
+        )}
       </dt>
       <dd className="num mt-0.5 text-[20px] font-medium tracking-tight">{value}</dd>
     </div>

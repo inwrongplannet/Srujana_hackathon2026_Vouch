@@ -150,10 +150,11 @@ $$G(u) = \sum_{s \in S} p_u(s)$$
 ### 4.1 Protected Minimum Cash Buffer ($B_{\text{floor}}$)
 Borrowers must maintain a protected liquidity buffer for subsistence:
 
-$$B_{\text{floor}} = \max\left(2000.00, 0.15 \times I_{\text{net}}\right) \quad (\text{in INR})$$
+$$B_{\text{floor}} = \max\left(3000.00, 0.15 \times I_{\text{net}}\right) \quad (\text{in INR})$$
 
-- Absolute floor: INR 2,000.00.
+- Absolute floor: INR 3,000.00 (`min_buffer_floor` in `affordability.py`).
 - Proportional floor: 15% of net monthly income ($I_{\text{net}}$).
+- Effective buffer by data reliability: verified and completeness $\ge 0.85$ keeps $B_{\text{floor}}$; completeness $\ge 0.50$ multiplies it by 1.15; below 0.50 (thin file) by 1.30. The API never marks data verified yet, so every assessment gets at least the 1.15 multiplier.
 
 ### 4.2 Disposable Income ($D$) & Monthly Surplus
 $$\text{Disposable Income } D = I_{\text{net}} - E_{\text{essential}} - B_{\text{floor}}$$
@@ -355,9 +356,9 @@ Formulates loan plan restructuring as a discrete Constraint Satisfaction Problem
 ### 8.2 Monte Carlo Stochastic Stress Testing (`stress_tester.py`)
 - **Sample Size:** $N = 5,000$ reproducible iterations with fixed seed (`seed = 42`).
 - **Stochastic Risk Models:**
-  - Income Volatility: $I_t = I_{\text{net}} \times (1 - \epsilon_I)$ where $\epsilon_I \sim \text{Beta}(\alpha=2, \beta=8)$.
-  - Payment Delay: Delay $d \sim \text{Poisson}(\lambda = 0.5 \text{ months})$.
-  - Emergency Expense Shock: Bernoulli trial $p = 0.08$ with severity $S_{\text{shock}} \sim \text{Uniform}(3000, 15000 \text{ INR})$.
+  - Income Volatility: $I_t = I_{\text{net}} \times \max(0, \epsilon_I)$ where $\epsilon_I \sim \mathcal{N}(1, 0.15^2)$.
+  - Payment Delay: Bernoulli trial $p = 0.05$ per month; 40% of that month's income moves to the next month.
+  - Emergency Expense Shock: Bernoulli trial $p = 0.10$ per month with severity $S_{\text{shock}} \sim \max(0, \mathcal{N}(4000, 2000^2))$ INR.
 - **Outputs:**
   - Shortfall Probability: $P(\text{Surplus} < 0) = \frac{1}{N} \sum_{i=1}^N \mathbf{1}_{[\text{Surplus}_i < 0]}$.
   - 5th-Percentile Value-at-Risk ($\text{VaR}_{95\%}$): 5th percentile adverse residual cash.
@@ -428,7 +429,7 @@ Executing `python main.py replay --restore`:
 | **Ancestor Slashing Factor** | - | `0.25` | $\gamma^2$ | Penalty damping factor for Level 2 transitive ancestors (`lending.py`) |
 | **Max Slashing Depth** | - | `2` | $k_{\max}$ | Maximum propagation depth (Level 3+ is cutoff) (`lending.py`) |
 | **Cluster Circuit-Breaker** | `CIRCUIT_BREAKER_THRESHOLD`| `0.30` (30%) | $\theta_{\text{circuit}}$ | Cluster default rate threshold halting vouching (`config.py`) |
-| **Min Cash Buffer Floor** | - | `2000.00` | $B_{\min}$ | Minimum protected subsistence buffer in INR (`affordability.py`) |
+| **Min Cash Buffer Floor** | - | `3000.00` | $B_{\min}$ | Minimum protected subsistence buffer in INR (`affordability.py`) |
 | **Cash Buffer Percentage** | - | `0.15` (15%) | - | Share of net income protected as cash buffer (`affordability.py`) |
 | **FOIR / ITI Policy Cap** | - | `0.40` (40%) | - | Maximum instalment to net income ratio (`affordability.py`) |
 | **DTI Policy Cap** | - | `0.50` (50%) | - | Maximum total debt service to net income ratio (`affordability.py`) |

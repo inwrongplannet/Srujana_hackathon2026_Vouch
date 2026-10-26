@@ -7,7 +7,7 @@ export function SourceBadge({ live, className = '' }: { live: boolean; className
         live ? 'border-active/30 bg-active-tint text-active' : 'border-rule-2 bg-paper-2 text-ink-3'
       } ${className}`}
     >
-      <span className={`size-1.5 rounded-full ${live ? 'bg-active' : 'bg-cold'}`} />
+      <span className={`size-1.5 rounded-full ${live ? 'bg-active' : 'bg-restricted'}`} />
       {live ? 'live backend' : 'demo data'}
     </span>
   );

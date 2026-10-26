@@ -63,7 +63,7 @@ The table below maps the original 6-hour hackathon concept to the implemented pr
 | Input data | JSON / CSV | Deterministic JSON (`data/store.json`) + SQLite + JSONL |
 | Cryptographic Audit | None | SHA-256 chained event ledger with replay recovery |
 | Interface | CLI initially; FastAPI if time permits | Interactive CLI shell (23 commands) + FastAPI REST API |
-| Testing | pytest | pytest test suite (152 tests passing) |
+| Testing | pytest | pytest test suite (159 tests passing) |
 
 ---
 

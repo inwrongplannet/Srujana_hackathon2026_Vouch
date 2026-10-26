@@ -361,7 +361,7 @@ backend/
 │           ├── protocol_routes.py               # Vouch requests, decisions, defaults
 │           ├── community_routes.py              # Community platform endpoints
 │           └── registry.py                      # Shared in-memory router registries
-├── tests/                                       # 152 passing unit tests covering all components
+├── tests/                                       # 159 passing unit tests (ML pipeline module skips without ML packages)
 │   ├── test_models.py                           # Domain models & Decimal validations
 │   ├── test_vouch.py                            # Vouching, unvouching, out-degree conservation
 │   ├── test_trust.py                            # Out-degree conservation, hop decay, multi-anchor sum
@@ -384,7 +384,7 @@ backend/
 │   ├── test_api_routes.py                       # REST API route integration tests
 │   └── test_protocol_routes.py                  # Protocol router integration tests
 ├── main.py                                      # Interactive CLI & FastAPI server runner
-└── requirements.txt                             # Pydantic v2, NetworkX, OR-Tools, FastAPI, PyTorch, XGBoost, LightGBM, pytest
+└── requirements.txt                             # Pydantic v2, NetworkX, OR-Tools, FastAPI, uvicorn, httpx, pytest (ML packages installed separately)
 ```
 
 ---
@@ -393,7 +393,7 @@ backend/
 
 All acceptance criteria across all stages are demonstrably met and verified:
 
-- **152 passing unit tests:** `pytest backend/tests` (100% green).
+- **159 passing unit tests:** run `pytest` from `backend/`; `tests/test_ml_pipeline.py` skips until the ML packages are installed.
 - **Cryptographic ledger audit:** `python main.py audit` verifies unbroken SHA-256 hash chains from Genesis to Head.
 - **Disaster recovery replay:** `python main.py replay --restore` reconstructs complete graph, loan, and platform treasury state deterministically from raw events.
 - **OR-Tools optimization:** CP-SAT solver verified on both `MIN_COST` and `MAX_PRINCIPAL` objectives with binding constraint identification.

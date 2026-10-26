@@ -4,6 +4,7 @@ import type { AssessmentResult, CombinedAssessment, Factor } from '@/api/backend
 import { Card, CardHead } from '@/components/ui/Card';
 import { Badge, type Tone } from '@/components/ui/StatusBadge';
 import { formatMoney, inr } from '@/lib/format';
+import { Explain } from '@/features/explain/Explain';
 
 /** A backend decimal string in rupees, formatted; "—" when the backend sent none. */
 export function rupees(amount: string | null | undefined, dp = 0): string {
@@ -19,7 +20,7 @@ const words = (code: string) => code.toLowerCase().replaceAll('_', ' ');
 
 const AFFORD_TONE: Record<string, Tone> = { SUFFICIENT: 'active', BORDERLINE: 'restricted', INSUFFICIENT: 'defaulted' };
 
-function Row({ label, children }: { label: string; children: ReactNode }) {
+function Row({ label, children }: { label: ReactNode; children: ReactNode }) {
   return (
     <>
       <dt className="text-ink-3">{label}</dt>
@@ -28,7 +29,7 @@ function Row({ label, children }: { label: string; children: ReactNode }) {
   );
 }
 
-function Signal({ n, title, badge, children }: { n: number; title: string; badge: ReactNode; children: ReactNode }) {
+function Signal({ n, title, badge, children }: { n: number; title: ReactNode; badge: ReactNode; children: ReactNode }) {
   return (
     <Card className="flex flex-col p-5">
       <div className="flex items-start justify-between gap-3">
@@ -57,7 +58,7 @@ export function Signals({ r, detail }: { r: AssessmentResult; detail: CombinedAs
 
       <Signal
         n={2}
-        title="Vouch Score"
+        title={<Explain id="vouchScore">Vouch Score</Explain>}
         badge={detail ? <Badge tone="neel">{words(detail.vouch.confidence)} confidence</Badge> : null}
       >
         <p className="num display text-[34px] leading-none">
@@ -66,9 +67,9 @@ export function Signals({ r, detail }: { r: AssessmentResult; detail: CombinedAs
         </p>
         {detail ? (
           <dl className="mt-3 grid grid-cols-2 gap-y-1">
-            <Row label="Endorsements counted">{detail.vouch.eligible_endorsements}</Row>
+            <Row label={<Explain id="endorsements">Endorsements counted</Explain>}>{detail.vouch.eligible_endorsements}</Row>
             <Row label="Standing">{words(detail.vouch.status)}</Row>
-            <Row label="Outcome quality">{score(detail.vouch.quality_factor, 2)}</Row>
+            <Row label={<Explain id="outcomeQuality">Outcome quality</Explain>}>{score(detail.vouch.quality_factor, 2)}</Row>
           </dl>
         ) : null}
         {new Decimal(r.vouch_score).isZero() ? <p className="mt-2 text-ink-3">Nobody has vouched yet: that is missing evidence, not risk.</p> : null}
@@ -78,14 +79,14 @@ export function Signals({ r, detail }: { r: AssessmentResult; detail: CombinedAs
         <dl className="grid grid-cols-2 gap-y-1">
           <Row label="Income a month">{rupees(r.affordability.gross_monthly_income)}</Row>
           <Row label="Essentials and EMIs">{rupees(r.affordability.non_discretionary_outflows)}</Row>
-          <Row label="Cash kept aside">{rupees(r.affordability.protected_cash_buffer)}</Row>
-          <Row label="Disposable a month">{rupees(r.affordability.disposable_income)}</Row>
-          <Row label="Largest safe EMI">{rupees(r.affordability.max_affordable_emi)}</Row>
+          <Row label={<Explain id="buffer">Cash kept aside</Explain>}>{rupees(r.affordability.protected_cash_buffer)}</Row>
+          <Row label={<Explain id="disposable">Disposable a month</Explain>}>{rupees(r.affordability.disposable_income)}</Row>
+          <Row label={<Explain id="maxEmi">Largest safe EMI</Explain>}>{rupees(r.affordability.max_affordable_emi)}</Row>
           <Row label="Set by">{words(r.affordability.binding_rule)}</Row>
         </dl>
         {stress ? (
           <p className="mt-3 text-ink-2">
-            Stress test: <b className="font-medium">{words(stress.rating)}</b>, shortfall in {score(new Decimal(String(stress.shortfall_probability)).mul(100).toString(), 1)}% of
+            <Explain id="stress">Stress test</Explain>: <b className="font-medium">{words(stress.rating)}</b>, shortfall in {score(new Decimal(String(stress.shortfall_probability)).mul(100).toString(), 1)}% of
             simulated futures; survives an income fall of {score(stress.income_shock_tolerance_percent, 1)}%.
           </p>
         ) : null}
@@ -132,7 +133,7 @@ export function Plan({ r }: { r: AssessmentResult }) {
         <dl className="mt-4 grid grid-cols-2 gap-y-1.5 text-[13.5px]">
           <Row label="Amount">{rupees(p.principal)}</Row>
           <Row label="Months">{p.term_months ?? '—'}</Row>
-          <Row label="Monthly EMI">{rupees(p.monthly_emi, 2)}</Row>
+          <Row label={<Explain id="emi">Monthly EMI</Explain>}>{rupees(p.monthly_emi, 2)}</Row>
           <Row label="Total interest">{rupees(p.total_interest, 2)}</Row>
         </dl>
       ) : (

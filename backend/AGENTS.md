@@ -24,7 +24,7 @@ Applies to any agent working in `backend/`, on top of the root `AGENTS.md`. Near
 
 ## Stack notes
 - **Framework & Runtime**: Python 3.11+, FastAPI (REST API), NetworkX (Web-of-Trust graph), Google OR-Tools CP-SAT (constrained loan optimization), Pydantic v2 (validation & schemas), SQLite + JSONL (tamper-evident audit ledger).
-- **Run tests**: `pytest` or `pytest tests/` (full test suite: 99 tests passing). Run one test: `pytest tests/test_vouch_score_v2.py`.
+- **Run tests**: `pytest` or `pytest tests/` (159 pass with `requirements.txt`; `tests/test_ml_pipeline.py` skips until the ML packages `interpret`, `torch`, `xgboost`, `lightgbm`, `pandas`, `scikit-learn` are installed). Run one test: `pytest tests/test_vouch_score_v2.py`.
 - **Run server**: `python main.py serve --port 8000` or `uvicorn veritrust.api.app:app --port 8000`. OpenAPI interactive docs at `http://localhost:8000/docs`.
 - **Folder layout**:
   - `src/veritrust/`: Core graph engine (`engine.py`), v2 scoring & heuristics (`scoring.py`), loan lifecycle (`lending.py`), cryptographic audit ledger (`ledger.py`), OR-Tools optimizer (`optimizer.py`), Monte Carlo stress tester (`stress_tester.py`), and FastAPI REST endpoints (`api/`).

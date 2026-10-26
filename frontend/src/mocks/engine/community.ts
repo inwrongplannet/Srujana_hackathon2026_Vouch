@@ -32,6 +32,8 @@ export const EVIDENCE_ONLY_CAP = D('0.60');
 /** ...plus this multiple of the known weight. */
 export const EVIDENCE_TO_KNOWN = D(2).div(3);
 export const LEARNING_RATE = D('0.10');
+/** Reputation points every vouch stakes. Set by the platform, the same for everyone; the voucher does not choose it (demo value). */
+export const VOUCH_STAKE = D(15);
 
 export interface Member {
   id: string;

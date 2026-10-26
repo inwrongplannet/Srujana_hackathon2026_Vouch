@@ -4,6 +4,7 @@ import { checkBackend, useBackend } from '@/state/backendStatus';
 import { Card, CardHead } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { SourceBadge } from '@/components/ui/SourceBadge';
+import { TryAgain } from '@/layout/ProductNav';
 import { Plan, Reasons, Signals, rupees } from '@/features/assess/parts';
 import { WhatIf } from '@/features/assess/WhatIf';
 import { ModelView } from '@/features/assess/Model';
@@ -31,6 +32,9 @@ export function AssessPage() {
   useEffect(() => {
     void checkBackend();
   }, []);
+  // Only the first probe hides the desk; a later "Try again" keeps the current run on screen.
+  const [settled, setSettled] = useState(b.status !== 'checking');
+  if (!settled && b.status !== 'checking') setSettled(true);
 
   return (
     <div className="space-y-6">
@@ -42,17 +46,15 @@ export function AssessPage() {
             Bureau, Vouch Score, affordability and evidence, shown side by side, then the lender decides.
           </p>
         </div>
-        {b.status === 'offline' ? (
+        {settled && b.status !== 'live' ? (
           <p className="flex flex-wrap items-center gap-3 text-[12.5px] text-ink-3">
             <SourceBadge live={false} />
             Backend not reachable, showing recorded runs.
-            <Button size="sm" variant="ghost" onClick={() => void checkBackend()}>
-              Retry
-            </Button>
+            <TryAgain />
           </p>
         ) : null}
       </div>
-      {b.status === 'checking' ? <Card className="p-6 text-[14px] text-ink-3">Looking for the backend…</Card> : <Desk live={b.status === 'live'} />}
+      {settled ? <Desk live={b.status === 'live'} /> : <Card className="p-6 text-[14px] text-ink-3">Looking for the backend…</Card>}
     </div>
   );
 }

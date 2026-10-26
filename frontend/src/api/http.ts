@@ -23,6 +23,16 @@ export function isRefusal(e: unknown): e is ApiError {
   return e instanceof ApiError && e.status >= 400 && e.status < 500;
 }
 
+let outageListener: ((message: string) => void) | null = null;
+
+/**
+ * Registers the one listener told about every outage (no answer or a 5xx), so the shared backend
+ * status can turn offline when a call fails after `/health` said the backend was live.
+ */
+export function onOutage(listener: (message: string) => void) {
+  outageListener = listener;
+}
+
 function detailOf(body: unknown, fallback: string): string {
   if (body && typeof body === 'object' && 'detail' in body) {
     const detail = (body as { detail: unknown }).detail;
@@ -46,7 +56,9 @@ export async function request<T>(method: 'GET' | 'POST', path: string, body?: un
       signal: controller.signal,
     });
   } catch {
-    throw new ApiError(0, 'The backend did not answer. Is it running, and does VITE_API_BASE_URL point at it?');
+    const message = 'The backend did not answer. Is it running, and does VITE_API_BASE_URL point at it?';
+    outageListener?.(message);
+    throw new ApiError(0, message);
   } finally {
     clearTimeout(timer);
   }
@@ -57,6 +69,11 @@ export async function request<T>(method: 'GET' | 'POST', path: string, body?: un
   } catch {
     parsed = null;   // a non-JSON error page; the status line is used instead
   }
-  if (!res.ok) throw new ApiError(res.status, detailOf(parsed, `${res.status} ${res.statusText}`));
+  if (!res.ok) {
+    const error = new ApiError(res.status, detailOf(parsed, `${res.status} ${res.statusText}`));
+    // The dev proxy answers 5xx when the backend is down, so a 5xx counts as an outage too.
+    if (res.status >= 500) outageListener?.(error.message);
+    throw error;
+  }
   return parsed as T;
 }

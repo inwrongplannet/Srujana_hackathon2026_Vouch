@@ -16,13 +16,13 @@ Applies to any agent working in `frontend/` on top of the root `AGENTS.md`. Near
 - **Dual-axis gauge**: show `mu_composite` (expected capacity) and `sigma2_epistem` (uncertainty) as two separate axes. Do NOT collapse them into a single credit score number — judges specifically look for both. Display `Score_final` (LCB) as the primary number with `mu ± kappa*sqrt(sigma2)` as a shaded band.
 - **Graph visualisation**: directed edges, edge weight labels, node colour by state (ACTIVE=green, RESTRICTED=amber, DEFAULTED=red, cold-start=grey). Use a library that handles DAGs correctly (e.g. Cytoscape.js or D3-DAG). Do not use a general force-directed layout that ignores edge direction.
 - **Illustrative data notice**: every screen showing figures derived from seed data must display "Illustrative data — not financial advice." This is non-negotiable.
-- **What-if simulator**: re-fetch the score from `POST /simulate` on every slider change (debounce 300ms). Never recalculate on the client side — the math lives in the backend.
+- **What-if simulator**: re-fetch the score from `POST /api/v1/assessments/{id}/scenarios` on every slider change (debounce 300ms). Never recalculate on the client side — the math lives in the backend.
 - **Uncertainty band**: a thin-file borrower's wide sigma2 band must be visually obvious. The band should shrink visibly as the user adds data in the what-if simulator.
 - **ZK stub labelling**: any UI text that references identity anchoring must say "simulated identity anchor", never "zero-knowledge proof".
 
 ## Stack notes (filled by the scaffold-zone skill)
 - Vite 8, React 19, TypeScript 6, Tailwind 4, React Router 8, Motion 14. Layout in `frontend/README.md` (Structure).
 - One test: `npx vitest run src/mocks/engine/graph.test.ts`. Lint: `npm run lint` (tsc + ESLint; `src/components/bits/` is vendored and skipped).
-- Types: import from `@/api/types` until `make types` produces `src/types/api.d.ts`. Data only through `@/api/client`.
+- Types: live backend calls use the generated `@/types/api` (`make types`) through `@/api/backend`; the guided story uses `@/api/types` through `@/api/client`.
 - Maths lives in `src/mocks/engine/` (backend stand-in). Components format, never compute; `geom()` converts to numbers for drawing only.
 - Screenshots: `?jump=<step>` replays the story (`request`, `vouch`, `apply`, `approve`, `advance`, `outcome`, `settled`, `defaulted`).
