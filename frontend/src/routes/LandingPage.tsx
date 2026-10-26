@@ -7,7 +7,9 @@ import { IllustrativeNotice } from '@/components/ui/Notice';
 import { IconArrowRight, IconCommunity, IconGauge, IconPlay } from '@/components/icons';
 import { AssessmentPanel } from '@/features/landing/AssessmentPanel';
 import { HowItDecides } from '@/features/landing/HowItDecides';
-import { GapFacts, GapHeadline, Research } from '@/features/landing/Evidence';
+import { Research } from '@/features/landing/Evidence';
+import { Problem } from '@/features/landing/Problem';
+import { HowFlow } from '@/features/landing/HowFlow';
 import { Proof } from '@/features/landing/Proof';
 import { BusinessModel } from '@/features/landing/BusinessModel';
 import { Reveal, Section } from '@/features/landing/Story';
@@ -32,10 +34,10 @@ function jumpTo(e: React.MouseEvent<HTMLAnchorElement>, id: string) {
 }
 
 const SECTIONS = [
-  { id: 'gap', label: 'The gap' },
+  { id: 'problem', label: 'The problem' },
+  { id: 'how', label: 'How it works' },
   { id: 'proof', label: 'Proof' },
   { id: 'evidence', label: 'Research' },
-  { id: 'how', label: 'How it works' },
   { id: 'business', label: 'Business' },
   { id: 'try', label: 'Try it' },
 ];
@@ -124,7 +126,7 @@ function Hero() {
           </motion.div>
           <motion.p {...enter(1.2)} className="mt-5 text-[13.5px] text-ink-3">
             Or{' '}
-            <a href="#gap" onClick={(e) => jumpTo(e, 'gap')} className="text-ink-2 underline decoration-rule-2 underline-offset-4 hover:text-ink">
+            <a href="#problem" onClick={(e) => jumpTo(e, 'problem')} className="text-ink-2 underline decoration-rule-2 underline-offset-4 hover:text-ink">
               read why it matters
             </a>
             , with the numbers and their sources.
@@ -198,8 +200,19 @@ export function LandingPage() {
       <TopNav />
       <Hero />
 
-      <Section id="gap" kicker="The gap" title="People without a file are not an edge case." aside={<GapFacts />}>
-        <GapHeadline />
+      <Section id="problem" kicker="The problem" title="Three things a credit score alone cannot see.">
+        <Problem />
+      </Section>
+
+      <Section id="how" kicker="How it works" title="Trust is useful evidence. But it needs to be earned.">
+        <p className="mt-5 max-w-[66ch] text-[16px] leading-relaxed text-ink-2">
+          Vouch is a complementary layer that combines accountable peer endorsements with consent-based financial evidence. It helps lenders see beyond a
+          credit score without replacing the credit bureau or the lender’s judgment.
+        </p>
+        <HowFlow />
+        <p className="mt-20 font-mono text-[11.5px] tracking-[0.16em] text-neel-700">SEE EACH STEP UP CLOSE</p>
+        <HowItDecides />
+        <IllustrativeNotice className="mt-8" />
       </Section>
 
       <Section id="proof" kicker="Does it work? We tested it" title="The vouch sees what the bureau misses.">
@@ -208,11 +221,6 @@ export function LandingPage() {
 
       <Section id="evidence" kicker="What the research says" title="The signal is real. So is the trap.">
         <Research />
-      </Section>
-
-      <Section id="how" kicker="How it works" title="Evidence, not popularity.">
-        <HowItDecides />
-        <IllustrativeNotice className="mt-8" />
       </Section>
 
       <Section id="business" kicker="Business model" title="Lenders pay. Borrowers never do.">

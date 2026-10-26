@@ -6,7 +6,7 @@
 import { useState } from 'react';
 import { motion } from 'motion/react';
 import { D } from '@/mocks/engine/params';
-import { edgeWeight, scoreFromWeight, TAU } from '@/mocks/engine/vouch';
+import { edgeWeight, scoreFromWeight } from '@/mocks/engine/vouch';
 import { fmt, geom } from '@/lib/format';
 import { DEFAULT_ENDORSERS, ENDORSERS, RING_SIZE, endorse } from '@/mocks/story';
 import { IconCheck } from '@/components/icons';
@@ -56,7 +56,7 @@ export function VouchBuilder() {
           );
         })}
         <li className="pt-2 text-[12.5px] leading-relaxed text-ink-3">
-          w = reputation × reliability × e<sup>−committed</sup> × edge quality. Untick everyone: the answer is “insufficient evidence”, never 0.
+          A vouch weighs more when the endorser has a good record and is not spread thin. Untick everyone: the answer is “insufficient evidence”, never 0.
         </li>
       </ul>
 
@@ -96,7 +96,7 @@ export function VouchBuilder() {
             transition={{ type: 'spring', stiffness: 200, damping: 22 }}
           />
           <text x={CW} y={CH + 24} textAnchor="end" className="fill-ink-3 font-mono text-[10px]">
-            total endorsement weight W → (score = 100 × (1 − e^(−W/{TAU.toString()})))
+            total endorsement weight →
           </text>
         </svg>
         <p className="mt-4 text-[13.5px] leading-relaxed text-ink-2">

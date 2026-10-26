@@ -10,9 +10,21 @@ export const SOURCES = {
     label: 'TransUnion CIBIL, Credit Market Indicator, Dec 2024',
     url: 'https://newsroom.transunioncibil.com/41-of-first-time-borrowers-are-gen-z-according-to-transunion-cibils-latest-cmi-report/',
   },
-  ibef: {
-    label: 'IBEF, summary of CIBIL’s Unlocking Access report, 15 Sep 2026',
-    url: 'https://www.ibef.org/news/first-time-borrowers-deepen-credit-reach-credit-uptake-among-eligible-indians-more-than-doubled-to-74-in-march-from-35-in-2017',
+  cibilCsc: {
+    label: 'TransUnion CIBIL, CIBIL–CSC partnership, first year',
+    url: 'https://newsroom.transunion.in/transunion-cibil-and-csc-partnership-benefits-15-lakh-consumers-in-first-year/',
+  },
+  bajaj: {
+    label: 'Bajaj Housing Finance, how a missed payment affects your CIBIL Score',
+    url: 'https://www.bajajhousingfinance.in/resources/how-does-missing-payment-affect-cibil-score',
+  },
+  tataDpd: {
+    label: 'Tata Capital, Days Past Due in the CIBIL report',
+    url: 'https://www.tatacapital.com/blog/credit-score/days-past-due-in-cibil-report/',
+  },
+  zet: {
+    label: 'ZET survey of 1,000+ people, reported by The Economic Times',
+    url: 'https://economictimes.indiatimes.com/industry/banking/finance/banking/nearly-half-of-indian-consumers-never-checked-their-credit-score-zet-study/articleshow/123948262.cms',
   },
   finreglab: {
     label: 'FinRegLab, cash-flow underwriting study, 2019',
@@ -32,25 +44,55 @@ export const SOURCES = {
   },
 } satisfies Record<string, Source>;
 
-/** India's credit gap, all from the same CIBIL report. */
+/** India's credit gap, the national context for the first pain point. */
 export const GAP = {
-  headline: { value: '451', unit: 'million', line: 'Indians have limited or no formal credit, out of 1.036 billion adults eligible to borrow.' },
-  facts: [
-    { value: '27%', line: 'of credit-eligible adults use formal credit: about 277 million people.' },
-    { value: '16%', line: 'credit penetration among Gen Z, who make up 34% of the credit-eligible population.' },
-    { value: '41%', line: 'of first-time borrowers are Gen Z.' },
-  ],
+  value: '451 million',
+  line: 'Indians have limited or no formal credit, out of 1.036 billion adults eligible to borrow.',
   source: SOURCES.cibil,
 };
 
-/** March 2017 against March 2026, in percent. */
-export const TREND = {
-  rows: [
-    { label: 'Eligible Indians who have borrowed at least once', from: 35, to: 74 },
-    { label: 'New-to-credit borrowers’ share of new retail loans', from: 32, to: 13 },
-  ],
-  source: SOURCES.ibef,
-};
+/**
+ * Three pain points (frontend/Vouch_Three_Pain_Points_Statistical_Evidence.md), each with its
+ * figure, its stated limit and what Vouch does about it. `draw` is the same figure as a number,
+ * used only for drawing; "about one in three" is drawn as one of three, never as a precise share.
+ */
+export const PAINS = [
+  {
+    key: 'no-file',
+    title: 'No score is not a bad score.',
+    figure: '19%',
+    draw: 19,
+    line: 'of 150,000 people in a CIBIL–CSC programme were not eligible for a numerical CIBIL Score, potentially because they had no credit history.',
+    caveat: 'One programme’s population, not a national estimate; it does not show that all of them could repay.',
+    vouch: 'Vouch records a missing file as unknown, not bad, and looks at cash flow and accountable endorsements instead.',
+    source: SOURCES.cibilCsc,
+  },
+  {
+    key: 'setback',
+    title: 'Years of paying on time, undone by one emergency.',
+    figure: '50–80 points',
+    draw: 80,
+    line: 'can come off a CIBIL Score for a single payment 30 days late, by a lender’s published estimate, however clean the record before it.',
+    context: {
+      value: '36 months',
+      line: 'of payment status sit on a CIBIL report. Thirty-five on-time months read 000; the one late month after a hospital bill reads 030, and the score follows it.',
+      source: SOURCES.tataDpd,
+    },
+    caveat: 'A lender’s estimate: TransUnion CIBIL does not publish how many points a late payment costs, and the drop depends on the rest of the report. The late entry can stay on the report for up to seven years.',
+    vouch: 'Vouch reads cash flow before and after the emergency, and who stood by the person, so years of good behaviour still count.',
+    source: SOURCES.bajaj,
+  },
+  {
+    key: 'no-reason',
+    title: 'A no without a reason.',
+    figure: '45%',
+    draw: 45,
+    line: 'of 1,000+ people surveyed had never checked their credit score; about one in three said they were rejected for a poor or missing credit history, often without an explanation.',
+    caveat: 'A survey of reported experiences, not a national estimate; it does not show that bureaus give no explanations.',
+    vouch: 'Vouch explains its own assessment: the evidence used, what is missing, and what would change the answer.',
+    source: SOURCES.zet,
+  },
+] as const;
 
 export type Finding = {
   key: string;

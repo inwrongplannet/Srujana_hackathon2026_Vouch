@@ -96,8 +96,8 @@ function Hundred({ title, n, rate, p, seed }: { title: string; n: number; rate: 
           <motion.span
             key={i}
             layout
-            transition={{ layout: { type: 'spring', stiffness: 140, damping: 22, delay: 0.3 } }}
-            className={`aspect-square rounded-full transition-colors duration-300 ${DOT[states[i]!]}`}
+            transition={{ layout: { type: 'spring', stiffness: 260, damping: 26, delay: 0.1 } }}
+            className={`aspect-square rounded-full transition-colors duration-150 ${DOT[states[i]!]}`}
           />
         ))}
       </div>
@@ -114,7 +114,7 @@ function RealLoans({ on }: { on: boolean }) {
   const [band, setBand] = useState(REAL.cells.length - 1);
   const [run, setRun] = useState(0);
   const cell = REAL.cells[band]!;
-  const p = useProgress(2.6, `${band}-${run}`, on);
+  const p = useProgress(1.2, `${band}-${run}`, on);
   return (
     <div>
       <div className="flex flex-wrap items-center gap-2" role="radiogroup" aria-label="Credit score band">
@@ -171,7 +171,7 @@ const STAGES = [
   'The vouch sees three different groups.',
   'Twelve months later.',
 ];
-const STAGE_MS = [1500, 2300, 2200];
+const STAGE_MS = [800, 1300, 1100];
 
 function AfterShock({ on }: { on: boolean }) {
   const reduce = useReducedMotion();
@@ -182,7 +182,7 @@ function AfterShock({ on }: { on: boolean }) {
   const starts = groups.map((_, i) => groups.slice(0, i).reduce((a, g) => a + g.dots, 0));
   // The cloud mixes the groups; dot ids stay fixed so each dot can travel to its group.
   const cloud = useMemo(() => shuffled(total, 5), [total]);
-  const p = useProgress(2.4, run, on && stage === 3);
+  const p = useProgress(1.1, run, on && stage === 3);
 
   useEffect(() => {
     if (!on) return;
@@ -226,9 +226,9 @@ function AfterShock({ on }: { on: boolean }) {
         key={id}
         layoutId={`shock-${id}`}
         layout
-        transition={{ type: 'spring', stiffness: 170, damping: 24 }}
+        transition={{ type: 'spring', stiffness: 300, damping: 28 }}
         animate={stage === 1 && !reduce ? { y: [0, 3, -2, 0] } : { y: 0 }}
-        className={`size-[12px] rounded-full transition-colors duration-500 ${tone(gi, local)}`}
+        className={`size-[12px] rounded-full transition-colors duration-200 ${tone(gi, local)}`}
       />
     );
   };
@@ -301,7 +301,7 @@ function Stronger({ on }: { on: boolean }) {
   // Walks up the levels once on first view, so the effect is visible before anyone drags.
   useEffect(() => {
     if (!on || touched.current || reduce) return;
-    const timers = [1, 2, 3, 4].map((l) => window.setTimeout(() => !touched.current && setLevel(l), 700 * l));
+    const timers = [1, 2, 3, 4].map((l) => window.setTimeout(() => !touched.current && setLevel(l), 350 * l));
     return () => timers.forEach((t) => window.clearTimeout(t));
   }, [on, reduce]);
   const d = DOSE[level]!;
@@ -348,7 +348,7 @@ function Stronger({ on }: { on: boolean }) {
       <div>
         <div className="grid max-w-[360px] grid-cols-10 gap-1.5" role="img" aria-label={`${d.label}: ${pct1(d.rate)} defaulted`}>
           {Array.from({ length: 100 }, (_, i) => (
-            <span key={i} className={`aspect-square rounded-full transition-colors duration-500 ${i >= 100 - k ? 'bg-defaulted' : 'bg-neel-700'}`} />
+            <span key={i} className={`aspect-square rounded-full transition-colors duration-200 ${i >= 100 - k ? 'bg-defaulted' : 'bg-neel-700'}`} />
           ))}
         </div>
         <p className="mt-4 flex items-baseline gap-2">
