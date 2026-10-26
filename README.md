@@ -1,7 +1,5 @@
 # VeriTrust
 
-> PLACEHOLDER. Edit only through `/readme`, and only inside the marker sections.
-
 <!-- BEGIN:overview -->
 <p align="center">
   <img src="docs/screenshots/landing.png" alt="Vouch landing page: no score isn't a bad score" width="900">
@@ -79,20 +77,7 @@ make hooks                    # once per clone: the pre-push docs gate
 <!-- END:quickstart -->
 
 <!-- BEGIN:features -->
-| Feature | Status | Assignee | What it does |
-|---|---|---|---|
-| Assessment desk | in-progress | Reehan | The first screen on the real FastAPI backend (`/app/assess`): pick a backend applicant, run the assessment, and see bureau, Vouch Score, affordability and evidence apart, with the best plan, a stress test, cited reasons and what-if sliders re-checked by `/scenarios`; beside it the predictive model's view (`/predict`: decision with a 90% conformal set, default probability, reasons, missing evidence, remedy); then the lender approves or declines (`/decision`), which puts a real loan on the book; when the backend is down or a call fails it shows a recorded run of the same backend (`src/mocks/deskRecorded.ts`) under a demo-data badge instead of an error; every figure with a dotted label opens the formula behind it, its terms and the file that computes it (`src/features/explain/formulas.ts`) |
-| Borrower dashboard | in-progress | Reehan | See a two-axis score, ask for a vouch and borrow |
-| Community | in-progress | Reehan | Hybrid vouching platform: borrowers post an ask and choose what strangers may see; anyone can vouch, always staking the same platform-set 15 reputation points (no stake slider), as someone who knows them (KNOWN) or as a stranger who read their verified summary (EVIDENCE, weighted by the voucher's track record and capped); vouchers stand by or step back after a setback; live on `/api/v1/community` when the backend answers (vouches, previews, stand-by and what strangers see all go to the server), demo data when it does not, with a badge saying which; every figure with a dotted label opens the formula behind it, its terms and the file that computes it (`src/features/explain/formulas.ts`) |
-| Default cascade | in-progress | Reehan | Watch a default slash sponsors and stop at two hops |
-| Demo director | in-progress | Reehan | Drive the demo story from one presenter bar |
-| Identity onboarding | in-progress | Reehan | Sign in with a demo Aadhaar and get a simulated identity anchor |
-| Landing page | in-progress | Reehan | Vouch in one screen: a live assessment cycling three cases (no file, a shock, an endorsement ring) with bureau, Vouch, affordability and evidence shown apart; three pain points with sourced figures (no score is not a bad score; years of on-time payments undone by one emergency, shown as a CIBIL report's 36-month payment history and a 50-80 point fall; a no without a reason), pinned while the reader scrolls; a four-step flow of how Vouch works with close-up tabs; three animated tests from our dataset (real Prosper loans by score band, simulated shocked borrowers split by vouch, default by vouch strength); the research for and against the idea; a business-model section (who pays whom under institution-owned and platform deployment, with each model's planning prices), each figure linked to its source; then a Vouch Score builder, a loan stress test and an explanation split into observed, reported, inferred and missing; a sticky section nav and a closing guide to the three ways in (guided story, community, Assessment desk) |
-| Lender console | in-progress | Reehan | Rank applicants on both axes and read the trust graph; when the backend is live, a live book of its loans with repay and default (showing the damped cascade), the platform treasury and recent transactions; offline, a "demo data" line with Try again in its place; every figure with a dotted label opens the formula behind it, its terms and the file that computes it (`src/features/explain/formulas.ts`) |
-| Mathematical trust framework | done | Abhijit | Chronological rank-based diminishing returns alpha_uv = 1 / 2^(r-1), hop decay delta, min-path same-source consolidation, diminishing repeat transaction minting, and atomic snapshot default penalties |
-| Platform treasury and transaction fees | done | Abhijit | Collects an auditable 1.0% fee cut on all loan disbursements and repayments, tracked on every Transaction model, accumulated in a dedicated Platform Treasury, and exposed via REST and CLI |
-| Dual-axis underwriting engine | done | Abhishek | Four-signal credit assessment combining rule-based cash-flow affordability (D = I - E - B), Google OR-Tools CP-SAT loan restructuring, Web-of-Trust graph credibility propagation, and Monte Carlo stress testing |
-| Vouching | in-progress | Reehan | See what a vouch costs you, then hold to vouch |
+Vouch combines explainable affordability analysis, Web-of-Trust reputation, stress-tested loan restructuring, and community-backed lending for people traditional credit scores cannot see.
 <!-- END:features -->
 
 <!-- BEGIN:architecture -->
@@ -131,17 +116,10 @@ The assessment desk and community run on the backend; the guided story runs on t
 <!-- END:architecture -->
 
 <!-- BEGIN:team -->
-- Abhishek: repo setup, architecture, review and merge
-- Reehan: frontend app, community platform and landing page
-- Abhijit: backend credit engine, mathematical framework and platform treasury
 <!-- END:team -->
 
 <!-- BEGIN:demo -->
-[Live demo](https://3-110-225-114.sslip.io) · presenter script and fallbacks in [docs/DEMO.md](docs/DEMO.md).
-
-1. **No file, not a bad file.** Lakshmi, a tailor with no bureau history, asks for 1,50,000 INR. The desk shows bureau "unknown", a Vouch Score of 63.5 from two vouchers, 8,945 INR a month to spare, and a restructured 24-month plan that fits where 12 months does not.
-2. **Vouching with skin in the game.** In the community, a voucher stakes a fixed 15 reputation points and sees the weight the vouch carries, the score change, and what they win or lose on the outcome.
-3. **Default, damped.** The guided story walks Lakshmi from sign-in to a loan, then a default: penalties fall on her sponsors and their sponsors, and stop at hop 3.
+[Live demo](https://3-110-225-114.sslip.io) · See the presenter script and fallback modes in [docs/DEMO.md](docs/DEMO.md).
 <!-- END:demo -->
 
 ---
