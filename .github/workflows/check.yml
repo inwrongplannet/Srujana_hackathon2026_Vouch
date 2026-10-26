@@ -122,9 +122,11 @@ jobs:
             echo "=========================================================="
             
             cd /opt/app/repo
-            sudo git fetch origin
-            sudo git checkout main
-            sudo git pull origin main
+            sudo git reset --hard
+            sudo git clean -fd
+            sudo git fetch origin main
+            sudo git checkout -f main
+            sudo git reset --hard origin/main
             sudo chmod +x scripts/docker-entrypoint.sh
             
             echo "Building updated Docker container..."
