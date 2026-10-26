@@ -2,10 +2,6 @@
 
 <!-- BEGIN:overview -->
 <p align="center">
-  <img src="docs/screenshots/landing.png" alt="Vouch landing page: no score isn't a bad score" width="900">
-</p>
-
-<p align="center">
   <b>Vouch</b> (code name VeriTrust) gives lenders fair, explainable evidence about people a credit bureau cannot see.<br>
   <a href="https://3-110-225-114.sslip.io">Live demo</a> ·
   <a href="docs/DEMO.md">Demo script</a> ·
@@ -21,6 +17,10 @@
   <img alt="OR-Tools CP-SAT" src="https://img.shields.io/badge/OR--Tools-CP--SAT-24368F">
   <img alt="Tests: 159 backend, 43 frontend" src="https://img.shields.io/badge/tests-159%20backend%20%C2%B7%2043%20frontend-2E7D4F">
   <img alt="Money: Decimal only" src="https://img.shields.io/badge/money-Decimal%20only-16181F">
+</p>
+
+<p align="center">
+  <img src="docs/screenshots/landing.png" alt="Vouch landing page: no score isn't a bad score" width="900">
 </p>
 
 **The problem.** A credit score alone cannot see three things:
