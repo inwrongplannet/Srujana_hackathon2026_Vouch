@@ -20,6 +20,7 @@ from typing import Any, Dict, List, Optional, Tuple
 from veritrust.affordability import AffordabilityEngine, affordability_input, calculate_emi
 from veritrust.engine import TrustEngine
 from veritrust.models import FinancialFeatures
+from veritrust.rule_fallback import RuleBasedFallbackEngine
 from veritrust.temporal import compute_temporal_confidences
 
 # Reason code metadata aligned with backend/ml/explain.py
@@ -545,6 +546,9 @@ def evaluate_credit_prediction(
 
     return {
         "borrower_id": borrower_id,
+        "is_fallback": False,
+        "fallback_reason": None,
+        "model_source": "PRIMARY_ML",
         "prediction": {
             "default_probability": default_prob,
             "repayment_probability": repay_prob,
@@ -586,3 +590,41 @@ def evaluate_credit_prediction(
             "actionable_recommendations": remedy_bullets,
         },
     }
+
+
+def predict_with_fallback(
+    params: dict[str, Any],
+    engine: Optional[TrustEngine] = None,
+    scorer: Optional[Any] = None,
+    force_fallback: bool = False,
+) -> dict[str, Any]:
+    """Execute credit risk prediction with automatic fallback to tuned rule-based engine.
+
+    If machine learning inference encounters an exception, unhandled numerical error,
+    or if force_fallback is explicitly requested, this seamlessly evaluates the request
+    using the deterministic RuleBasedFallbackEngine.
+    """
+    if force_fallback:
+        return RuleBasedFallbackEngine().evaluate(
+            params,
+            engine=engine,
+            scorer=scorer,
+            fallback_reason="Explicit rule-based fallback requested",
+        )
+
+    try:
+        res = evaluate_credit_prediction(params, engine=engine, scorer=scorer)
+        res["is_fallback"] = False
+        res["fallback_reason"] = None
+        res["model_source"] = "PRIMARY_ML"
+        return res
+    except ValueError:
+        raise
+    except Exception as exc:
+        return RuleBasedFallbackEngine().evaluate(
+            params,
+            engine=engine,
+            scorer=scorer,
+            fallback_reason=f"ML prediction error: {str(exc)}",
+        )
+
