@@ -106,7 +106,7 @@ The backend offers nine core analytical engines exposed through clear REST endpo
 ### Tamper-evident ledger
 - **What it does:** Records every reputation mutation, endorsement, loan creation, repayment, fee cut, and penalty in an append-only hash chain.
 - **Audit:** Any client can audit the SHA-256 chain from genesis to head or deterministically reconstruct state from raw events.
-- **Endpoint:** `GET /api/v1/audit/trail`, `GET /api/v1/transactions`.
+- **Endpoint:** `GET /api/v1/transactions` (money movements with fees). The hash-chain audit and replay have no endpoint yet; run them with `python main.py audit` and `python main.py replay` in `backend/`.
 
 ---
 
@@ -168,15 +168,15 @@ The existing frontend pages and proposed UI panels map directly to backend capab
   - Temporal Freshness Indicator: Displays age of financial statements and vouches with half-life decay indicators and staleness warnings.
   - Counterfactual Action Guide: Specific steps the applicant can take to qualify (e.g. "Extend tenure to 24 months to lower EMI to 7,930.66 INR" or "Add 2 guild endorsements to lift score above 50").
 
-### Borrower portal (`/borrower`, `/applicant`)
+### Borrower portal (`/app/borrower`)
 - **What it does:** Borrower dashboard displaying current standing and active loans.
-- **Backend calls:** `GET /api/v1/users/{id}/vouch-summary`, `GET /api/v1/loans`, `POST /api/v1/loans/repay`.
+- **Backend calls today:** none; it runs on the guided-story mock (`frontend/src/mocks/`). A live version would use `GET /api/v1/users/{id}/vouch-summary`, `GET /api/v1/loans`, `POST /api/v1/loans/repay`.
 - **UI components:**
   - Approved Credit Limit Card: Displays Lower Confidence Bound ceiling and remaining borrowing capacity.
   - Active Loan Card: Outstanding balance, interest rate, tenure, and next instalment.
   - One-Click Repay Modal: Submits repayment, displays 1% platform fee transparency, and shows instant reputation boost upon settlement.
 
-### Community platform (`/community`, `/community/ask/:id`)
+### Community platform (`/community`, `/community/p/:id`, `/community/me`)
 - **What it does:** Social underwriting network where peers vouch for each other with reputation stakes.
 - **Backend calls:** `GET /api/v1/community/asks`, `POST /api/v1/community/asks/{id}/vouch-preview`, `POST /api/v1/community/asks/{id}/vouches`, `POST /api/v1/community/asks/{id}/setback`.
 - **UI components:**
@@ -184,9 +184,9 @@ The existing frontend pages and proposed UI panels map directly to backend capab
   - Vouch Impact Preview: Interactive slider displaying score gain if loan is repaid versus reputation loss if defaulted.
   - Setback Stand-By Modal: Vouchers review borrower hardship notices and choose whether to stand by them or step back.
 
-### Lender portfolio and treasury view (`/lender`)
-- **What it does:** Portfolio management dashboard for capital providers.
-- **Backend calls:** `GET /api/v1/loans`, `GET /api/v1/transactions`, `GET /api/v1/platform/treasury`, `POST /api/v1/loans/{id}/default`.
+### Lender portfolio and treasury view (`/app/lender`)
+- **What it does:** Portfolio management dashboard for capital providers. The story file view runs on the mock; the live book calls the backend.
+- **Backend calls (live book):** `GET /api/v1/loans`, `GET /api/v1/transactions`, `GET /api/v1/platform/treasury`, `POST /api/v1/loans/{id}/default`.
 - **UI components:**
   - Portfolio Yield Dashboard: Total principal disbursed, active interest yield, and recovery rate.
   - Treasury Fee Monitor: Cumulative platform transaction fee cut collected (`PlatformTreasury`).

@@ -1,4 +1,4 @@
-# Project: <name> - Finance Hackathon
+# Project: Vouch (VeriTrust) - Finance Hackathon
 
 Instructions for every AI coding agent in this repo (Claude Code, OpenCode, Codex, Cursor, Copilot, Gemini CLI, others). Precedence: the user's prompt, then the nearest `AGENTS.md` (`backend/`, `frontend/` and `spikes/` have their own), then this file. `CLAUDE.md` and `GEMINI.md` only point here: never add rules to them.
 
@@ -10,12 +10,12 @@ Instructions for every AI coding agent in this repo (Claude Code, OpenCode, Code
 ## Commands (use exactly these; never invent entry points)
 ```bash
 make hooks      # once per clone: installs the pre-push docs gate
-make dev        # run backend + frontend
-make test       # all tests (zones and scripts)
+make dev        # run frontend (backend: cd backend && python main.py serve --port 8000)
+make test       # frontend and scripts tests (backend: cd backend && pytest)
 make lint       # linters and formatters
 make docs       # docs gates: agent files, style, docs-sync
 make check      # everything CI runs: structure, docs, lint, test, README table
-make seed       # regenerate deterministic demo data in data/
+make seed       # regenerate the template sample in data/ (app seed: backend/src/veritrust/store.py)
 make types      # regenerate frontend types from backend OpenAPI
 make readme     # regenerate the README features table
 make structure  # README markers, required files, no secrets tracked

@@ -97,7 +97,8 @@ The protocol relies on six mathematical safeguards to maintain fairness and prot
 
 ### Formula 1: The Cash-Flow Safety Floor ($D = I_{\text{net}} - E_{\text{essential}} - B_{\text{floor}}$)
 - **The Concept:** Before calculating how much a borrower can repay each month, the engine subtracts their living expenses and locks away a mandatory cash cushion:
-  $$B_{\text{floor}} = \max(\text{₹5,000}, 0.15 \times I_{\text{net}})$$
+  $$B_{\text{floor}} = \max(\text{₹3,000}, 0.15 \times I_{\text{net}})$$
+  The backend (`affordability.py`) raises this buffer by 15% when data completeness is 0.50 to 0.85 or unverified, and by 30% below 0.50 (thin file).
 - **Why it matters:** Even if an applicant has a high Vouch Score, loan payments must never starve them of basic food, housing, or subsistence. It also enforces strict policy ceilings: loan instalments must not exceed 40% of income (FOIR $\le 40\%$), and total debt must stay under 50% of income (DTI $\le 50\%$).
 
 ### Formula 2: Chronological Rank Discounting ($\alpha_{uv} = 1 / 2^{r_{uv} - 1}$)
@@ -180,12 +181,12 @@ Lakshmi's community network is evaluated:
 
 [Step 3: Affordability Check]
 Lakshmi earns ₹18,000/month from tailoring. Her essential expenses are ₹9,000.
-The engine locks away ₹5,000 as a protected subsistence buffer.
-Her disposable cash surplus is D = ₹18,000 - ₹9,000 - ₹5,000 = ₹4,000/month.
+With verified data the engine locks away ₹3,000 (the floor; 15% of ₹18,000 is only ₹2,700).
+Her disposable cash surplus is D = ₹18,000 - ₹9,000 - ₹3,000 = ₹6,000/month.
 Her requested loan requires ₹3,600/month EMI, which fits inside D.
 
 [Step 4: Model 1 Runs (Loan Eligibility Predictor)]
-Model 1 combines her ₹4,000 disposable surplus with her 72 Vouch Score.
+Model 1 combines her ₹6,000 disposable surplus with her 72 Vouch Score.
 Conformal prediction evaluates her profile against the calibration cohort.
 Model 1 Output: Decision = ELIGIBLE.
 Approved Limit: ₹22,000. Basel Score: 710. Default Probability: 12.4%.

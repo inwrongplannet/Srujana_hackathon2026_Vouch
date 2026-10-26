@@ -36,13 +36,13 @@ A zone is a top-level folder with its own `AGENTS.md` (`backend/`, `frontend/`, 
 | `CLAUDE.md`, `GEMINI.md`, `.github/copilot-instructions.md` | Thin pointers so each tool finds `AGENTS.md`; tool-specific notes only | Done |
 | `README.md` | Judges' first impression; marker sections keep it controlled | Overview at kickoff, rest ongoing via `/readme` |
 | `CONTRIBUTING.md` | Claude-free copy of the team rules | Before event |
-| `Makefile` | One command vocabulary (dev/test/check/seed/types) | Wired up when backend/frontend exist |
+| `Makefile` | One command vocabulary (dev/test/check/seed/types); delegates dev/test/lint to `frontend/Makefile` (`backend/` has no Makefile yet, so it is skipped) | Done for frontend |
 | `docker-compose.yml`, `Dockerfile`, `.dockerignore`, `docker-run.sh`, `docker-run.ps1`, `docker-run.bat` | Dockerization, multi-container compose, and cross-platform launcher scripts for backend and frontend | Done |
 | `.env.example` | Documents required keys, no secrets | As keys are added |
 | `.gitignore` | Keeps secrets and junk out of git | Done |
 | `.github/CODEOWNERS` | Requests Abhishek's review on every PR | Before event (real username) |
 | `.github/pull_request_template.md` | Same checklist on every PR | Done |
-| `.github/workflows/check.yml` | Automatic gate on every PR | Wire up with scaffolding |
+| `.github/workflows/check.yml` | Gate on every PR (repo checks, backend pytest, frontend tests and lint); on push to `main` it also tags a GitHub Release and deploys to AWS EC2 | Done |
 | `opencode.json`, `.opencode/` | OpenCode permissions, plus thin command/agent wrappers that point at `.claude/` so there is one source of truth | Done |
 | `.claude/settings.json` | Pre-approved safe commands, blocks reading `.env` | Done; add hooks later |
 | `.claude/commands/` | Slash-command shortcuts for repeated team actions | Before event |
@@ -58,9 +58,12 @@ A zone is a top-level folder with its own `AGENTS.md` (`backend/`, `frontend/`, 
 | `docs/DECISIONS.md` | Log of choices and dependencies; pitch material | Via `/decide` |
 | `docs/OR_TOOLS_AND_MONTE_CARLO.md` | Technical rationale for OR-Tools optimization and Monte Carlo stress testing | Ongoing |
 | `docs/DEMO.md` | Demo script and fallback plan | Mid-event, finalized in last 20% |
+| `docs/FRONTEND_FALLBACK.md` | How live screens fall back to recorded or demo data when the backend is down | Done |
 | `docs/frontend-features/` | One manifest per feature; feeds README table and `/status` | As features start |
+| `docs/screenshots/` | README screenshots, captured from the running app at 1440x900 on seed data | Done |
 | `docs/templates/` | Fixed formats for tasks, spike write-ups, feature manifests | Before event |
 | `backend/` | API and finance logic, scaffolded by whoever the task is assigned to | Event day |
+| `backend/data/store.json` | Persisted demo state (users, vouches, loans); reseeded from `store.py` when its version is old. Backend tests rewrite it | Done |
 | `backend/ml/` | Explainable ML models (EBM, XGBoost GPU, PyTorch GPU), conformal prediction sets, noise generator and ablation engine | Done |
 | `backend/localdocs/Implementation_Doc.md` | Master implementation roadmap, stages 1-9, code organization and production verification | Done |
 | `backend/localdocs/BENCHMARKS_AND_METRICS.md` | Consolidated empirical benchmark evaluation, model metrics, ablation findings, and conformal coverage | Done |
@@ -68,9 +71,10 @@ A zone is a top-level folder with its own `AGENTS.md` (`backend/`, `frontend/`, 
 | `backend/localdocs/FORMULAS_AND_NUMBERS.md` | Master mathematical specification: formulas, processes, constants, and calibration numbers | Done |
 | `backend/localdocs/TEMPORAL_UNCERTAINTY_AND_FRESHNESS.md` | Temporal uncertainty decay model: confidence half-lives, epistemic inflation, and LCB limit derivation | Done |
 | `backend/localdocs/PROSPER_AND_LITERATURE_LESSONS.md` | Empirical analysis of 55k Prosper loans, cheap-talk failure modes, and literature synthesis | Done |
-| `frontend/` | User-facing app, scaffolded by whoever the task is assigned to | Event day |
+| `backend/localdocs/` (other files) | `Init_Arch.md`, `VERITRUST_SYSTEM_FLOW.md`, `VOUCH_SHOCK_DATA_SPEC.md`, `VeriTrust_Project_Documentation.md` and the v2 scenarios PDF: earlier design and data specs | Done |
+| `frontend/` | User-facing app (React, Vite); its `Vouch_*.md` files are landing-page copy and evidence notes | Done |
 | `spikes/` | Sandbox for experiments; messy is fine, findings must be written | During event |
-| `data/` | Small sample and seed files | During event |
+| `data/` | Template sample from `make seed` and the git-ignored ML dataset `data/combined/` (see `data/README.md`) | Done |
 | `scripts/` | Automation behind the Makefile and skills, including the docs and agent-file gates and the pre-push hook in `scripts/hooks/` | Before/during event |
 
 ## How work flows

@@ -10,7 +10,12 @@ Vouch (VeriTrust) is a decentralized, explainable credit-underwriting and risk-a
 3. **Web-of-Trust graph engine:** Transitive trust propagation with out-degree conservation, hop decay, and per-path cycle absorption.
 4. **Monte Carlo stochastic stress tester:** Simulates 5,000 forward-looking economic scenarios (income volatility, payment delays, emergency shocks).
 5. **Explainability & forensic audit engine:** Traces rule evaluations, evidence links, graph paths, and cryptographic event hashes.
-6. **Explainable ML & conformal prediction engine:** Glassbox Explainable Boosting Machines (EBM), GPU-accelerated gradient boosting, and finite-sample conformal prediction sets ($\ge 90\%$ coverage) for calibrated default probabilities, scorecard ratings, and tri-state decisions (`ELIGIBLE`, `REVIEW`, `DECLINE_CANDIDATE`).
+6. **Predictive risk layer:** `POST /api/v1/predict` (`prediction.py`) returns a default probability, a 300-900 scorecard rating, a two-outcome conformal-style set and a tri-state decision (`ELIGIBLE`, `REVIEW`, `DECLINE_CANDIDATE`) from deterministic, inspectable rules, with `rule_fallback.py` behind it. The trained models (EBM, XGBoost, PyTorch, LightGBM, conformal sets) live offline in `backend/ml/` and produce the benchmarks; the API does not load them.
+
+Where each part runs today:
+- **Backend** (`backend/`, FastAPI on port 8000): every layer above, served by the endpoints in `docs/API_CONTRACT.md`. State lives in memory and is saved to `backend/data/store.json`; applications and assessments are in-memory only and lost on restart.
+- **Frontend** (`frontend/`, Vite on port 5173): the Assessment desk, the community and the lender console's live book call the backend and fall back to recorded or demo data when it is down (`docs/FRONTEND_FALLBACK.md`).
+- **Guided story** (landing, onboarding, borrower, voucher, lender views): runs entirely on the frontend engine in `frontend/src/mocks/engine/`, whose formulas differ from the backend's (for example, story edge weight $W = C/|Out|$ summed over all anchor paths). Formula pages say which engine they describe.
 
 ```mermaid
 flowchart TD
@@ -53,7 +58,7 @@ flowchart TD
   - Hard floor: Disposable income $D > 0$.
   - Fixed Obligation to Income Ratio (FOIR/ITI): $\le 40\%$.
   - Debt-to-Income (DTI): $\le 50\%$.
-  - Protected cash buffer: $B_{\text{floor}} = \max(\text{₹5,000}, 0.15 \times I_{\text{net}})$.
+  - Protected cash buffer: $B_{\text{floor}} = \max(\text{₹3,000}, 0.15 \times I_{\text{net}})$, raised by 15% for partial or unverified data (completeness 0.50 to 0.85) and by 30% for a thin file (below 0.50).
 
 ### 3. Google OR-Tools CP-SAT optimizer
 - **Role:** When an applicant's requested loan exceeds approved credit limits or monthly repayment caps, the optimizer searches the discrete $(P, T)$ grid to find the optimal feasible plan:
@@ -80,9 +85,10 @@ flowchart TD
 ### 5. Monte Carlo stress tester
 - **Role:** Tests repayment viability across 5,000 seeded stochastic economic futures over the proposed loan horizon.
 - **Parameters:**
-  - Income volatility: $I_t \sim \mathcal{N}(\mu, \sigma^2)$ with configurable drift.
-  - Payment receipt delays: $\text{Bernoulli}(p_{\text{delay}})$.
-  - Emergency expenditure shocks: $\text{Poisson}(\lambda_{\text{shock}})$.
+  - Income volatility: monthly income times a multiplier drawn from $\mathcal{N}(1, 0.15^2)$, floored at 0.
+  - Payment receipt delays: $\text{Bernoulli}(0.05)$ per month; 40% of that month's income moves to the next month.
+  - Emergency expenditure shocks: $\text{Bernoulli}(0.10)$ per month, cost drawn from $\mathcal{N}(4000, 2000^2)$ INR, floored at 0.
+  - Seed 42, so runs are reproducible.
 - **Diagnostics:** Shortfall risk %, 5th-percentile adverse cash cushion, and exact income drop tolerance before insolvency.
 
 ### 6. Explanation and forensic audit explorer
@@ -108,8 +114,8 @@ flowchart TD
 ### 9. Explainable ML and conformal uncertainty layer
 - **Role:** Delivers predictive credit risk inference, Basel scorecard rating (300-900), and finite-sample uncertainty coverage alongside deterministic rule scoring.
 - **Components:**
-  - `PredictiveInferenceEngine` (`POST /api/v1/predict`): Evaluates applicant profiles using calibrated ensembles.
-  - Model Palette: Glassbox Explainable Boosting Machines (EBM), XGBoost GPU with TreeSHAP, PyTorch GPU Tabular Net with Monte Carlo Dropout, LightGBM, and $L_2$ Logistic Scorecard.
+  - `POST /api/v1/predict` (`prediction.py`): deterministic risk rules over affordability, graph score and temporal confidence; it does not load the trained models.
+  - Offline model palette (`backend/ml/`, benchmarks only): Glassbox Explainable Boosting Machines (EBM), XGBoost GPU with TreeSHAP, PyTorch GPU Tabular Net with Monte Carlo Dropout, LightGBM, and $L_2$ Logistic Scorecard.
   - Conformal Prediction Sets: Split and Mondrian conformal methods guaranteeing $\ge 90\%$ coverage with tri-state decisions (`ELIGIBLE`, `REVIEW`, `DECLINE_CANDIDATE`).
   - Additive Local Reasons: Inspectable log-odds contributions and observed values per risk factor.
 

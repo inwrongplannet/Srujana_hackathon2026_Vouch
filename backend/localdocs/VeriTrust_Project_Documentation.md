@@ -1,7 +1,7 @@
 # VeriTrust --- Project Architecture and Technical Reference
 
 **Document status:** Production reference specification & verified implementation (supersedes initial POC design draft)\
-**Deliverable status:** Fully implemented, validated, and verified across `backend/src/veritrust/` and `backend/ml/` (152/152 passing tests)\
+**Deliverable status:** Fully implemented, validated, and verified across `backend/src/veritrust/` and `backend/ml/` (159 passing tests; the ML pipeline module skips without the ML packages)\
 **Master references:** [Implementation_Doc.md](Implementation_Doc.md) and [VOUCH_DEVELOPER_MASTER_V2.md](VOUCH_DEVELOPER_MASTER_V2.md)\
 **Audience:** Product, engineering, and hackathon teammates\
 **Version:** 2.0 (Production)\

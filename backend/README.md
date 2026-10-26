@@ -11,7 +11,7 @@ Web-of-trust credit engine, dual-axis underwriting, and lending simulations.
   - **Loan optimizer using Google OR-Tools:** Solves discrete search grid with CP-SAT constraint programming, optimizing for either lowest total borrowing cost (`MIN_COST`) or largest sustainable principal (`MAX_PRINCIPAL`). Outputs original request, best feasible alternative, EMI, total interest, and binding constraints.
   - **Monte Carlo stress tester:** Simulates thousands of stochastic financial scenarios (income volatility, payment delays, emergency expense shocks) using reproducible seeded pseudo-random sampling (no ML). Measures shortfall frequency, 5th-percentile adverse residual cash, and the exact income shock tolerance boundary.
   - **Explanation and evidence engine:** Generates traceable, auditable natural language explanations from the exact rules that fired, evaluating Financial Capacity, Evidence Reliability, Graph Reputation, and Stress-Test Resilience as four separate dimensions.
-- **Test Suite Complete:** 152 pytest tests covering domain models, vouch conservation, propagation, slashing, cryptographic ledger integrity, affordability rules, OR-Tools optimization, Monte Carlo stress testing, explanation synthesis, explainable ML models, conformal prediction coverage, the community engine and every API router.
+- **Test Suite Complete:** 159 pytest tests pass with `requirements.txt` (the ML pipeline module skips until the ML packages are installed), covering domain models, vouch conservation, propagation, slashing, cryptographic ledger integrity, affordability rules, OR-Tools optimization, Monte Carlo stress testing, explanation synthesis, conformal prediction coverage, the community engine and every API router.
 - **Empirical Benchmarks & Metrics Complete:** (Full specification in `localdocs/BENCHMARKS_AND_METRICS.md`):
   - Option A Shock Cohort (Model D): **0.8892 AUC**, **0.9191 PR-AUC**, Brier loss **0.1190**, KS **0.6655**, **91.01%** conformal coverage.
   - Simulated Micro-Borrower Cohort: **0.9087 AUC**, **0.7141 PR-AUC**, Brier loss **0.0717**, KS **0.6697**, **90.56%** conformal coverage.
@@ -80,7 +80,7 @@ python main.py replay --restore               # Deterministically reconstruct st
 python main.py denounce IMRAN               # Denounce bad actor and trigger slashing
 python main.py graph                          # Inspect Web-of-Trust graph topology
 python main.py treasury                       # Inspect platform treasury fees and cut rate
-python main.py --demo                         # Run automated walkthrough simulation
+python main.py --demo                         # Scripted walkthrough on its own in-memory cast (ANCHOR_BANK, ALICE, CHARLIE)
 ```
 
 ### Mode C: Docker Execution (Full-Stack Automated Launch)
@@ -217,6 +217,9 @@ Accessible at:
 | `simulate-attack [--attack sybil/collusion/dilution/burst/all]` | Adversarial attack simulator testing graph invariants & defensive safeguards |
 | `audit-decision <amt> [-t tenure] [-b borrower]` | Forensic decision explorer: explicit rule traces, primary evidence, paths, and sensitivity |
 | `recourse file/resolve/audit` | Borrower dispute workflow, evidence quality classification & score recalculation audit |
+| `temporal` | Simulate evidence freshness decay, epistemic uncertainty and recovery |
+| `default <loan_id> [--slash d0]` | Default a loan and trigger the slashing cascade |
+| `interactive` | Start the interactive shell (same as no arguments) |
 | `serve [--host host] [--port port]` | Launch FastAPI REST API server (Swagger UI at `/docs`) |
 | `graph` | Visualize the Web-of-Trust network |
 | `denounce <id> [--reason]` | Denounce bad actor and trigger 4-level slashing cascade |
@@ -251,9 +254,9 @@ Accessible at:
   - `temporal.py`: Temporal uncertainty and evidence freshness decay engine ($C(t) = 2^{-\Delta t / H}$, multi-horizon asymmetric half-lives, epistemic uncertainty inflation, LCB loan limits).
   - `prediction.py`: Predictive credit risk inference, Basel scorecard rating, honest conformal prediction sets (ELIGIBLE, REVIEW, DECLINE_CANDIDATE), additive local reason codes, missing evidence disclosures, and actionable counterfactual remedies.
   - `api/`: FastAPI REST API package. `routes.py`: applications, evidence, endorsements, assessments, scenarios, disputes, users, loans, platform treasury, predictions. `protocol_routes.py`: vouch requests, lender decisions, defaults. `community_routes.py`: the community platform. `registry.py`: in-memory applications and assessments shared by the routers.
-- `tests/`: 152 Pytest unit tests for all mathematical invariants, state transitions, ML pipeline, and ledger integrity.
+- `tests/`: 159 Pytest unit tests for all mathematical invariants, state transitions, ML pipeline, and ledger integrity.
 - `main.py`: End-to-end interactive CLI demonstration.
-- `requirements.txt`: Python package requirements (`pydantic`, `networkx`, `ortools`, `fastapi`, `torch`, `xgboost`, `lightgbm`, `interpret`, `pytest`).
+- `requirements.txt`: API and engine requirements (`pydantic`, `networkx`, `ortools`, `fastapi`, `uvicorn`, `httpx`, `pytest`). The `ml/` pipeline also needs `numpy`, `pandas`, `scikit-learn`, `torch`, `xgboost`, `lightgbm` and `interpret`, installed separately.
 
 ## Interfaces
 - **`TrustEngine`**: Core graph state manager exposing `create_user()`, `vouch()`, `unvouch()`.

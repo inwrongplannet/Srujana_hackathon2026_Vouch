@@ -189,6 +189,6 @@ Score_final  = mu_composite - kappa * sigma
 
 - **ZK circuits:** Replace with mock/simulated nullifier generation; the math is real, the crypto proof is stubbed.
 - **Smart contracts:** Simulate on-chain state with an in-memory or SQLite store; no live EVM deployment required for judging.
-- **AA rails:** Use seed cash-flow data (`make seed`) instead of live Account Aggregator API calls.
+- **AA rails:** Use the seeded cash-flow figures in `backend/src/veritrust/store.py` (and the frontend mocks) instead of live Account Aggregator API calls.
 - **Graph size:** 20-50 seeded nodes is sufficient to demonstrate multi-hop trust propagation and cycle absorption.
 - **Underwriter UI:** A single dashboard showing the dual-axis score, graph visualisation, and what-if sliders is the minimum demoable surface.
