@@ -313,6 +313,7 @@ pytest tests/test_protocol_routes.py # Vouch requests, decisions, defaults, comm
 pytest tests/test_api_routes.py     # Assessment, scenario and other REST routes (needs OR-Tools)
 pytest tests/test_platform_fee.py    # Transaction fees, treasury cuts, ledger replay and persistence
 pytest tests/test_mathematical_framework.py # Complete mathematical framework, rank weights, and calibration invariants
+pytest tests/test_rule_fallback.py     # Tuned rule-based underwriting and explainability fallback
 pytest tests/test_temporal_uncertainty.py # Temporal evidence decay and epistemic inflation
 pytest tests/test_prediction_api.py   # Predictive risk inference and conformal API
 pytest tests/test_ml_pipeline.py      # Parallel GPU training, noise generator, conformal coverage

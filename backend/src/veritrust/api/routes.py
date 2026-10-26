@@ -23,7 +23,7 @@ from veritrust.models import (
 from veritrust.optimizer import LoanOptimizer, OptimizationResult
 from veritrust.recourse import BorrowerRecourseWorkflow, DisputeCase
 from veritrust.stress_tester import MonteCarloStressTester
-from veritrust.prediction import evaluate_credit_prediction
+from veritrust.prediction import evaluate_credit_prediction, predict_with_fallback
 
 router = APIRouter()
 
@@ -361,10 +361,14 @@ class PredictRequest(BaseModel):
     declared_income_status: Optional[str] = "VERIFIED"
     occupation_tenure_months: Optional[int] = 24
     evidence_age_months: Optional[float] = 0.0
+    force_fallback: Optional[bool] = False
 
 
 class PredictResponse(BaseModel):
     borrower_id: Optional[str] = None
+    is_fallback: bool = False
+    fallback_reason: Optional[str] = None
+    model_source: str = "PRIMARY_ML"
     prediction: PredictionDetails
     explanation: ExplanationDetails
     temporal_freshness: TemporalFreshnessReport
@@ -820,12 +824,21 @@ def get_platform_treasury():
 
 @router.post("/api/v1/predict", response_model=PredictResponse, tags=["Prediction"])
 def predict_credit_risk(req: PredictRequest):
-    """Predict credit default probability, conformal decision set, and multi-dimensional explanation."""
+    """Predict credit default probability, conformal decision set, and multi-dimensional explanation.
+
+    Includes fail-safe fallback: if machine learning inference encounters an exception,
+    or if force_fallback is set, seamlessly evaluates via tuned rule-based fallback engine.
+    """
     engine, scorer, _, _ = get_services()
     try:
         # Only the fields the caller sent: an unsent bureau field is missing, not zero, and an unsent
         # vouch count is the borrower's own.
-        raw_result = evaluate_credit_prediction(req.model_dump(exclude_unset=True), engine=engine, scorer=scorer)
+        raw_result = predict_with_fallback(
+            req.model_dump(exclude_unset=True),
+            engine=engine,
+            scorer=scorer,
+            force_fallback=bool(req.force_fallback),
+        )
     except ValueError as exc:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc))
     return raw_result
